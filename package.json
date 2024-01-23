@@ -1,5 +1,5 @@
 {
-	"name": "10m.club",
+	"name": "mindapp",
 	"private": true,
 	"version": "0.0.0",
 	"main": "./out/main/main.js",
@@ -21,7 +21,8 @@
 		"@heroicons/react": "2.1.1",
 		"howler": "2.2.4",
 		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
+		"react-dom": "^18.2.0",
+		"react-router-dom": "6.21.3"
 	},
 	"devDependencies": {
 		"@types/howler": "2.2.11",
