@@ -1,30 +1,52 @@
 import { HashRouter, Link, Route, Routes } from 'react-router-dom';
-import Test from './components/Test';
+import IpcListener from './components/IpcListener';
+import Preferences from './components/Preferences';
+import Home from './components/Home';
+import SetUp from './components/SetUp';
+
+const setGlobalCssVariable = (variableName: string, value: string) => {
+	document.documentElement.style.setProperty(`--${variableName}`, value);
+};
+
+let lastScroll = 0;
+let initialScrollUpPosition = 0;
+let scrollingDown = true;
+window.addEventListener('scroll', () => {
+	const currentScroll = window.scrollY;
+	if (currentScroll > lastScroll) {
+		setGlobalCssVariable('header-opacity', '0.25');
+		scrollingDown = true;
+	} else {
+		if (currentScroll <= 10 || initialScrollUpPosition - currentScroll > 88) {
+			setGlobalCssVariable('header-opacity', '1');
+		}
+		if (scrollingDown) {
+			initialScrollUpPosition = currentScroll;
+		}
+		scrollingDown = false;
+	}
+	lastScroll = currentScroll <= 0 ? 0 : currentScroll;
+});
 
 function App() {
 	return (
-		<main className="">
+		<main className="mt-12">
 			<HashRouter basename="/">
-				<header className="z-50 absolute top-0 w-screen fx justify-between">
-					<Link to="/" className="m-5 fx">
+				<header
+					className="z-50 fixed top-0 w-screen xy h-12 transition-opacity"
+					style={{ opacity: 'var(--header-opacity)' }}
+				>
+					<Link to="/" className="fx h-10 overflow-hidden">
 						<img src="mindapp-logo.svg" alt="logo" className="h-8" />
 						<p className="ml-2 text-3xl font-medium">Mindapp</p>
 					</Link>
 				</header>
-				<div
-					className="h-screen xy"
-					style={{
-						// backgroundImage: `url(samekomon.svg)`,
-						// backgroundSize: '10%',
-						backgroundSize: 'cover',
-						backgroundRepeat: 'no-repeat',
-						backgroundPosition: 'center',
-					}}
-				>
-					<Routes>
-						<Route path="/" Component={Test} />
-					</Routes>
-				</div>
+				<IpcListener />
+				<Routes>
+					<Route path="/" Component={Home} />
+					<Route path="/set-up" Component={SetUp} />
+					<Route path="/preferences" Component={Preferences} />
+				</Routes>
 			</HashRouter>
 		</main>
 	);

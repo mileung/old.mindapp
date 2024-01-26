@@ -31,7 +31,6 @@ if (window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener) {
 	window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener('change', (e) => {
 		if (localStorage.theme === 'system') {
 			e.matches ? darken() : lighten();
-			console.log('e.matches:', e.matches);
 		}
 	});
 }

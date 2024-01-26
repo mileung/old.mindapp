@@ -3,15 +3,21 @@
 @tailwind utilities;
 
 body {
-	@apply bg-bg0 text-fg1;
+	@apply bg-bg1 text-fg1;
 	font-family: 'Quicksand Variable', sans-serif;
 }
 
+a,
 button,
 input,
 select,
 textarea {
-	@apply outline-none bg-clear;
+	@apply bg-clear outline-1 outline-fg2;
+}
+
+input::placeholder,
+textarea::placeholder {
+	@apply placeholder-fg2;
 }
 
 select {

@@ -1,13 +1,10 @@
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
+module.exports = {
 	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
 	darkMode: 'class',
 	theme: {
 		extend: {
 			colors: {
 				clear: 'var(--clear)',
-				bg0: 'var(--bg0)',
 				bg1: 'var(--bg1)',
 				bg2: 'var(--bg2)',
 				bg3: 'var(--bg3)',
@@ -16,6 +13,7 @@ const config: Config = {
 				cell3: 'var(--cell3)',
 				mg1: 'var(--mg1)',
 				mg2: 'var(--mg2)',
+				mg3: 'var(--mg3)',
 				fg1: 'var(--fg1)',
 				fg2: 'var(--fg2)',
 				input: 'var(--input)',
@@ -25,12 +23,12 @@ const config: Config = {
 			},
 		},
 	},
-	// plugins: {
-	// 	'postcss-import': {},
-	// 	'tailwindcss/nesting': {},
-	// 	tailwindcss: {},
-	// 	autoprefixer: {},
-	// },
+	plugins: [
+		require('postcss-import'),
+		require('tailwindcss/nesting'),
+		require('tailwindcss'),
+		require('autoprefixer'),
+	],
 };
 
-export default config;
+// export default config;
