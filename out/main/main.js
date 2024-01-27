@@ -10404,12 +10404,7 @@ var electronStore = ElectronStore;
 const Store = /* @__PURE__ */ getDefaultExportFromCjs(electronStore);
 const isDev = process.env.NODE_ENV === "development";
 let mainWindow;
-function createWindow() {
-  (async () => {
-    const store = new Store();
-    store.set("unicorn", "🦄");
-    console.log(store.get("unicorn"));
-  })();
+require$$1$2.app.whenReady().then(() => {
   mainWindow = new require$$1$2.BrowserWindow({
     titleBarStyle: "hiddenInset",
     minWidth: 400,
@@ -10507,16 +10502,33 @@ function createWindow() {
     },
     {
       label: "Window",
-      submenu: [{ label: "Minimize", role: "minimize" }]
+      submenu: [
+        { label: "Minimize", role: "minimize" },
+        { label: "Reload", role: "reload" }
+      ]
     }
   ];
   const menu = require$$1$2.Menu.buildFromTemplate(menuTemplate);
   require$$1$2.Menu.setApplicationMenu(menu);
-  mainWindow.loadURL("http://localhost:5173");
-  mainWindow.on("closed", () => mainWindow = null);
-}
-require$$1$2.app.whenReady().then(() => {
-  createWindow();
+  (async () => {
+    try {
+      const store = new Store({
+        name: "config",
+        schema: {
+          mindappRoot: { type: "string" }
+        },
+        defaults: {
+          mindappRoot: ""
+        }
+      });
+      const data = store.get("mindappRoot");
+      console.log("data", data);
+      mainWindow.loadURL("http://localhost:5173");
+    } catch (error2) {
+    } finally {
+      mainWindow.loadURL("http://localhost:5173/set-up");
+    }
+  })();
 });
 require$$1$2.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

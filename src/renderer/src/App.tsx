@@ -30,7 +30,7 @@ window.addEventListener('scroll', () => {
 
 function App() {
 	return (
-		<main className="mt-12">
+		<main className="mt-12 min-h-[calc(100vh-3rem)] flex flex-col">
 			<HashRouter basename="/">
 				<header
 					className="z-50 fixed top-0 w-screen xy h-12 transition-opacity"

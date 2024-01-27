@@ -4,14 +4,7 @@ import * as path from 'path';
 export const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
-
-function createWindow() {
-	(async () => {
-		const store = new Store();
-
-		store.set('unicorn', '🦄');
-		console.log(store.get('unicorn'));
-	})();
+app.whenReady().then(() => {
 	// console.log('app.getAppPath():', app.getAppPath());
 	mainWindow = new BrowserWindow({
 		titleBarStyle: 'hiddenInset',
@@ -32,10 +25,6 @@ function createWindow() {
 		mainWindow.setPosition(0, 0);
 		mainWindow.setSize(width / 2, height);
 	}
-
-	// globalShortcut.register('CommandOrControl+W', () => {
-	// 	// stuff here
-	// });
 
 	const navigateToRoute = (route) => {
 		// const history = useHistory();
@@ -122,20 +111,45 @@ function createWindow() {
 		},
 		{
 			label: 'Window',
-			submenu: [{ label: 'Minimize', role: 'minimize' }],
+			submenu: [
+				{ label: 'Minimize', role: 'minimize' },
+				{ label: 'Reload', role: 'reload' },
+			],
 		},
 	];
 
 	const menu = Menu.buildFromTemplate(menuTemplate);
 	Menu.setApplicationMenu(menu);
 
-	// Vite dev server URL
-	mainWindow.loadURL('http://localhost:5173');
-	mainWindow.on('closed', () => (mainWindow = null));
-}
+	// ipcMain.handle('my-invokable-ipc', async (event, ...args) => {
+	// 	const result = await somePromise(...args);
+	// 	return result;
+	// });
+	(async () => {
+		try {
+			// code ~/Library/Application\ Support/mindapp/config.json
+			const store = new Store({
+				name: 'config',
+				schema: {
+					mindappRoot: { type: 'string' },
+				},
+				defaults: {
+					mindappRoot: '',
+				},
+			});
 
-app.whenReady().then(() => {
-	createWindow();
+			const data = store.get('mindappRoot');
+
+			console.log('data', data);
+
+			mainWindow.loadURL('http://localhost:5173');
+		} catch (error) {
+			// console.log('error:', error);
+		} finally {
+			// mainWindow.loadURL('http://localhost:5173/settings');
+			mainWindow.loadURL('http://localhost:5173/set-up');
+		}
+	})();
 });
 
 app.on('window-all-closed', () => {

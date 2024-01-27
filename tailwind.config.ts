@@ -13,7 +13,6 @@ module.exports = {
 				cell3: 'var(--cell3)',
 				mg1: 'var(--mg1)',
 				mg2: 'var(--mg2)',
-				mg3: 'var(--mg3)',
 				fg1: 'var(--fg1)',
 				fg2: 'var(--fg2)',
 				input: 'var(--input)',

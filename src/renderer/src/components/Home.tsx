@@ -7,17 +7,17 @@ export default function Home() {
 	const tagInput = useRef<null | HTMLInputElement>(null);
 	const [tags, tagsSet] = useState<string[]>([]);
 	const [notes, notesSet] = useState<string[]>([
-		'test',
-		'test',
-		'test',
-		'test',
-		'test',
+		// 'test',
+		// 'test',
+		// 'test',
+		// 'test',
+		// 'test',
 		'test',
 		'test',
 	]);
 
 	return (
-		<div className="p-4">
+		<div className="p-4 flex-1">
 			<div className="w-full max-w-2xl ">
 				<textarea
 					value={thought}
@@ -79,7 +79,7 @@ export default function Home() {
 					<button
 						// title="Control + Tab"
 						// title="Enter"
-						className="px-3 py-0.5 rounded transition bg-mg2 hover:bg-mg3"
+						className="px-3 py-0.5 rounded font-medium transition bg-mg1 hover:bg-mg2"
 					>
 						Save
 					</button>

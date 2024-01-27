@@ -10,7 +10,6 @@ import { useState } from 'react';
 import { formatTimestamp } from '../utils/time';
 import { BookmarkIcon } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkedIcon } from '@heroicons/react/24/solid';
-import TimeAgo from './TimeAgo';
 
 export default function Cell({ date, note }: { date: number; note: string }) {
 	const [open, openSet] = useState(true);
@@ -19,7 +18,7 @@ export default function Cell({ date, note }: { date: number; note: string }) {
 	return (
 		<div className="flex bg-bg2 rounded">
 			<button
-				className="w-5 fy transition rounded-l text-fg2 hover:text-fg1 hover:bg-mg3"
+				className="w-5 fy transition rounded-l text-fg2 hover:text-fg1 hover:bg-mg2"
 				onClick={() => openSet(!open)}
 			>
 				<div className="justify-self-start mt-1">
