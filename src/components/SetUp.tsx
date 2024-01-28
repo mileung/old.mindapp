@@ -1,5 +1,3 @@
-// import { dialog } from 'electron';
-
 export default function SetUp() {
 	return (
 		<div className="p-4 flex-1 xy">

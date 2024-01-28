@@ -1,20 +1,20 @@
 import { XMarkIcon } from '@heroicons/react/16/solid';
 import { useRef, useState } from 'react';
 import Cell from './Cell';
+// import useSWR from 'swr';
+
+// const fetcher = (...args: Parameters<typeof fetch>) => fetch(...args).then(res => res.json())
 
 export default function Home() {
+	// const { data, error, isLoading } = useSWR('http://localhost:3000/', fetcher)
 	const [thought, thoughtSet] = useState('');
 	const tagInput = useRef<null | HTMLInputElement>(null);
 	const [tags, tagsSet] = useState<string[]>([]);
-	const [notes, notesSet] = useState<string[]>([
-		// 'test',
-		// 'test',
-		// 'test',
-		// 'test',
-		// 'test',
-		'test',
-		'test',
-	]);
+	const [notes, notesSet] = useState<string[]>(['test', 'test']);
+
+	// if (error) return <div>failed to load</div>
+	// if (isLoading) return <div>loading...</div>
+	// console.log('data:', data)
 
 	return (
 		<div className="p-4 flex-1">

@@ -1,10 +1,13 @@
-module.exports = {
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
 	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
 	darkMode: 'class',
 	theme: {
 		extend: {
 			colors: {
 				clear: 'var(--clear)',
+				bg0: 'var(--bg0)',
 				bg1: 'var(--bg1)',
 				bg2: 'var(--bg2)',
 				bg3: 'var(--bg3)',
@@ -22,12 +25,12 @@ module.exports = {
 			},
 		},
 	},
-	plugins: [
-		require('postcss-import'),
-		require('tailwindcss/nesting'),
-		require('tailwindcss'),
-		require('autoprefixer'),
-	],
+	// plugins: {
+	// 	'postcss-import': {},
+	// 	'tailwindcss/nesting': {},
+	// 	tailwindcss: {},
+	// 	autoprefixer: {},
+	// },
 };
 
-// export default config;
+export default config;

@@ -1,5 +1,4 @@
-import { HashRouter, Link, Route, Routes } from 'react-router-dom';
-import IpcListener from './components/IpcListener';
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import Preferences from './components/Preferences';
 import Home from './components/Home';
 import SetUp from './components/SetUp';
@@ -31,7 +30,7 @@ window.addEventListener('scroll', () => {
 function App() {
 	return (
 		<main className="mt-12 min-h-[calc(100vh-3rem)] flex flex-col">
-			<HashRouter basename="/">
+			<BrowserRouter>
 				<header
 					className="z-50 fixed top-0 w-screen xy h-12 transition-opacity"
 					style={{ opacity: 'var(--header-opacity)' }}
@@ -41,13 +40,12 @@ function App() {
 						<p className="ml-2 text-3xl font-medium">Mindapp</p>
 					</Link>
 				</header>
-				<IpcListener />
 				<Routes>
 					<Route path="/" Component={Home} />
 					<Route path="/set-up" Component={SetUp} />
 					<Route path="/preferences" Component={Preferences} />
 				</Routes>
-			</HashRouter>
+			</BrowserRouter>
 		</main>
 	);
 }
