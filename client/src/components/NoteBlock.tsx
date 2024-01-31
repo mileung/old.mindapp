@@ -1,19 +1,24 @@
 import {
 	ArrowTopRightOnSquareIcon,
-	ChevronDownIcon,
-	ChevronUpIcon,
-	FaceSmileIcon,
+	PlusCircleIcon,
 	MinusIcon,
 	PlusIcon,
+	// ArrowDownTrayIcon,
 } from '@heroicons/react/16/solid';
 import { useState } from 'react';
 import { formatTimestamp } from '../utils/time';
-import { BookmarkIcon } from '@heroicons/react/24/outline';
-import { BookmarkIcon as BookmarkedIcon } from '@heroicons/react/24/solid';
 
-export default function Cell({ date, note }: { date: number; note: string }) {
+export type Note = {
+	createDate: number;
+	authorId: number;
+	content: string;
+	tags?: string[];
+	parent?: number;
+	children?: number[];
+};
+
+export default function NoteBlock(note: Note) {
 	const [open, openSet] = useState(true);
-	const [marked, markedSet] = useState(false);
 
 	return (
 		<div className="flex bg-bg2 rounded">
@@ -26,9 +31,9 @@ export default function Cell({ date, note }: { date: number; note: string }) {
 				</div>
 			</button>
 			<div className="p-1">
-				<p className="text-sm text-fg2 font-bold">{formatTimestamp(date)}</p>
+				<p className="text-sm text-fg2 font-bold">{formatTimestamp(note.createDate)}</p>
 				<div className={`${open ? '' : 'hidden'}`}>
-					<pre className="">{note}</pre>
+					<pre className="">{note.content}</pre>
 					<div className="fx gap-2 text-fg2 text-xs font-bold">
 						{/* <button className="h-4 w-4 xy">
 							<ChevronUpIcon className="absolute h-7 w-7" />
@@ -36,19 +41,15 @@ export default function Cell({ date, note }: { date: number; note: string }) {
 						<button className="h-4 w-4 xy">
 							<ChevronDownIcon className="absolute h-7 w-7" />
 						</button> */}
-						<button className="h-4 w-4 xy">
-							<FaceSmileIcon className="absolute h-4 w-4" />
-						</button>
-						<button className="h-4 w-4 xy">
+						<button className="h-4 w-4 xy hover:text-fg1 transition">
 							<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
 						</button>
-						<button className="h-4 w-4 xy" onClick={() => markedSet(!marked)}>
-							{marked ? (
-								<BookmarkedIcon className="absolute h-5 w-5" />
-							) : (
-								<BookmarkIcon className="absolute h-5 w-5" />
-							)}
+						<button className="h-4 w-4 xy hover:text-fg1 transition">
+							<PlusCircleIcon className="absolute h-4 w-4" />
 						</button>
+						{/* <button className="h-4 w-4 xy hover:text-fg1 transition" onClick={() => {}}>
+							<ArrowDownTrayIcon className="absolute h-5 w-5" />
+						</button> */}
 						{/* <button className="">Reference</button>
 						<button className="">Bookmark</button> */}
 					</div>

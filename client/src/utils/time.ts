@@ -23,5 +23,5 @@ export function formatTimestamp(timestamp: number): string {
 	// 	const daysAgo = Math.floor(timeDiff / day);
 	// 	return `${daysAgo} ${daysAgo === 1 ? 'day' : 'days'} ago`;
 	// }
-	return dayjs(timestamp).format('YYYY-MM-DD HH:mm');
+	return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss');
 }
