@@ -1,7 +1,7 @@
 // https://stackoverflow.com/a/62878548
 
 declare global {
-  var startDate: number;
+	var startDate: number;
 }
 
 export {};

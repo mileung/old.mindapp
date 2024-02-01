@@ -3,7 +3,8 @@
 	"scripts": {
 		"client": "cd client && npm run dev",
 		"server": "cd server && npm start",
-		"start": "concurrently \"npm run server\" \"npm run client\""
+		"start": "concurrently \"npm run server\" \"npm run client\"",
+		"format": "prettier . --write"
 	},
 	"prettier": {
 		"printWidth": 100,
@@ -13,6 +14,7 @@
 		"trailingComma": "es5"
 	},
 	"devDependencies": {
-		"concurrently": "8.2.2"
+		"concurrently": "8.2.2",
+		"prettier": "3.2.4"
 	}
 }
