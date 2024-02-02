@@ -15,9 +15,9 @@ textarea {
 	@apply bg-clear outline-1 outline-fg2;
 }
 
-input::placeholder,
-textarea::placeholder {
-	@apply placeholder-fg2;
+input,
+textarea {
+	@apply placeholder:text-fg2 !important;
 }
 
 select {

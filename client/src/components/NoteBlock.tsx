@@ -34,13 +34,7 @@ export default function NoteBlock(note: Note) {
 				<p className="text-sm text-fg2 font-bold">{formatTimestamp(note.createDate)}</p>
 				<div className={`${open ? '' : 'hidden'}`}>
 					<pre className="">{note.content}</pre>
-					<div className="fx gap-2 text-fg2 text-xs font-bold">
-						{/* <button className="h-4 w-4 xy">
-							<ChevronUpIcon className="absolute h-7 w-7" />
-						</button>
-						<button className="h-4 w-4 xy">
-							<ChevronDownIcon className="absolute h-7 w-7" />
-						</button> */}
+					<div className="mt-1 fx gap-2 text-fg2">
 						<button className="h-4 w-4 xy hover:text-fg1 transition">
 							<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
 						</button>
@@ -52,6 +46,17 @@ export default function NoteBlock(note: Note) {
 						</button> */}
 						{/* <button className="">Reference</button>
 						<button className="">Bookmark</button> */}
+						{!!note.tags?.length &&
+							note.tags.map((tag) => {
+								return (
+									<button
+										key={tag}
+										className="rounded-full overflow-hidden px-2 bg-mg1 hover:bg-mg2 transition text-base font-semibold leading-5"
+									>
+										{tag}
+									</button>
+								);
+							})}
 					</div>
 				</div>
 			</div>

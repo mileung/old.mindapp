@@ -5,6 +5,7 @@ import path from 'path';
 const whoami: RequestHandler = (req, res) => {
 	const userDesktopPath = path.join(require('os').homedir(), 'Desktop');
 	const folderName = 'mindapp';
+	console.log(req.hostname);
 
 	const identities = {
 		'localhost:5173': { self: 'public key' },
@@ -12,9 +13,10 @@ const whoami: RequestHandler = (req, res) => {
 		'space-url': { username: 'public key', multiple: 'personas' },
 	};
 
-	res.send(`<pre>
-${JSON.stringify(identities, null, 2)}
-</pre>`);
+	res.send(identities);
+	// 	res.send(`<pre>
+	// ${JSON.stringify(identities, null, 2)}
+	// </pre>`);
 };
 
 export default whoami;

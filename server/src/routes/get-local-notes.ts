@@ -6,10 +6,11 @@ import { Note } from '../types/Note';
 import { day } from '../utils/time';
 
 const notesPerPage = 8;
-const searchLocalFs: RequestHandler = (req, res) => {
+const getLocalNotes: RequestHandler = (req, res) => {
 	const notes: Note[] = [];
 
 	const spaceIds = typeof req.query.spaceIds === 'string' ? req.query.spaceIds.split(',') : [];
+	console.log('spaceIds:', spaceIds);
 	// const searchedKeywords = req.query.searchedKeywords;
 	const oldToNew = req.query.oldToNew === 'true';
 	const pageAfter = +req.query.pageAfter! || Date.now();
@@ -17,33 +18,35 @@ const searchLocalFs: RequestHandler = (req, res) => {
 	const startingDay = Math.floor(pageAfter / day);
 	// console.log("startingDay:", startingDay);
 
-	const spacesDir = fs
+	const spacesDirs = fs
 		.readdirSync(spacesPath)
 		.filter((id) => (spaceIds.length ? spaceIds.includes(id) : true));
-	for (let i = 0; i < spacesDir.length; i++) {
-		const spaceId = spacesDir[i];
+	console.log('spacesDirs:', spacesDirs);
+	for (let i = 0; i < spacesDirs.length; i++) {
+		const spaceId = spacesDirs[i];
+		console.log('spaceId:', spaceId);
 		const spaceIdPath = path.join(spacesPath, spaceId);
 		if (!isDirectory(spaceIdPath)) return;
 		const periodDirs = fs.readdirSync(spaceIdPath).sort((a, b) => (oldToNew ? +a - +b : +b - +a));
-		// console.log("periodDirs:", periodDirs);
 
 		for (let i = 0; i < periodDirs.length; i++) {
 			const period = periodDirs[i];
-			// console.log("period:", period);
+			console.log('period:', period);
 			if (notes.length === notesPerPage) break;
 			if (startingDay % +period >= 100) continue;
 			const periodPath = path.join(spaceIdPath, period);
-			if (!isDirectory(periodPath)) return;
+			console.log('periodPath:', periodPath);
+			if (!isDirectory(periodPath)) continue;
 			const dayDirs = fs.readdirSync(periodPath).sort((a, b) => (oldToNew ? +a - +b : +b - +a));
 
-			// console.log("dayDirs:", dayDirs);
+			console.log('dayDirs:', dayDirs);
 			for (let i = 0; i < dayDirs.length; i++) {
 				const day = dayDirs[i];
-				// console.log("day:", day);
+				console.log('day:', day);
 				if (notes.length === notesPerPage) break;
 				if (oldToNew ? startingDay > +day : startingDay < +day) continue;
 				const dayPath = path.join(periodPath, day);
-				if (!isDirectory(dayPath)) return;
+				if (!isDirectory(dayPath)) continue;
 				const notesDir = fs.readdirSync(dayPath).sort((a, b) => {
 					a = a.substring(0, a.indexOf('.'));
 					b = b.substring(0, b.indexOf('.'));
@@ -52,12 +55,12 @@ const searchLocalFs: RequestHandler = (req, res) => {
 				for (let i = 0; i < notesDir.length; i++) {
 					const fileName = notesDir[i];
 					const noteTimestamp = Number(fileName.substring(0, fileName.indexOf('.')));
-					// console.log("noteTimestamp:", noteTimestamp);
+					console.log('noteTimestamp:', noteTimestamp);
 					if (oldToNew ? pageAfter >= noteTimestamp : pageAfter <= noteTimestamp) continue;
-					// console.log("fileName:", fileName);
+					console.log('fileName:', fileName);
 					const filePath = path.join(dayPath, fileName);
 					if (isFile(filePath) && fileName.endsWith('.json')) {
-						if (isNaN(noteTimestamp)) return;
+						if (isNaN(noteTimestamp)) continue;
 						notes.push(JSON.parse(fs.readFileSync(filePath).toString()));
 						if (notes.length === notesPerPage) break;
 					}
@@ -66,7 +69,8 @@ const searchLocalFs: RequestHandler = (req, res) => {
 		}
 	}
 
+	// console.log('notes:', notes);
 	res.status(200).json(notes);
 };
 
-export default searchLocalFs;
+export default getLocalNotes;
