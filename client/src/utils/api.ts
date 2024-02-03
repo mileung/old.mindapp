@@ -16,7 +16,12 @@ export function buildUrl(basePath: string, params?: { [key: string]: any }) {
 }
 
 export const fetcher = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
-	fetch(...args).then((res) => res.json());
+	new Promise((resolve, reject) => {
+		fetch(...args).then(async (res) => {
+			const json = await res.json();
+			return res.status === 200 ? resolve(json) : reject(json);
+		});
+	});
 
 // keep it simple for now
 export const usePing = <T>(...args: Parameters<typeof buildUrl>) => {

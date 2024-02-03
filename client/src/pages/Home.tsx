@@ -2,13 +2,13 @@ import { XMarkIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NoteBlock, { Note } from '../components/NoteBlock';
 import { buildUrl, fetcher } from '../utils/api';
-import { useSearchParams } from 'react-router-dom';
 
 const notesPerPage = 8;
 
 const PageBlock = ({ page }: { page: Note[] }) => {
-	return page.map((note) => {
-		return <NoteBlock key={note.createDate} {...note} />;
+	return page.map((note, i) => {
+		// console.log('note:', note);
+		return <NoteBlock key={i} {...note} />;
 	});
 };
 
@@ -18,38 +18,32 @@ export default function Home() {
 	const [tags, tagsSet] = useState<string[]>([]);
 	const tagInput = useRef<null | HTMLInputElement>(null);
 	const [startDate] = useState(Date.now());
-
+	const [additionalNotes, additionalNotesSet] = useState<Note[]>([]);
 	const [pages, pagesSet] = useState<Note[][]>([]);
 	const [endReached, endReachedSet] = useState(false);
 
 	const writeNote = useCallback(() => {
-		const userId = 123;
 		if (!contentRef.current!.value) return;
-		fetch(buildUrl('write-note'), {
+		const userId = 123;
+		const newNote: Partial<Note> = {
+			authorId: userId,
+			content: contentRef.current!.value,
+			tags,
+		};
+		fetcher<{ createDate: number }>(buildUrl('write-note'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({
-				author: userId,
-				content: contentRef.current!.value,
-				tags,
-			}),
+			body: JSON.stringify(newNote),
 		})
-			.then(async (res) => {
-				const data = await res.text();
-				console.log('data', data);
-				// notesSet([content, ...notes]);
+			.then(({ createDate }) => {
+				additionalNotesSet([{ createDate, ...newNote } as Note, ...additionalNotes]);
 				contentRef.current!.value = '';
 				tagsSet([]);
 			})
-			.catch((err) => {
-				console.log('err', err);
-			})
-			.finally(() => {
-				// console.log('fin');
-			});
-	}, ['userId', tags, 'parent']);
+			.catch((err) => window.alert(JSON.stringify(err, null, 2)));
+	}, ['userId', tags, pages, 'parent']);
 
 	const loadNextPage = useCallback(() => {
 		const lastPage = pages[pages.length - 1];
@@ -147,6 +141,7 @@ export default function Home() {
 				</div>
 			</div>
 			<div className="mt-3 space-y-1.5">
+				<PageBlock page={additionalNotes} />
 				{pages.map((page, i) => {
 					return <PageBlock key={i} page={page} />;
 				})}

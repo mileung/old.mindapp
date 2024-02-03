@@ -35,15 +35,15 @@ export default function Header() {
 
 	return (
 		<header
-			className="z-50 px-3 fixed top-0 w-screen flex justify-between py-2 h-12 transition-opacity bg-bg1 "
+			className="z-50 px-3 fixed top-0 w-screen flex justify-between py-1 h-12 transition-opacity bg-bg1"
 			style={{ opacity: 'var(--header-opacity)' }}
 			onMouseDown={() => setGlobalCssVariable('header-opacity', '1')}
 		>
-			<Link to="/" className="fx h-10 shrink-0">
+			<Link to="/" className="fx shrink-0">
 				<img src="mindapp-logo.svg" alt="logo" className="h-7" />
 				<p className="ml-2 text-2xl font-black">Mindapp</p>
 			</Link>
-			<div className="w-full h-10 mx-2 max-w-md flex rounded border-2 border-mg1">
+			<div className="w-full mx-2 max-w-md flex rounded border-2 border-mg1">
 				<form
 					className="w-full"
 					onSubmit={(e: FormEvent<HTMLFormElement>) => {
@@ -68,7 +68,7 @@ export default function Header() {
 				</button>
 			</div>
 			{/* <Link to="/tags" className="xy h-10 w-10 rounded-full text-fg1 transition hover:bg-mg1"> */}
-			<Link to="/tags" className="xy h-10 w-10 rounded-full text-fg2 transition hover:text-fg1">
+			<Link to="/tags" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
 				<TagIcon className="h-7 w-7" />
 			</Link>
 		</header>

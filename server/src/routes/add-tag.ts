@@ -2,19 +2,15 @@ import { RequestHandler } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { spacesPath } from '../utils/files';
+import { Tag } from '../types/Tag';
 
-export type Tags = {
-	tag: string;
-	subsetOf: string[];
-	subsets: string[];
-};
+const addTag: RequestHandler = (req, res, next) => {
+	console.log('next:', next);
 
-const addTag: RequestHandler = (req, res) => {
-	const spaceId = req.query.spaceId;
-	if (typeof spaceId !== 'string') return res.sendStatus(400);
-	const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
+	// const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
+	// const tags: Tag[] = JSON.parse(fs.readFileSync(tagsPath).toString());
 
-	res.sendStatus(200);
+	res.send({});
 };
 
 export default addTag;

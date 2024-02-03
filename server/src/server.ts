@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express from 'express';
+import express, { ErrorRequestHandler } from 'express';
 import path from 'path';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
@@ -25,6 +25,16 @@ app.get('/get-tags', getTags);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
 app.get('/get-local-notes', getLocalNotes);
+
+app.use(((err, req, res, next) => {
+	console.log('err:', err);
+	res.status(err.status || 500);
+	res.send({
+		error: {
+			message: err.message,
+		},
+	});
+}) as ErrorRequestHandler);
 
 app.listen(port, () => {
 	touchIfDne(path.join(mindappRootPath, 'settings.json'), JSON.stringify(new Settings()));
