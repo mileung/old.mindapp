@@ -5,8 +5,7 @@ import { spacesPath, touchIfDne } from '../utils/files';
 import { Tag } from '../types/Tag';
 
 const getTags: RequestHandler = (req, res) => {
-	const spaceId = req.query.spaceId;
-	if (typeof spaceId !== 'string') return res.sendStatus(400);
+	const spaceId = 'localhost';
 	const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
 	touchIfDne(tagsPath, JSON.stringify([]));
 	const tags: Tag[] = JSON.parse(fs.readFileSync(tagsPath).toString());

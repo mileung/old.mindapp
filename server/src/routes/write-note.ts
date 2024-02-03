@@ -7,9 +7,7 @@ import { day } from '../utils/time';
 const writeNote: RequestHandler = (req: Request & { body: Note }, res) => {
 	const now = Date.now();
 	const authorId = req.body.authorId; // TODO: make more robust user id system
-	// const spaceId = req.headers.host!;
-	const spaceId = req.hostname;
-	// console.log('spaceId:', spaceId);
+	const spaceId = 'localhost';
 	const note = new Note(
 		now,
 		req.body.authorId,

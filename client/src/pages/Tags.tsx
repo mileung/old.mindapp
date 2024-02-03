@@ -9,7 +9,7 @@ export type Tags = {
 const tags = new Set([]);
 
 export default function Tags() {
-	const { data } = usePing<Tags>('get-tags', { spaceId: window.location.host });
+	const { data } = usePing<Tags>('get-tags');
 	console.log('data:', data);
 
 	return (
