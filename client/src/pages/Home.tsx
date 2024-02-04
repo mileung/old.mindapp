@@ -1,4 +1,4 @@
-import { XMarkIcon } from '@heroicons/react/16/solid';
+import { XCircleIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NoteBlock, { Note } from '../components/NoteBlock';
 import { buildUrl, fetcher } from '../utils/api';
@@ -12,10 +12,19 @@ const PageBlock = ({ page }: { page: Note[] }) => {
 	});
 };
 
+let lastTagInput = '';
 export default function Home() {
 	// TODO: const userId = useUserId();
 	const contentRef = useRef<null | HTMLTextAreaElement>(null);
-	const [tags, tagsSet] = useState<string[]>([]);
+	const [tags, tagsSet] = useState<string[]>([
+		'test',
+		'San Francisco',
+		'Cities',
+		'California',
+		'Japan',
+		'Network',
+	]);
+	const tagRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagInput = useRef<null | HTMLInputElement>(null);
 	const [startDate] = useState(Date.now());
 	const [additionalNotes, additionalNotesSet] = useState<Note[]>([]);
@@ -76,8 +85,8 @@ export default function Home() {
 				<textarea
 					ref={contentRef}
 					name="content"
-					placeholder="New content"
-					className="rounded text-xl p-3 bg-mg1 w-full max-w-full resize-y"
+					placeholder="New note"
+					className="rounded text-xl font-medium p-3 bg-mg1 w-full max-w-full resize-y"
 					onKeyDown={(e) => {
 						if (e.key === 'Enter' && e.metaKey) {
 							writeNote();
@@ -86,24 +95,31 @@ export default function Home() {
 				/>
 				{!!tags.length && (
 					<div
-						className="mt-0.5 fx flex-wrap px-3 py-3 gap-1.5 rounded-t bg-bg2 text-xl"
+						className="mt-0.5 fx flex-wrap px-3 py-1 gap-1 rounded-t bg-bg2 text-lg"
 						onClick={() => tagInput.current!.focus()}
 					>
 						{tags.map((name, i) => {
 							return (
-								<div key={i} className="bg-mg1 text-fg1 flex rounded-full overflow-hidden pl-0.5">
-									<div className="pl-2.5 pr-1">{name}</div>
+								<div key={i} className="text-fg1 flex group">
+									<div
+										className=""
+										// onMouseEnter={} TODO: show set hierarchy
+									>
+										{name}
+									</div>
 									<button
-										className="xy group h-8 w-8 rounded-full -outline-offset-4"
-										onClick={() => {
+										className="xy -ml-0.5 group h-7 w-7 rounded-full -outline-offset-4"
+										ref={(r) => (tagRefs.current[i] = r)}
+										onClick={(e) => {
+											e.stopPropagation(); // this is needed to focus the next tag
+											tagRefs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
+
 											const newCats = [...tags];
 											newCats.splice(i, 1);
 											tagsSet(newCats);
 										}}
 									>
-										<div className="w-5 h-5 xy rounded-full border-[1px] border-fg2 group-hover:border-fg1 transition">
-											<XMarkIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
-										</div>
+										<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
 									</button>
 								</div>
 							);
@@ -115,11 +131,16 @@ export default function Home() {
 					name="tags"
 					autoComplete="off"
 					className="px-3 py-1 text-xl bg-mg1 w-full rounded-b overflow-hidden"
-					placeholder="Separate tags with Enter"
+					placeholder="Add tag with Enter"
 					ref={tagInput}
+					onFocus={() => (tagInput.current!.value = lastTagInput)}
+					onBlur={() => {
+						lastTagInput = tagInput.current!.value;
+						tagInput.current!.value = '';
+					}}
 					onKeyDown={(e) => {
 						if (e.key === 'Enter') {
-							const tag = tagInput.current?.value.trim();
+							const tag = tagInput.current!.value.trim();
 							if (tag) {
 								tagsSet([...tags, tag]);
 								tagInput.current!.value = '';
@@ -132,7 +153,7 @@ export default function Home() {
 				/>
 				<div className="mt-2 fx gap-2">
 					<button
-						className="px-3 py-1 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
+						className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
 						onClick={writeNote}
 					>
 						Save

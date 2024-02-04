@@ -44,25 +44,22 @@ export default function Header() {
 				<p className="ml-2 text-2xl font-black">Mindapp</p>
 			</Link>
 			<div className="w-full mx-2 max-w-md flex rounded border-2 border-mg1">
-				<form
-					className="w-full"
-					onSubmit={(e: FormEvent<HTMLFormElement>) => {
-						e.preventDefault();
-						const { value } = searchRef.current!;
-						// console.log('value:', value);
-						if (value.trim()) {
-							const queryString = new URLSearchParams({ search: value.trim() }).toString();
-							navigate(`/results?${queryString}`);
+				<input
+					ref={searchRef}
+					className="w-full h-full text-lg px-2"
+					placeholder="Keywords"
+					defaultValue={searchedKeywords || ''}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter') {
+							const { value } = searchRef.current!;
+							// console.log('value:', value);
+							if (value.trim()) {
+								const queryString = new URLSearchParams({ search: value.trim() }).toString();
+								navigate(`/results?${queryString}`);
+							}
 						}
 					}}
-				>
-					<input
-						ref={searchRef}
-						className="w-full h-full text-lg px-2"
-						placeholder="Keywords"
-						defaultValue={searchedKeywords || ''}
-					/>
-				</form>
+				/>
 				<button className="xy px-2 transition text-fg2 hover:text-fg1" type="submit">
 					<MagnifyingGlassIcon className="h-7 w-7" />
 				</button>

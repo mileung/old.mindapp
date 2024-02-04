@@ -16,14 +16,14 @@ const schema = {
 export class Tag {
 	constructor(
 		public tag: string,
-		public subsetOf: string[],
-		public subsets: string[]
+		public subsetOf: string[] = [],
+		public subsets: string[] = []
 	) {
 		this.tag = tag;
 		this.subsetOf = subsetOf;
 		this.subsets = subsets;
 
-		// console.log("this:", this);
+		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Tag: ' + JSON.stringify(this));
 	}
 }
