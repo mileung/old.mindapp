@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCache } from '../components/GlobalState';
 
-export function buildUrl(basePath: string, params?: { [key: string]: any }) {
+export function buildUrl(basePath: string, params?: Record<string, any>) {
 	let url: string;
 	if (!params) {
 		url = `http://localhost:3000/${basePath}`;
@@ -15,7 +16,7 @@ export function buildUrl(basePath: string, params?: { [key: string]: any }) {
 	return url;
 }
 
-export const fetcher = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
+export const pinger = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 	new Promise((resolve, reject) => {
 		fetch(...args).then(async (res) => {
 			const json = await res.json();
@@ -23,16 +24,34 @@ export const fetcher = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 		});
 	});
 
-// keep it simple for now
-export const usePing = <T>(...args: Parameters<typeof buildUrl>) => {
-	const [data, dataSet] = useState<null | T>(null);
-	const [loading, loadingSet] = useState(true);
+export const usePinger = <T>(...args: Parameters<typeof fetch>) => {
+	const cacheKey = useMemo(() => JSON.stringify(args), [args]);
+	const [cache, cacheSet] = useCache();
+	const data = useMemo<null | T>(() => cache.get(cacheKey) || null, [cache, args]);
+	const [loading, loadingSet] = useState(data === null);
 	const [error, errorSet] = useState<null | string>(null);
+	const [flip, flipSet] = useState(false);
+
+	const refresh = useCallback(() => {
+		flipSet(!flip);
+		loadingSet(true);
+		loadingSet(true);
+	}, [flip]);
+
 	useEffect(() => {
-		fetcher<T>(buildUrl(...args))
-			.then((res) => dataSet(res))
+		!data && loadingSet(true);
+	}, [data]);
+
+	useEffect(() => {
+		pinger<T>(...args)
+			.then((res) => {
+				const map = cache;
+				map.set(cacheKey, res);
+				cacheSet(map);
+			})
 			.catch((err) => errorSet(err))
 			.finally(() => loadingSet(false));
-	}, []);
-	return { data, loading, error };
+	}, [cacheKey, JSON.stringify(args), flip]);
+
+	return { data, loading, error, refresh };
 };

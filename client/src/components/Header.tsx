@@ -64,7 +64,6 @@ export default function Header() {
 					<MagnifyingGlassIcon className="h-7 w-7" />
 				</button>
 			</div>
-			{/* <Link to="/tags" className="xy h-10 w-10 rounded-full text-fg1 transition hover:bg-mg1"> */}
 			<Link to="/tags" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
 				<TagIcon className="h-7 w-7" />
 			</Link>

@@ -7,6 +7,7 @@ import {
 } from '@heroicons/react/16/solid';
 import { useState } from 'react';
 import { formatTimestamp } from '../utils/time';
+import { Link } from 'react-router-dom';
 
 export type Note = {
 	createDate: number;
@@ -17,11 +18,12 @@ export type Note = {
 	children?: number[];
 };
 
-export default function NoteBlock(note: Note) {
+export default function NoteBlock(props: { note: Note; depth?: number }) {
 	const [open, openSet] = useState(true);
+	const { note, depth = 0 } = props;
 
 	return (
-		<div className="flex bg-bg2 rounded">
+		<div className={`flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg3'}`}>
 			<button
 				className="w-5 fy transition rounded-l text-fg2 hover:text-fg1 hover:bg-mg2"
 				onClick={() => openSet(!open)}
@@ -30,7 +32,7 @@ export default function NoteBlock(note: Note) {
 					{open ? <MinusIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
 				</div>
 			</button>
-			<div className="p-1">
+			<div className="p-1 flex-1">
 				<p className="text-sm text-fg2 font-bold">{formatTimestamp(note.createDate)}</p>
 				<div className={`${open ? '' : 'hidden'}`}>
 					<pre className="">{note.content}</pre>
@@ -48,17 +50,24 @@ export default function NoteBlock(note: Note) {
 						<button className="">Bookmark</button> */}
 						{!!note.tags?.length &&
 							note.tags.map((tag) => {
+								const queryString = new URLSearchParams({
+									search: `[${tag}]`, // TODO: tag page
+								}).toString();
 								return (
-									<button
+									<Link
 										key={tag}
-										className="rounded-full overflow-hidden px-2 bg-mg1 hover:bg-mg2 transition text-base font-semibold leading-5"
+										to={`/results?${queryString}`}
+										className="text-fg2 hover:text-fg1 transition  font-semibold leading-5"
 									>
 										{tag}
-									</button>
+									</Link>
 								);
 							})}
 					</div>
 				</div>
+				{/* {note.children?.map((childNote, i) => {
+					return <NoteBlock key={i} note={childNote} depth={depth + 1} />;
+				})} */}
 			</div>
 		</div>
 	);

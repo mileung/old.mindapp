@@ -1,62 +1,16 @@
-'use client';
-
-import { systemThemeIsDark, toggleDarkMode } from '@/utils/theme';
 import { atom, useAtom } from 'jotai';
-import { useHydrateAtoms } from 'jotai/utils';
-import { useEffect } from 'react';
+import { Note } from './NoteBlock';
 
-export const atomUserId = atom<string | null>(null);
-export const useUserId = () => useAtom(atomUserId);
-
-export const atomCvIndex = atom<number | null>(null);
-export const useCvIndex = () => useAtom(atomCvIndex);
-
-export const atomOldCachedCvId = atom<string | null>(null);
-export const useOldCachedCvId = () => useAtom(atomOldCachedCvId);
-
-export const atomCvs = atom<
-	| {
-			id: string;
-			md_content: string;
-	  }[]
-	| null
->(null);
-export const useCvs = () => useAtom(atomCvs);
-
-type Props = {
-	userId?: string;
+export const createAtom = <T,>(initialValue: T) => {
+	const atomInstance = atom<T>(initialValue);
+	return () => useAtom(atomInstance);
 };
 
-export default function GlobalState({ userId }: Props) {
-	useHydrateAtoms([
-		[atomUserId, userId || null],
-		// [anotherAtom, anotherValue],
-	]);
+export const useUserId = createAtom<null | string>(null);
+export const useTags = createAtom<null | string[]>(null);
+export const useNotes = createAtom<null | Note[]>(null);
+export const useCache = createAtom<Map<any, any>>(new Map());
 
-	useEffect(() => {
-		if (!localStorage.theme) {
-			localStorage.theme = 'system';
-		}
-
-		if (localStorage.theme === 'dark' || (localStorage.theme === 'system' && systemThemeIsDark())) {
-			toggleDarkMode(true);
-		} else {
-			toggleDarkMode(false);
-		}
-
-		// does not exist on older browsers
-		if (window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener) {
-			window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener('change', (e) => {
-				if (localStorage.theme === 'system') {
-					if (e.matches) {
-						toggleDarkMode(true);
-					} else {
-						toggleDarkMode(false);
-					}
-				}
-			});
-		}
-	}, []);
-
+export const GlobalState = () => {
 	return null;
-}
+};

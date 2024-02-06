@@ -30,6 +30,7 @@ const writeNote: RequestHandler = (req: Request & { body: Note }, res) => {
 	);
 
 	if (!touchIfDne(filePath, JSON.stringify(note))) {
+		// TODO: the client should retry so the user doesn't have to manually trigger again
 		throw new Error('Duplicate timestamp entry');
 	}
 	res.send({ createDate: now });

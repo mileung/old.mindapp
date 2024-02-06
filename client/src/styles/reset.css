@@ -7,12 +7,9 @@ body {
 	font-family: 'Quicksand Variable', sans-serif;
 }
 
-a,
-button,
 input,
-select,
 textarea {
-	@apply bg-clear outline-1 outline-fg2;
+	@apply bg-clear outline-none;
 }
 
 input,

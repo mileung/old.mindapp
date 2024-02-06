@@ -4,10 +4,12 @@ import Home from './pages/Home';
 import Preferences from './pages/Preferences';
 import Tags from './pages/Tags';
 import Results from './pages/Results';
+import { GlobalState } from './components/GlobalState';
 
 function App() {
 	return (
 		<main className="mt-12 min-h-[calc(100vh-3rem)] flex flex-col">
+			<GlobalState />
 			<BrowserRouter>
 				<Header />
 				<Routes>
