@@ -1,63 +1,65 @@
 export type Tag = {
 	label: string;
-	parentTags: string[];
-	subTags: string[];
+	parentLabels: string[];
+	subLabels: string[];
 };
 
-export type RecursiveTag = {
+export type RecTag = {
+	// rec = recursive
 	lineage: string[];
 	label: string;
-	subTags: null | RecursiveTag[];
+	recSubTags: null | RecTag[];
 };
 
-export const makeRecursiveTags = (tags: Tag[]): RecursiveTag[] => {
+export const makeRecTags = (tags: Tag[]): RecTag[] => {
 	const tagMap: { [label: string]: Tag } = {};
-	const recursiveTags: RecursiveTag[] = [];
+	const RecTags: RecTag[] = [];
 
 	// Convert array of tags to map for easy lookup
 	tags.forEach((tag) => {
 		tagMap[tag.label] = tag;
 	});
 
-	const buildRecursiveTag = (label: string, lineage: string[]): RecursiveTag => {
+	const buildRecTag = (label: string, lineage: string[]): RecTag => {
 		const tag = tagMap[label];
+		!tag && console.log(label, tag);
 
 		// Check for loop in lineage
 		if (lineage.includes(label)) {
 			return {
 				lineage: [...lineage, label],
 				label,
-				subTags: null,
+				recSubTags: null,
 			};
 		}
 
-		const subTags: RecursiveTag[] = tag.subTags.map((subsetLabel) =>
-			buildRecursiveTag(subsetLabel, [...lineage, label])
+		const recSubTags: RecTag[] = tag.subLabels.map((subsetLabel) =>
+			buildRecTag(subsetLabel, [...lineage, label])
 		);
 
 		return {
 			lineage: [...lineage, label],
 			label,
-			subTags,
+			recSubTags,
 		};
 	};
 
-	// Build RecursiveTags for each Tag
+	// Build RecTags for each Tag
 	Object.keys(tagMap).forEach((tagLabel) => {
-		// if (!tagMap[tagLabel].parentTags.length) {
-		recursiveTags.push(buildRecursiveTag(tagLabel, []));
+		// if (!tagMap[tagLabel].parentLabels.length) {
+		RecTags.push(buildRecTag(tagLabel, []));
 		// }
 	});
 
-	return recursiveTags;
+	return RecTags;
 };
 
 // Example usage:
 // const tags: Tag[] = [
-// 	{ label: 'A', parentTags: ['B'], subTags: [] },
-// 	{ label: 'B', parentTags: ['C'], subTags: ['A'] },
-// 	{ label: 'C', parentTags: [], subTags: ['B'] },
+// 	{ label: 'A', parentLabels: ['B'], subLabels: [] },
+// 	{ label: 'B', parentLabels: ['C'], subLabels: ['A'] },
+// 	{ label: 'C', parentLabels: [], subLabels: ['B'] },
 // ];
 
-// const recursiveTags: RecursiveTag[] = makeRecursiveTags(tags);
-// console.log(recursiveTags);
+// const RecTags: RecTag[] = makeRecTags(tags);
+// console.log(RecTags);

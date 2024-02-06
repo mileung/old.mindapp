@@ -54,7 +54,7 @@ export default function Home() {
 				contentRef.current!.value = '';
 				noteTagsSet([]);
 			})
-			.catch((err) => window.alert(JSON.stringify(err, null, 2)));
+			.catch((err) => alert(JSON.stringify(err, null, 2)));
 	}, ['userId', noteTags, pages, 'parent']);
 
 	const loadNextPage = useCallback(() => {
@@ -67,9 +67,7 @@ export default function Home() {
 				pagesSet([...pages, newPage]);
 				endReachedSet(newPage.length < notesPerPage);
 			})
-			.catch((err) => {
-				console.log('err', err);
-			});
+			.catch((err) => alert('Error: ' + err));
 	}, [pages]);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -171,7 +169,7 @@ export default function Home() {
 					{suggestTags && (
 						<div className="z-10 flex flex-col rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 h-screen">
 							{tags?.map((tag, i) => {
-								const tagIndex = noteTags.indexOf(tag.tag);
+								const tagIndex = noteTags.indexOf(tag.label);
 								const inNoteTags = tagIndex !== -1;
 								return (
 									<button
@@ -185,12 +183,12 @@ export default function Home() {
 												newNoteTags.splice(tagIndex, 1);
 												noteTagsSet(newNoteTags);
 											} else {
-												noteTagsSet([...noteTags, tag.tag]);
+												noteTagsSet([...noteTags, tag.label]);
 											}
 										}}
 										onKeyDown={(e) => {}}
 									>
-										{tag.tag} {inNoteTags && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
+										{tag.label} {inNoteTags && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
 									</button>
 								);
 							})}

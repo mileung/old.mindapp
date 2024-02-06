@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { buildUrl, pinger, usePinger } from '../utils/api';
 import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
-import { RecursiveTag, Tag, makeRecursiveTags } from '../utils/tags';
+import { RecTag, Tag, makeRecTags } from '../utils/tags';
 
 const TagAdder = ({ onAdd, onBlur }: { onAdd: (label: string) => void; onBlur?: () => void }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -49,16 +49,18 @@ const TagAdder = ({ onAdd, onBlur }: { onAdd: (label: string) => void; onBlur?: 
 
 const TagEditor = ({
 	tag,
+	parentLabel,
 	onRename,
 	onSubset,
-	onDelete,
+	onRemove,
 }: {
-	tag: RecursiveTag;
+	tag: RecTag;
+	parentLabel?: string;
 	onRename: (oldLabel: string, newLabel: string) => void;
 	onSubset: (label: string, parentLabel: string) => void;
-	onDelete: (label: string) => void;
+	onRemove: (currentTagLabel: string, parentLabel?: string) => void;
 }) => {
-	const [addingSubset, addingsubTagset] = useState(false);
+	const [addingSubset, addingSubLabelSet] = useState(false);
 	const [editing, editingSet] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const makeSubsetRef = useRef<HTMLButtonElement>(null);
@@ -83,7 +85,7 @@ const TagEditor = ({
 					size={1}
 					ref={inputRef}
 					defaultValue={tag.label}
-					placeholder={`${editing ? 'Edit tag' : 'Make tags'} with Enter`}
+					placeholder="Edit tag with Enter"
 					className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-bg1 hover:border-mg2 focus:border-fg2"
 					onBlur={onBlur}
 					onFocus={() => editingSet(true)}
@@ -93,7 +95,7 @@ const TagEditor = ({
 							const newLabel = inputRef.current!.value.trim();
 							if (newLabel) {
 								if (tag.label !== newLabel) {
-									onRename(tag.label, newLabel, inputRef.current!.blur);
+									onRename(tag.label, newLabel);
 									inputRef.current?.blur();
 								}
 							} else {
@@ -107,10 +109,10 @@ const TagEditor = ({
 					<>
 						<button
 							className="xy h-8 w-8 group"
-							title="Make subset tags"
+							title="Make subtags"
 							ref={makeSubsetRef}
 							onClick={() => {
-								addingsubTagset(true);
+								addingSubLabelSet(true);
 								editingSet(false);
 							}}
 						>
@@ -120,7 +122,7 @@ const TagEditor = ({
 							className="xy h-8 w-8 group"
 							ref={xRef}
 							onClick={() => {
-								onDelete(tag.label);
+								onRemove(tag.label, parentLabel);
 								editingSet(false);
 							}}
 							onKeyDown={(e) => e.key === 'Tab' && editingSet(false)}
@@ -134,16 +136,17 @@ const TagEditor = ({
 				{addingSubset && (
 					<TagAdder
 						onAdd={(label) => onSubset(label, tag.label)}
-						onBlur={() => addingsubTagset(false)}
+						onBlur={() => addingSubLabelSet(false)}
 					/>
 				)}
-				{tag.subTags?.map((subset) => (
+				{tag.recSubTags?.map((subtag) => (
 					<TagEditor
-						key={subset.label}
-						tag={subset}
+						key={subtag.label}
+						parentLabel={subtag.label}
+						tag={subtag}
 						onRename={onRename}
 						onSubset={onSubset}
-						onDelete={onDelete}
+						onRemove={onRemove}
 					/>
 				))}
 			</div>
@@ -154,8 +157,8 @@ const TagEditor = ({
 export default function Tags() {
 	const { data, refresh } = usePinger<Tag[]>(buildUrl('get-tags'));
 
-	const recursiveTags = useMemo(() => {
-		if (data) return makeRecursiveTags(data);
+	const recTags = useMemo(() => {
+		if (data) return makeRecTags(data);
 	}, [data]);
 
 	const addTag = useCallback((label: string) => {
@@ -167,21 +170,15 @@ export default function Tags() {
 			},
 			body: JSON.stringify({ label }),
 		})
-			.then((data) => {
-				console.log('data', data);
-				// tagRef.current!.value = '';
-				refresh();
-			})
-			.catch((err) => {
-				console.log('err', err);
-			});
+			.then(refresh)
+			.catch((err) => alert('Error: ' + err));
 	}, []);
 
 	return (
 		<div className="p-3">
 			<TagAdder onAdd={addTag} />
-			{recursiveTags?.length ? (
-				recursiveTags.map((tag) => {
+			{recTags?.length ? (
+				recTags.map((tag) => {
 					return (
 						<TagEditor
 							key={tag.label}
@@ -190,28 +187,28 @@ export default function Tags() {
 								pinger(buildUrl('add-tag'), {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({ label, parentTags: [parentLabel] }),
+									body: JSON.stringify({ label, parentLabels: [parentLabel] }),
 								})
 									.then(refresh)
-									.catch((err) => {
-										console.log('err', err);
-									});
+									.catch((err) => alert('Error: ' + err));
 							}}
 							onRename={(oldLabel, newLabel) => {
-								console.log(oldLabel, newLabel);
-								// pinger(buildUrl('rename-tag'), {
-								// 	method: 'POST',
-								// 	headers: { 'Content-Type': 'application/json' },
-								// 	body: JSON.stringify({ oldName: tag, oldLabel, newLabel }),
-								// });
+								pinger(buildUrl('rename-tag'), {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ oldLabel, newLabel }),
+								})
+									.then(refresh)
+									.catch((err) => alert('Error: ' + err));
 							}}
-							onDelete={(label) => {
-								console.log(label);
-								// pinger(buildUrl('delete-tag'), {
-								// 	method: 'POST',
-								// 	headers: { 'Content-Type': 'application/json' },
-								// 	body: JSON.stringify({ tag }),
-								// });
+							onRemove={(currentTagLabel, parentLabel) => {
+								pinger(buildUrl('remove-tag'), {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ currentTagLabel, parentLabel }),
+								})
+									.then(refresh)
+									.catch((err) => alert('Error: ' + err));
 							}}
 						/>
 					);

@@ -10,6 +10,7 @@ import whoami from './routes/whoami';
 import writeNote from './routes/write-note';
 import { Settings } from './types/Settings';
 import { getSettings, mindappRootPath, mkdirIfDne, touchIfDne } from './utils/files';
+import renameTag from './routes/rename-tag';
 
 const app = express();
 const port = 3000;
@@ -24,6 +25,7 @@ app.post('/write-note', writeNote);
 app.get('/get-tags', getTags);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
+app.post('/rename-tag', renameTag);
 app.get('/get-local-notes', getLocalNotes);
 
 app.use(((err, req, res, next) => {
