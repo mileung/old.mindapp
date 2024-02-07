@@ -53,6 +53,7 @@ export default function Home() {
 				additionalNotesSet([{ createDate, ...newNote } as Note, ...additionalNotes]);
 				contentRef.current!.value = '';
 				noteTagsSet([]);
+				suggestTagsSet(false);
 			})
 			.catch((err) => alert(JSON.stringify(err, null, 2)));
 	}, ['userId', noteTags, pages, 'parent']);
@@ -151,6 +152,7 @@ export default function Home() {
 						ref={tagInput}
 						onFocus={() => suggestTagsSet(true)}
 						onBlur={onAddingTagBlur}
+						onClick={() => suggestTagsSet(true)}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter') {
 								const tag = tagInput.current!.value.trim();
@@ -162,7 +164,7 @@ export default function Home() {
 									writeNote();
 								}
 							} else if (e.key === 'Escape') {
-								suggestTagsSet(false);
+								suggestTagsSet(!suggestTags);
 							}
 						}}
 					/>
@@ -186,7 +188,10 @@ export default function Home() {
 												noteTagsSet([...noteTags, tag.label]);
 											}
 										}}
-										onKeyDown={(e) => {}}
+										onKeyDown={(e) => {
+											e.key === 'Escape' && suggestTagsSet(false);
+											e.key === 'Enter' && e.metaKey && writeNote();
+										}}
 									>
 										{tag.label} {inNoteTags && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
 									</button>
@@ -195,29 +200,12 @@ export default function Home() {
 						</div>
 					)}
 				</div>
-
-				<div className="mt-2 justify-end fx gap-2">
-					<button
-						className="px-2 text-lg font-semibold group"
-						onClick={() => {
-							if (
-								(contentRef.current!.value || noteTags.length) &&
-								window.confirm('Are you sure you want to delete this draft?')
-							) {
-								contentRef.current!.value = '';
-								noteTagsSet([]);
-							}
-						}}
-					>
-						<XMarkIcon className="h-7 w-7 text-fg2 transition group-hover:text-fg1" />
-					</button>
-					<button
-						className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
-						onClick={writeNote}
-					>
-						<PlusIcon className="h-7 w-7" />
-					</button>
-				</div>
+				<button
+					className="mt-2 px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
+					onClick={writeNote}
+				>
+					<PlusIcon className="h-7 w-7" />
+				</button>
 			</div>
 			<div className="mt-3 space-y-1.5">
 				<PageBlock page={additionalNotes} />
