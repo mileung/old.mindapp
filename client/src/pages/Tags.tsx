@@ -142,7 +142,7 @@ const TagEditor = ({
 				{tag.recSubTags?.map((subtag) => (
 					<TagEditor
 						key={subtag.label}
-						parentLabel={subtag.label}
+						parentLabel={tag.label}
 						tag={subtag}
 						onRename={onRename}
 						onSubset={onSubset}
