@@ -8,7 +8,7 @@ export const createAtom = <T,>(initialValue: T) => {
 
 export const useUserId = createAtom<null | string>(null);
 export const useTags = createAtom<null | string[]>(null);
-export const useNotes = createAtom<null | Note[]>(null);
+export const useNotes = createAtom<(null | Note)[]>([]);
 export const useCache = createAtom<Map<any, any>>(new Map());
 
 export const GlobalState = () => {

@@ -5,7 +5,7 @@ import { isDirectory, isFile, spacesPath } from '../utils/files';
 import { Note } from '../types/Note';
 import { day } from '../utils/time';
 
-const notesPerPage = 8;
+const notesPerLoad = 8;
 const getLocalNotes: RequestHandler = (req, res) => {
 	const notes: Note[] = [];
 
@@ -13,9 +13,9 @@ const getLocalNotes: RequestHandler = (req, res) => {
 	// console.log('spaceIds:', spaceIds);
 	// const searchedKeywords = req.query.searchedKeywords;
 	const oldToNew = req.query.oldToNew === 'true';
-	const pageAfter = +req.query.pageAfter! || Date.now();
-	// console.log("pageAfter:", pageAfter);
-	const startingDay = Math.floor(pageAfter / day);
+	const notesAfter = +req.query.notesAfter! || Date.now();
+	// console.log("notesAfter:", notesAfter);
+	const startingDay = Math.floor(notesAfter / day);
 	// console.log("startingDay:", startingDay);
 
 	const spacesDirs = fs
@@ -32,7 +32,7 @@ const getLocalNotes: RequestHandler = (req, res) => {
 		for (let i = 0; i < periodDirs.length; i++) {
 			const period = periodDirs[i];
 			// console.log('period:', period);
-			if (notes.length === notesPerPage) break;
+			if (notes.length === notesPerLoad) break;
 			if (startingDay % +period >= 100) continue;
 			const periodPath = path.join(spaceIdPath, period);
 			// console.log('periodPath:', periodPath);
@@ -43,7 +43,7 @@ const getLocalNotes: RequestHandler = (req, res) => {
 			for (let i = 0; i < dayDirs.length; i++) {
 				const day = dayDirs[i];
 				// console.log('day:', day);
-				if (notes.length === notesPerPage) break;
+				if (notes.length === notesPerLoad) break;
 				if (oldToNew ? startingDay > +day : startingDay < +day) continue;
 				const dayPath = path.join(periodPath, day);
 				if (!isDirectory(dayPath)) continue;
@@ -56,13 +56,13 @@ const getLocalNotes: RequestHandler = (req, res) => {
 					const fileName = notesDir[i];
 					const noteTimestamp = Number(fileName.substring(0, fileName.indexOf('.')));
 					// console.log('noteTimestamp:', noteTimestamp);
-					if (oldToNew ? pageAfter >= noteTimestamp : pageAfter <= noteTimestamp) continue;
+					if (oldToNew ? notesAfter >= noteTimestamp : notesAfter <= noteTimestamp) continue;
 					// console.log('fileName:', fileName);
 					const filePath = path.join(dayPath, fileName);
 					if (isFile(filePath) && fileName.endsWith('.json')) {
 						if (isNaN(noteTimestamp)) continue;
 						notes.push(JSON.parse(fs.readFileSync(filePath).toString()));
-						if (notes.length === notesPerPage) break;
+						if (notes.length === notesPerLoad) break;
 					}
 				}
 			}
