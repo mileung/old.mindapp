@@ -9,8 +9,8 @@ const schema = {
 		authorId: { type: 'number' },
 		content: { type: 'string' },
 		tags: { type: 'array', items: { type: 'string' } },
-		parent: { type: 'number' },
-		children: { type: 'array', items: { type: 'number' } },
+		parentId: { type: 'string' },
+		childrenIds: { type: 'array', items: { type: 'string' } },
 	},
 	required: ['createDate', 'authorId', 'content'],
 	additionalProperties: false,
@@ -22,15 +22,15 @@ export class Note {
 		public authorId: number,
 		public content: string,
 		public tags?: string[],
-		public parent?: number,
-		public children?: number[]
+		public parentId?: string,
+		public childrenIds?: string[]
 	) {
 		this.createDate = createDate;
 		this.authorId = authorId;
 		this.content = content;
 		this.tags = tags;
-		this.parent = parent;
-		this.children = children;
+		this.parentId = parentId;
+		this.childrenIds = childrenIds;
 
 		// console.log("this:", this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Note: ' + JSON.stringify(this));

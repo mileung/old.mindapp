@@ -9,8 +9,9 @@ import removeTag from './routes/remove-tag';
 import whoami from './routes/whoami';
 import writeNote from './routes/write-note';
 import { Settings } from './types/Settings';
-import { getSettings, mindappRootPath, mkdirIfDne, touchIfDne } from './utils/files';
+import { getSettings, mindappRootPath, mkdirIfDne, writeIfDne } from './utils/files';
 import renameTag from './routes/rename-tag';
+import getNote from './routes/get-note';
 
 const app = express();
 const port = 3000;
@@ -22,6 +23,7 @@ app.use(express.json());
 app.get('/', root);
 app.get('/whoami', whoami);
 app.post('/write-note', writeNote);
+app.post('/get-note', getNote);
 app.get('/get-tags', getTags);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
@@ -39,7 +41,7 @@ app.use(((err, req, res, next) => {
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	touchIfDne(path.join(mindappRootPath, 'settings.json'), JSON.stringify(new Settings()));
+	writeIfDne(path.join(mindappRootPath, 'settings.json'), JSON.stringify(new Settings()));
 	mkdirIfDne(path.join(mindappRootPath, 'spaces'));
 	global.startDate = getSettings().startDate;
 	console.log(`Server is running on http://localhost:${port}`);

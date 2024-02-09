@@ -5,7 +5,7 @@ import { Tag } from '../utils/tags';
 import { Note } from './NoteBlock';
 import { useNotes } from './GlobalState';
 
-export const NoteWriter = () => {
+export const NoteWriter = ({ parentId, onLink }: { parentId?: string; onLink?: () => void }) => {
 	const [notes, notesSet] = useNotes();
 	const contentRef = useRef<null | HTMLTextAreaElement>(null);
 	const [noteTags, noteTagsSet] = useState<string[]>([
@@ -25,27 +25,34 @@ export const NoteWriter = () => {
 	const writeNote = useCallback(() => {
 		if (!contentRef.current!.value) return;
 		const userId = 123;
+		const [parentCreateDate, parentAuthorId] = (parentId || '').split('.');
+		console.log('parentId:', parentId);
 		const newNote: Partial<Note> = {
 			authorId: userId,
 			content: contentRef.current!.value,
 			tags: noteTags,
 		};
+
 		pinger<{ createDate: number }>(buildUrl('write-note'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify(newNote),
+			body: JSON.stringify({
+				parentCreateDate: +parentCreateDate,
+				parentAuthorId: +parentAuthorId,
+				note: newNote,
+			}),
 		})
 			.then(({ createDate }) => {
 				notesSet([{ createDate, ...newNote } as Note, ...notes]);
+				onLink && onLink();
 				contentRef.current!.value = '';
 				noteTagsSet([]);
 				suggestTagsSet(false);
 			})
 			.catch((err) => alert(JSON.stringify(err, null, 2)));
-		// }, ['userId', noteTags, pages, 'parent']);
-	}, ['userId', noteTags, 'parent']);
+	}, [parentId, onLink, noteTags]);
 
 	const onAddingTagBlur = useCallback(() => {
 		setTimeout(() => {

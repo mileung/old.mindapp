@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { spacesPath } from '../utils/files';
+import { parseFile, spacesPath } from '../utils/files';
 import { Tag } from '../types/Tag';
 import { makeSetArr } from '../utils/tags';
 
@@ -13,7 +13,7 @@ const renameTag: RequestHandler = (req, res) => {
 
 	if (oldTag.label !== newTag.label) {
 		const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
-		const tags: Tag[] = JSON.parse(fs.readFileSync(tagsPath).toString());
+		const tags = parseFile<Tag[]>(tagsPath);
 		// I get that this could be optimized into 1 for loop but don't do that until it's actually slow for the user
 		const oldTagIndex = tags.findIndex((tag) => tag.label === oldTag.label);
 		const newTagIndex = tags.findIndex((tag) => tag.label === newTag.label);

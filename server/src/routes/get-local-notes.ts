@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { isDirectory, isFile, spacesPath } from '../utils/files';
+import { isDirectory, isFile, parseFile, spacesPath } from '../utils/files';
 import { Note } from '../types/Note';
 import { day } from '../utils/time';
 
@@ -61,7 +61,7 @@ const getLocalNotes: RequestHandler = (req, res) => {
 					const filePath = path.join(dayPath, fileName);
 					if (isFile(filePath) && fileName.endsWith('.json')) {
 						if (isNaN(noteTimestamp)) continue;
-						notes.push(JSON.parse(fs.readFileSync(filePath).toString()));
+						notes.push(parseFile(filePath));
 						if (notes.length === notesPerLoad) break;
 					}
 				}
