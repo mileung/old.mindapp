@@ -86,17 +86,17 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 			} else if (event.key === 'Enter' && isMetaDown && !event.repeat) {
 				// console.log('Enter key with meta pressed');
 
-				const focusedSuggestion = tagSuggestionsRefs.current.find(
+				const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
 					(e) => e === document.activeElement
 				);
 				const focusedOnThoughtWriter =
 					document.activeElement === contentTextArea.current ||
 					document.activeElement === tagInput.current ||
-					focusedSuggestion;
+					focusedSuggestionIndex !== -1;
 
 				if (focusedOnThoughtWriter) {
 					writeThought(
-						[focusedSuggestion?.innerHTML || '', tagInput.current!.value].filter((e) => !!e)
+						[tags![focusedSuggestionIndex].label, tagInput.current!.value].filter((e) => !!e)
 					);
 				}
 			}
@@ -108,7 +108,7 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 			document.removeEventListener('keydown', handleKeyPress);
 			document.removeEventListener('keyup', handleKeyPress);
 		};
-	}, [writeThought]);
+	}, [tags, writeThought]);
 
 	return (
 		<div className="w-full flex flex-col">
