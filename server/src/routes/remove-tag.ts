@@ -1,12 +1,10 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
-import path from 'path';
-import { parseFile, spacesPath } from '../utils/files';
 import { Tag } from '../types/Tag';
+import { parseFile, tagsPath } from '../utils/files';
 
 const removeTag: RequestHandler = (req, res) => {
-	const spaceId = 'localhost';
-	const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
+	const spaceId = null;
 	const tags = parseFile<Tag[]>(tagsPath);
 
 	const { currentTagLabel, parentLabel } = req.body;

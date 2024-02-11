@@ -1,15 +1,12 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
-import path from 'path';
-import { parseFile, spacesPath } from '../utils/files';
 import { Tag } from '../types/Tag';
+import { parseFile, tagsPath } from '../utils/files';
 import { makeSetArr } from '../utils/tags';
 
 const addTag: RequestHandler = (req, res) => {
-	const spaceId = 'localhost';
 	// console.log('req.body:', req.body);
 	const newTag = new Tag(req.body.label.trim(), req.body.parentLabels);
-	const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
 	const tags = parseFile<Tag[]>(tagsPath);
 
 	const existingTagIndex = tags.findIndex((tag) => tag.label === newTag.label);

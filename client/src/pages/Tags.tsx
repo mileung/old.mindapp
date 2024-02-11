@@ -3,6 +3,7 @@ import { buildUrl, pinger, usePinger } from '../utils/api';
 import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecTag, Tag, makeRecTags } from '../utils/tags';
+import { tagsUse } from '../components/GlobalState';
 
 const TagAdder = ({ onAdd, onBlur }: { onAdd: (label: string) => void; onBlur?: () => void }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -155,23 +156,24 @@ const TagEditor = ({
 };
 
 export default function Tags() {
-	const { data, refresh } = usePinger<Tag[]>(buildUrl('get-tags'));
-
+	const [tags, tagsSet] = tagsUse();
 	const recTags = useMemo(() => {
-		if (data) return makeRecTags(data);
-	}, [data]);
+		if (tags) return makeRecTags(tags);
+	}, [tags]);
+	const refreshTags = useCallback(() => {
+		pinger<Tag[]>(buildUrl('get-tags'))
+			.then((data) => tagsSet(data))
+			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+	}, []);
 
 	const addTag = useCallback((label: string) => {
-		// console.log('label:', label);
 		pinger(buildUrl('add-tag'), {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ label }),
 		})
-			.then(refresh)
-			.catch((err) => alert('Error: ' + err));
+			.then(refreshTags)
+			.catch((err) => alert('Error: ' + JSON.stringify(err)));
 	}, []);
 
 	return (
@@ -189,8 +191,8 @@ export default function Tags() {
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ label, parentLabels: [parentLabel] }),
 								})
-									.then(refresh)
-									.catch((err) => alert('Error: ' + err));
+									.then(refreshTags)
+									.catch((err) => alert('Error: ' + JSON.stringify(err)));
 							}}
 							onRename={(oldLabel, newLabel) => {
 								pinger(buildUrl('rename-tag'), {
@@ -198,8 +200,8 @@ export default function Tags() {
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ oldLabel, newLabel }),
 								})
-									.then(refresh)
-									.catch((err) => alert('Error: ' + err));
+									.then(refreshTags)
+									.catch((err) => alert('Error: ' + JSON.stringify(err)));
 							}}
 							onRemove={(currentTagLabel, parentLabel) => {
 								pinger(buildUrl('remove-tag'), {
@@ -207,8 +209,8 @@ export default function Tags() {
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ currentTagLabel, parentLabel }),
 								})
-									.then(refresh)
-									.catch((err) => alert('Error: ' + err));
+									.then(refreshTags)
+									.catch((err) => alert('Error: ' + JSON.stringify(err)));
 							}}
 						/>
 					);

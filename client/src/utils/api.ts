@@ -1,6 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useCache } from '../components/GlobalState';
-
 export function buildUrl(basePath: string, params?: Record<string, any>) {
 	let url: string;
 	if (!params) {
@@ -23,35 +20,3 @@ export const pinger = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 			return res.status === 200 ? resolve(json) : reject(json);
 		});
 	});
-
-export const usePinger = <T>(...args: Parameters<typeof fetch>) => {
-	const cacheKey = useMemo(() => JSON.stringify(args), [args]);
-	const [cache, cacheSet] = useCache();
-	const data = useMemo<null | T>(() => cache.get(cacheKey) || null, [cache, args]);
-	const [loading, loadingSet] = useState(data === null);
-	const [error, errorSet] = useState<null | string>(null);
-	const [flip, flipSet] = useState(false);
-
-	const refresh = useCallback(() => {
-		flipSet(!flip);
-		loadingSet(true);
-		loadingSet(true);
-	}, [flip]);
-
-	useEffect(() => {
-		!data && loadingSet(true);
-	}, [data]);
-
-	useEffect(() => {
-		pinger<T>(...args)
-			.then((res) => {
-				const map = cache;
-				map.set(cacheKey, res);
-				cacheSet(map);
-			})
-			.catch((err) => errorSet(err))
-			.finally(() => loadingSet(false));
-	}, [cacheKey, JSON.stringify(args), flip]);
-
-	return { data, loading, error, refresh };
-};

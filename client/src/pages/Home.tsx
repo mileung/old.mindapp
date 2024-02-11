@@ -1,29 +1,37 @@
-import { useCallback, useEffect } from 'react';
-import NoteBlock, { Note } from '../components/NoteBlock';
-import { NoteWriter } from '../components/NoteWriter';
+import { useCallback, useEffect, useState } from 'react';
+import ThoughtBlock, { RecThought } from '../components/ThoughtBlock';
+import { ThoughtWriter } from '../components/ThoughtWriter';
 import { buildUrl, pinger } from '../utils/api';
-import { useNotes } from '../components/GlobalState';
 
 export default function Home() {
-	const [notes, notesSet] = useNotes();
+	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
 
-	const loadMoreNotes = useCallback(() => {
-		const lastNote = notes[notes.length - 1];
-		if (lastNote === null) return;
-		const notesAfter = notes.length ? lastNote.createDate : Date.now();
-		pinger<Note[]>(buildUrl('get-local-notes', { notesAfter, oldToNew: false }))
-			.then((additionalNotes) => {
-				const notesPerLoad = 8;
-				const newNotes = [...notes, ...additionalNotes];
-				additionalNotes.length < notesPerLoad && newNotes.push(null);
-				notesSet(newNotes);
+	const loadMoreThoughts = useCallback(() => {
+		const lastRoot = roots[roots.length - 1];
+		if (lastRoot === null) return;
+		const thoughtsAfter = roots.length ? lastRoot.createDate : Date.now();
+
+		pinger<RecThought[]>(
+			buildUrl('get-local-thoughts', {
+				thoughtsAfter,
+				oldToNew: false,
+				ignoreRootIds: roots.map(
+					(root) => root && root.spaceId + '.' + root.createDate + '.' + root.authorId
+				),
 			})
-			.catch((err) => alert('Error: ' + err));
-	}, [notes]);
+		)
+			.then((additionalRoots) => {
+				const rootsPerLoad = 8;
+				const rootsNew = [...roots, ...additionalRoots];
+				additionalRoots.length < rootsPerLoad && rootsNew.push(null);
+				rootsSet(rootsNew);
+			})
+			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+	}, [roots]);
 
-	useEffect(() => loadMoreNotes(), []);
+	useEffect(() => loadMoreThoughts(), []);
 
-	// QUESTION: Why does get-local-notes need cors but not whoami?
+	// QUESTION: Why does get-local-thoughts need cors but not whoami?
 	// useEffect(() => {
 	// 	(async () => {
 	// 		const thing = await (await fetch('http://localhost:3000/whoami')).json();
@@ -33,11 +41,14 @@ export default function Home() {
 
 	return (
 		<div className="p-3 flex-1">
-			<NoteWriter />
+			<ThoughtWriter />
 			<div className="mt-3 space-y-1.5">
-				{notes.map((note, i) => note && <NoteBlock key={i} note={note} />)}
-				{notes[notes.length - 1] !== null && (
-					<button className="rounded self-center px-3 bg-mg1 hover:bg-mg2" onClick={loadMoreNotes}>
+				{roots.map((thought, i) => thought && <ThoughtBlock key={i} thought={thought} />)}
+				{roots[roots.length - 1] !== null && (
+					<button
+						className="rounded self-center px-3 bg-mg1 hover:bg-mg2"
+						onClick={loadMoreThoughts}
+					>
 						Load more
 					</button>
 				)}

@@ -3,46 +3,51 @@ import express, { ErrorRequestHandler } from 'express';
 import path from 'path';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
-import getLocalNotes from './routes/get-local-notes';
+import getLocalThoughts from './routes/get-local-thoughts';
 import getTags from './routes/get-tags';
 import removeTag from './routes/remove-tag';
 import whoami from './routes/whoami';
-import writeNote from './routes/write-note';
+import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
-import { getSettings, mindappRootPath, mkdirIfDne, writeIfDne } from './utils/files';
+import {
+	getSettings,
+	mindappRootPath,
+	mkdirIfDne,
+	parseFile,
+	settingsPath,
+	timelinePath,
+	touchIfDne,
+} from './utils/files';
 import renameTag from './routes/rename-tag';
-import getNote from './routes/get-note';
+import getThought from './routes/get-thought';
+import { Thought } from './types/Thought';
 
 const app = express();
 const port = 3000;
 
-// QUESTION: Why does get-local-notes need cors but not whoami?
+// QUESTION: Why does get-local-thoughts need cors but not whoami?
 app.use(cors());
 app.use(express.json());
 
 app.get('/', root);
 app.get('/whoami', whoami);
-app.post('/write-note', writeNote);
-app.post('/get-note', getNote);
+app.post('/write-thought', writeThought);
+app.post('/get-thought', getThought);
 app.get('/get-tags', getTags);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
 app.post('/rename-tag', renameTag);
-app.get('/get-local-notes', getLocalNotes);
+app.get('/get-local-thoughts', getLocalThoughts);
 
 app.use(((err, req, res, next) => {
 	console.log('err:', err);
 	res.status(err.status || 500);
-	res.send({
-		error: {
-			message: err.message,
-		},
-	});
+	res.send({ error: { message: err.message } });
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	writeIfDne(path.join(mindappRootPath, 'settings.json'), JSON.stringify(new Settings()));
-	mkdirIfDne(path.join(mindappRootPath, 'spaces'));
+	touchIfDne(settingsPath, JSON.stringify(new Settings()));
+	mkdirIfDne(timelinePath);
 	global.startDate = getSettings().startDate;
 	console.log(`Server is running on http://localhost:${port}`);
 });

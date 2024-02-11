@@ -1,16 +1,25 @@
 import { atom, useAtom } from 'jotai';
-import { Note } from './NoteBlock';
+import { useEffect } from 'react';
+import { buildUrl, pinger } from '../utils/api';
+import { Tag } from '../utils/tags';
 
 export const createAtom = <T,>(initialValue: T) => {
 	const atomInstance = atom<T>(initialValue);
 	return () => useAtom(atomInstance);
 };
 
-export const useUserId = createAtom<null | string>(null);
-export const useTags = createAtom<null | string[]>(null);
-export const useNotes = createAtom<(null | Note)[]>([]);
-export const useCache = createAtom<Map<any, any>>(new Map());
+export const spaceIdUse = createAtom<null | number>(null);
+export const personaUse = createAtom<null | number>(null);
+export const tagsUse = createAtom<null | Tag[]>(null);
 
 export const GlobalState = () => {
+	const [, tagsSet] = tagsUse();
+
+	useEffect(() => {
+		pinger<Tag[]>(buildUrl('get-tags'))
+			.then((data) => tagsSet(data))
+			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+	}, []);
+
 	return null;
 };

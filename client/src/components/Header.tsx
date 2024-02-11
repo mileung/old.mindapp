@@ -28,6 +28,8 @@ window.addEventListener('scroll', () => {
 });
 
 export default function Header() {
+	// spaceIdUse
+	// personaUse
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('search') || '';
 	const searchRef = useRef<HTMLInputElement>(null);
@@ -43,11 +45,11 @@ export default function Header() {
 				<img src="mindapp-logo.svg" alt="logo" className="h-7" />
 				<p className="ml-2 text-2xl font-black">Mindapp</p>
 			</Link>
-			<div className="w-full mx-2 max-w-md flex rounded border-2 border-mg1">
+			<div className="w-full mx-2 max-w-md flex rounded border-2 border-mg1 focus:border-white">
 				<input
 					ref={searchRef}
 					className="w-full h-full text-lg px-2"
-					placeholder="Keywords"
+					placeholder="Search"
 					defaultValue={searchedKeywords || ''}
 					onKeyDown={(e) => {
 						if (e.key === 'Enter') {

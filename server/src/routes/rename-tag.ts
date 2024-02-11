@@ -1,18 +1,15 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
-import path from 'path';
-import { parseFile, spacesPath } from '../utils/files';
 import { Tag } from '../types/Tag';
+import { parseFile, tagsPath } from '../utils/files';
 import { makeSetArr } from '../utils/tags';
 
 const renameTag: RequestHandler = (req, res) => {
-	const spaceId = 'localhost';
 	// console.log('req.body:', req.body);
 	let oldTag = new Tag(req.body.oldLabel.trim());
 	const newTag = new Tag(req.body.newLabel.trim());
 
 	if (oldTag.label !== newTag.label) {
-		const tagsPath = path.join(spacesPath, spaceId, 'tags.json');
 		const tags = parseFile<Tag[]>(tagsPath);
 		// I get that this could be optimized into 1 for loop but don't do that until it's actually slow for the user
 		const oldTagIndex = tags.findIndex((tag) => tag.label === oldTag.label);
