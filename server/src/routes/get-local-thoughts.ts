@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { isDirectory, isFile, parseFile, timelinePath } from '../utils/files';
+import { isDirectory, isFile, timelinePath } from '../utils/files';
 import { day } from '../utils/time';
 import { Thought } from '../types/Thought';
 

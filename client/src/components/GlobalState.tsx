@@ -18,7 +18,7 @@ export const GlobalState = () => {
 	useEffect(() => {
 		pinger<Tag[]>(buildUrl('get-tags'))
 			.then((data) => tagsSet(data))
-			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+			.catch((err) => alert(JSON.stringify(err)));
 	}, []);
 
 	return null;

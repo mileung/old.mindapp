@@ -41,7 +41,7 @@ export class Thought {
 		this.createDate = createDate;
 		this.authorId = authorId;
 		this.content = content;
-		this.tags = tags;
+		this.tags = !tags ? tags : tags.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
 

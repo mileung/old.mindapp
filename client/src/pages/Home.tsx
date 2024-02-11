@@ -26,7 +26,7 @@ export default function Home() {
 				additionalRoots.length < rootsPerLoad && rootsNew.push(null);
 				rootsSet(rootsNew);
 			})
-			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+			.catch((err) => alert(JSON.stringify(err)));
 	}, [roots]);
 
 	useEffect(() => loadMoreThoughts(), []);

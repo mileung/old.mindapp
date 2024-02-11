@@ -1,10 +1,10 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { GlobalState } from './components/GlobalState';
 import Header from './components/Header';
 import Home from './pages/Home';
 import Preferences from './pages/Preferences';
+import Results from './pages/Results';
 import Tags from './pages/Tags';
-import results from './pages/results';
-import { GlobalState } from './components/GlobalState';
 
 function App() {
 	return (
@@ -15,7 +15,7 @@ function App() {
 				<Routes>
 					<Route path="/" Component={Home} />
 					<Route path="/tags" Component={Tags} />
-					<Route path="/results" Component={results} />
+					<Route path="/results" Component={Results} />
 					<Route path="/preferences" Component={Preferences} />
 				</Routes>
 			</BrowserRouter>

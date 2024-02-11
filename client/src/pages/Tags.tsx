@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { buildUrl, pinger, usePinger } from '../utils/api';
+import { buildUrl, pinger } from '../utils/api';
 import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecTag, Tag, makeRecTags } from '../utils/tags';
@@ -163,7 +163,7 @@ export default function Tags() {
 	const refreshTags = useCallback(() => {
 		pinger<Tag[]>(buildUrl('get-tags'))
 			.then((data) => tagsSet(data))
-			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+			.catch((err) => alert(JSON.stringify(err)));
 	}, []);
 
 	const addTag = useCallback((label: string) => {
@@ -173,7 +173,7 @@ export default function Tags() {
 			body: JSON.stringify({ label }),
 		})
 			.then(refreshTags)
-			.catch((err) => alert('Error: ' + JSON.stringify(err)));
+			.catch((err) => alert(JSON.stringify(err)));
 	}, []);
 
 	return (
@@ -192,7 +192,7 @@ export default function Tags() {
 									body: JSON.stringify({ label, parentLabels: [parentLabel] }),
 								})
 									.then(refreshTags)
-									.catch((err) => alert('Error: ' + JSON.stringify(err)));
+									.catch((err) => alert(JSON.stringify(err)));
 							}}
 							onRename={(oldLabel, newLabel) => {
 								pinger(buildUrl('rename-tag'), {
@@ -201,7 +201,7 @@ export default function Tags() {
 									body: JSON.stringify({ oldLabel, newLabel }),
 								})
 									.then(refreshTags)
-									.catch((err) => alert('Error: ' + JSON.stringify(err)));
+									.catch((err) => alert(JSON.stringify(err)));
 							}}
 							onRemove={(currentTagLabel, parentLabel) => {
 								pinger(buildUrl('remove-tag'), {
@@ -210,7 +210,7 @@ export default function Tags() {
 									body: JSON.stringify({ currentTagLabel, parentLabel }),
 								})
 									.then(refreshTags)
-									.catch((err) => alert('Error: ' + JSON.stringify(err)));
+									.catch((err) => alert(JSON.stringify(err)));
 							}}
 						/>
 					);

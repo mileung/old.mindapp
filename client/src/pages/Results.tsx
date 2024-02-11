@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 
-export default function results() {
+export default function Results() {
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('search') || '';
 
