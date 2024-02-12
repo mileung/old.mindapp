@@ -8,15 +8,15 @@ const ajv = new Ajv();
 const schema = {
 	type: 'object',
 	properties: {
-		spaceId: { type: ['null', 'number'] },
 		createDate: { type: 'number' },
 		authorId: { type: ['null', 'number'] },
+		spaceId: { type: ['null', 'number'] },
 		content: { type: 'string' },
 		tags: { type: 'array', items: { type: 'string' } },
 		parentId: { type: 'string' },
 		childrenIds: { type: 'array', items: { type: 'string' } },
 	},
-	required: ['spaceId', 'createDate', 'authorId', 'content'],
+	required: ['createDate', 'authorId', 'spaceId', 'content'],
 	additionalProperties: false,
 };
 
@@ -25,21 +25,40 @@ export class Thought {
 	public filePath: string;
 	public parent?: Thought;
 	public children?: Thought[];
+	// Above are temporary. Below are saved on disk.
+	public createDate: number;
+	public authorId: null | number;
+	public spaceId: null | number;
+	public content: string;
+	public tags?: string[];
+	public parentId?: string;
+	public childrenIds?: string[] = [];
 
 	constructor(
-		public spaceId: null | number,
-		public createDate: number,
-		public authorId: null | number,
-		public content: string,
-		public tags?: string[],
-		public parentId?: string,
-		public childrenIds: string[] = [],
-		write = false
+		{
+			createDate,
+			authorId,
+			spaceId,
+			content,
+			tags,
+			parentId,
+			childrenIds,
+		}: {
+			createDate: number;
+			authorId: null | number;
+			spaceId: null | number;
+			content: string;
+			tags?: string[];
+			parentId?: string;
+			childrenIds?: string[];
+		},
+		write?: boolean,
+		overwrite?: boolean
 	) {
 		// save these props on disk
-		this.spaceId = spaceId;
 		this.createDate = createDate;
 		this.authorId = authorId;
+		this.spaceId = spaceId;
 		this.content = content;
 		this.tags = !tags ? tags : tags.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 		this.parentId = parentId;
@@ -49,8 +68,8 @@ export class Thought {
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Thought: ' + JSON.stringify(this));
 
 		// Saving these props is not necessary
-		this.id = spaceId + '.' + createDate + '.' + authorId;
-		this.filePath = Thought.calcFilePath(spaceId, createDate, authorId);
+		this.id = createDate + '.' + authorId + '.' + spaceId;
+		this.filePath = Thought.calcFilePath(createDate, authorId, spaceId);
 
 		if (write) {
 			if (parentId) {
@@ -65,6 +84,8 @@ export class Thought {
 
 				// overwrite parent when if it exists and child was written
 				parent.overwrite();
+			} else if (overwrite) {
+				this.overwrite();
 			} else {
 				this.write();
 			}
@@ -73,9 +94,9 @@ export class Thought {
 
 	get criticalProps() {
 		return {
-			spaceId: this.spaceId,
 			createDate: this.createDate,
 			authorId: this.authorId,
+			spaceId: this.spaceId,
 			content: this.content,
 			tags: this.tags,
 			parentId: this.parentId,
@@ -101,14 +122,16 @@ export class Thought {
 	}
 
 	expand() {
-		this.children = this.childrenIds.map((id) => {
-			const child = Thought.parse(id);
-			child.expand();
-			return child;
-		});
+		this.children = !this.childrenIds
+			? this.childrenIds
+			: this.childrenIds.map((id) => {
+					const child = Thought.parse(id);
+					child.expand();
+					return child;
+				});
 	}
 
-	static calcFilePath(spaceId: null | number, createDate: number, authorId: null | number) {
+	static calcFilePath(createDate: number, authorId: null | number, spaceId: null | number) {
 		const daysSince1970 = +createDate / day;
 		const period = Math.floor(daysSince1970 / 100) * 100 + '';
 
@@ -116,25 +139,25 @@ export class Thought {
 			timelinePath,
 			period,
 			Math.floor(daysSince1970) + '',
-			`${spaceId}.${createDate}.${authorId}.json`
+			`${createDate}.${authorId}.${spaceId}.json`
 		);
 	}
 
 	static parse(thoughtId: string) {
-		const [spaceId, createDate, authorId] = thoughtId.split('.');
-		return Thought.read(this.calcFilePath(+spaceId || null, +createDate, +authorId || null));
+		const [createDate, authorId, spaceId] = thoughtId.split('.');
+		return Thought.read(this.calcFilePath(+createDate, +authorId || null, +spaceId || null));
 	}
 
 	static read(filePath: string) {
 		const o = parseFile<Thought>(filePath);
-		return new Thought(
-			o.spaceId,
-			o.createDate,
-			o.authorId,
-			o.content,
-			o.tags,
-			o.parentId,
-			o.childrenIds
-		);
+		return new Thought({
+			createDate: o.createDate,
+			authorId: o.authorId,
+			spaceId: o.spaceId,
+			content: o.content,
+			tags: o.tags,
+			parentId: o.parentId,
+			childrenIds: o.childrenIds,
+		});
 	}
 }

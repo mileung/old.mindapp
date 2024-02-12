@@ -2,19 +2,30 @@ import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
-	const spaceId = null;
-	const now = Date.now();
-	const {
-		thought: { authorId, content, tags },
+	let {
 		parentId,
+		thought: { createDate, authorId, spaceId, content, tags },
 	} = req.body as {
-		thought: Thought;
 		parentId?: string;
+		thought: Thought;
 	};
+	const overwrite = !!createDate;
+	createDate = createDate || Date.now(); // can be used for editing
 
-	new Thought(spaceId, now, authorId, content, tags, parentId, [], true);
+	new Thought(
+		{
+			createDate,
+			authorId,
+			spaceId,
+			content,
+			tags,
+			parentId,
+		},
+		true,
+		overwrite
+	);
 
-	res.send({ createDate: now });
+	res.send({ createDate });
 };
 
 export default writeThought;

@@ -31,13 +31,13 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 			const dayPath = path.join(periodPath, day);
 			if (!isDirectory(dayPath)) continue;
 			const thoughtFiles = fs.readdirSync(dayPath).sort((a, b) => {
-				a = a.split('.')[1];
-				b = b.split('.')[1];
+				a = a.split('.')[0];
+				b = b.split('.')[0];
 				return oldToNew ? +a - +b : +b - +a;
 			});
 			for (let i = 0; i < thoughtFiles.length; i++) {
 				const fileName = thoughtFiles[i];
-				const createDate = Number(fileName.split('.')[1]);
+				const createDate = Number(fileName.split('.')[0]);
 				if (isNaN(createDate)) continue;
 				const filePath = path.join(dayPath, fileName);
 				if (isFile(filePath) && fileName.endsWith('.json')) {

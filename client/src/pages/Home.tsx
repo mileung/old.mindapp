@@ -16,7 +16,7 @@ export default function Home() {
 				thoughtsAfter,
 				oldToNew: false,
 				ignoreRootIds: roots.map(
-					(root) => root && root.spaceId + '.' + root.createDate + '.' + root.authorId
+					(root) => root && root.createDate + '.' + root.authorId + '.' + root.spaceId
 				),
 			})
 		)

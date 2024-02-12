@@ -5,7 +5,15 @@ import { buildUrl, pinger } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { Tag } from '../utils/tags';
 
-export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?: () => void }) => {
+export const ThoughtWriter = ({
+	editId,
+	parentId,
+	onLink,
+}: {
+	editId?: string;
+	parentId?: string;
+	onLink?: () => void;
+}) => {
 	const [tags, tagsSet] = tagsUse();
 	const [personaId] = personaUse();
 	const [thoughtTags, thoughtTagsSet] = useState<string[]>([]);
@@ -29,8 +37,9 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 				body: JSON.stringify({
 					parentId,
 					thought: {
-						spaceId: null,
+						createDate: +editId?.split('.')[0]! || undefined,
 						authorId: personaId,
+						spaceId: null,
 						content: contentTextArea.current!.value,
 						tags: [...thoughtTags, ...additionalTags],
 					},
@@ -62,7 +71,7 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 					.catch((err) => alert(JSON.stringify(err)));
 			}
 		},
-		[parentId, onLink, thoughtTags]
+		[editId, parentId, onLink, thoughtTags]
 	);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -84,8 +93,6 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 			if (event.key === 'Meta') {
 				isMetaDown = event.type === 'keydown';
 			} else if (event.key === 'Enter' && isMetaDown && !event.repeat) {
-				// console.log('Enter key with meta pressed');
-
 				const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
 					(e) => e === document.activeElement
 				);
@@ -96,7 +103,7 @@ export const ThoughtWriter = ({ parentId, onLink }: { parentId?: string; onLink?
 
 				if (focusedOnThoughtWriter) {
 					writeThought(
-						[tags![focusedSuggestionIndex].label, tagInput.current!.value].filter((e) => !!e)
+						[tags![focusedSuggestionIndex]?.label, tagInput.current!.value].filter((e) => !!e)
 					);
 				}
 			}
