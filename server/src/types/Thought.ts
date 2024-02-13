@@ -2,6 +2,7 @@ import Ajv from 'ajv';
 import path from 'path';
 import { parseFile, timelinePath, touchIfDne, writeFile } from '../utils/files';
 import { day } from '../utils/time';
+import { makeSortedUniqueArr } from '../utils/tags';
 
 const ajv = new Ajv();
 
@@ -60,7 +61,7 @@ export class Thought {
 		this.authorId = authorId;
 		this.spaceId = spaceId;
 		this.content = content;
-		this.tags = !tags ? tags : tags.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+		this.tags = !tags ? tags : makeSortedUniqueArr(tags);
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
 

@@ -3,20 +3,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { tagsUse, personaUse } from './GlobalState';
 import { buildUrl, pinger } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { Tag } from '../utils/tags';
+import { Tag, makeSortedUniqueArr } from '../utils/tags';
+import { Thought } from './ThoughtBlock';
+import { onFocus } from '../utils/input';
 
 export const ThoughtWriter = ({
+	initialContent,
+	initialThoughtTags,
 	editId,
 	parentId,
-	onLink,
+	onWrite,
 }: {
+	initialContent?: string;
+	initialThoughtTags?: string[];
 	editId?: string;
 	parentId?: string;
-	onLink?: () => void;
+	onWrite?: (thought: Thought) => void;
 }) => {
 	const [tags, tagsSet] = tagsUse();
 	const [personaId] = personaUse();
-	const [thoughtTags, thoughtTagsSet] = useState<string[]>([]);
+	const [thoughtTags, thoughtTagsSet] = useState<string[]>(initialThoughtTags || []);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = useRef<null | HTMLTextAreaElement>(null);
@@ -31,7 +37,7 @@ export const ThoughtWriter = ({
 	const writeThought = useCallback(
 		(additionalTags: string[] = []) => {
 			if (!contentTextArea.current!.value) return;
-			pinger<{ createDate: number }>(buildUrl('write-thought'), {
+			pinger<Thought>(buildUrl('write-thought'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -41,13 +47,13 @@ export const ThoughtWriter = ({
 						authorId: personaId,
 						spaceId: null,
 						content: contentTextArea.current!.value,
-						tags: [...thoughtTags, ...additionalTags],
+						tags: makeSortedUniqueArr([...thoughtTags, ...additionalTags]),
 					},
 				}),
 			})
-				.then(() => {
+				.then((thought) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
-					onLink && onLink();
+					onWrite && onWrite(thought);
 					contentTextArea.current!.value = '';
 					thoughtTagsSet([]);
 					suggestTagsSet(false);
@@ -71,7 +77,7 @@ export const ThoughtWriter = ({
 					.catch((err) => alert(JSON.stringify(err)));
 			}
 		},
-		[editId, parentId, onLink, thoughtTags]
+		[editId, parentId, onWrite, thoughtTags]
 	);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -121,7 +127,9 @@ export const ThoughtWriter = ({
 		<div className="w-full flex flex-col">
 			<textarea
 				autoFocus
+				defaultValue={initialContent}
 				ref={contentTextArea}
+				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
 				className="rounded text-xl font-medium p-3 w-full max-w-full resize-y bg-mg1 transition brightness-75 focus:brightness-100"

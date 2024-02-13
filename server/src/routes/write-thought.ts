@@ -12,7 +12,7 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 	const overwrite = !!createDate;
 	createDate = createDate || Date.now(); // can be used for editing
 
-	new Thought(
+	const thought = new Thought(
 		{
 			createDate,
 			authorId,
@@ -22,10 +22,10 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 			parentId,
 		},
 		true,
-		overwrite
+		overwrite,
 	);
 
-	res.send({ createDate });
+	res.status(200).send(thought);
 };
 
 export default writeThought;

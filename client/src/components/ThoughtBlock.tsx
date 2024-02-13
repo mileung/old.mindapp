@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/time';
 import { ThoughtWriter } from './ThoughtWriter';
+import { resultsUse } from './GlobalState';
 
 export type Thought = {
 	createDate: number;
@@ -31,18 +32,21 @@ export type RecThought = {
 };
 
 export default function ThoughtBlock({
+	resultsIndices,
 	thought,
 	depth = 0,
 }: {
+	resultsIndices: number[];
 	thought: RecThought;
 	depth?: number;
 }) {
+	const [results, resultsSet] = resultsUse();
 	const [editing, editingSet] = useState(false);
 	const [open, openSet] = useState(true);
 	const [linking, linkingSet] = useState(false);
 	const thoughId = useMemo(
 		() => thought.createDate + '.' + thought.authorId + '.' + thought.spaceId,
-		[thought]
+		[thought],
 	);
 
 	return (
@@ -60,7 +64,21 @@ export default function ThoughtBlock({
 				<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 					{editing ? (
 						<div className="mt-1">
-							<ThoughtWriter editId={thoughId} />
+							<ThoughtWriter
+								editId={thoughId}
+								initialContent={thought.content}
+								initialThoughtTags={thought.tags}
+								onWrite={(thought) => {
+									editingSet(false);
+									const newResults = [...results] as RecThought[];
+									let pointer = newResults;
+									for (let i = 0; i < resultsIndices.length - 1; i++) {
+										pointer = pointer[resultsIndices[i]].children!;
+									}
+									pointer[resultsIndices[resultsIndices.length - 1]] = thought;
+									resultsSet(newResults);
+								}}
+							/>
 						</div>
 					) : (
 						<>
@@ -114,14 +132,37 @@ export default function ThoughtBlock({
 					</div>
 					{linking && (
 						<div className={`${depth % 2 === 0 ? 'bg-bg1' : 'bg-bg2'} p-1 rounded mt-1`}>
-							<ThoughtWriter parentId={thoughId} onLink={() => linkingSet(false)} />
+							<ThoughtWriter
+								parentId={thoughId}
+								onWrite={(thought) => {
+									linkingSet(false);
+									const newResults = [...results] as RecThought[];
+									let pointer = newResults;
+									for (let i = 0; i < resultsIndices.length; i++) {
+										if (!pointer[resultsIndices[i]].children) {
+											pointer[resultsIndices[i]].children = [];
+										}
+										pointer = pointer[resultsIndices[i]].children!;
+									}
+									pointer.push(thought);
+									resultsSet(newResults);
+								}}
+							/>
 						</div>
 					)}
 					{thought.children && (
 						<div className="mt-1 space-y-1">
-							{thought.children.map((childThought, i) => (
-								<ThoughtBlock key={i} thought={childThought} depth={depth + 1} />
-							))}
+							{thought.children.map(
+								(childThought, i) =>
+									childThought && (
+										<ThoughtBlock
+											key={i}
+											resultsIndices={[...resultsIndices, i]}
+											thought={childThought}
+											depth={depth + 1}
+										/>
+									),
+							)}
 						</div>
 					)}
 				</div>
