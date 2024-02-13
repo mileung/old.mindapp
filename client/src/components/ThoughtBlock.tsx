@@ -50,7 +50,7 @@ export default function ThoughtBlock({
 	);
 
 	return (
-		<div className={`flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}>
+		<div className={`overflow-hidden flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}>
 			<button
 				className="w-5 z-10 fy transition rounded-l text-fg2 hover:text-fg1 hover:bg-mg2"
 				onClick={() => openSet(!open)}
@@ -82,7 +82,7 @@ export default function ThoughtBlock({
 						</div>
 					) : (
 						<>
-							<pre className="">{thought.content}</pre>
+							<p className="whitespace-pre-line font-medium leading-4 my-1">{thought.content}</p>
 							{!!thought.tags?.length && (
 								<div className="flex flex-wrap gap-x-2">
 									{thought.tags.map((tag) => {

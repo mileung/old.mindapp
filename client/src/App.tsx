@@ -3,7 +3,7 @@ import { GlobalState } from './components/GlobalState';
 import Header from './components/Header';
 import Home from './pages/Home';
 import Preferences from './pages/Preferences';
-import Results from './pages/Results';
+import Search from './pages/Search';
 import Tags from './pages/Tags';
 
 function App() {
@@ -15,7 +15,7 @@ function App() {
 				<Routes>
 					<Route path="/" Component={Home} />
 					<Route path="/tags" Component={Tags} />
-					<Route path="/results" Component={Results} />
+					<Route path="/search" Component={Search} />
 					<Route path="/preferences" Component={Preferences} />
 				</Routes>
 			</BrowserRouter>
