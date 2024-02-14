@@ -50,9 +50,9 @@ export default function ThoughtBlock({
 	);
 
 	return (
-		<div className={`overflow-hidden flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}>
+		<div className={`flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}>
 			<button
-				className="w-5 z-10 fy transition rounded-l text-fg2 hover:text-fg1 hover:bg-mg2"
+				className="w-5 z-10 fy transition rounded text-fg2 hover:text-fg1 hover:bg-mg2"
 				onClick={() => openSet(!open)}
 			>
 				<div className="my-0.5">
@@ -82,17 +82,17 @@ export default function ThoughtBlock({
 						</div>
 					) : (
 						<>
-							<p className="whitespace-pre-line font-medium leading-4 my-1">{thought.content}</p>
+							<p className="whitespace-pre-line font-medium mb-1">{thought.content}</p>
 							{!!thought.tags?.length && (
 								<div className="flex flex-wrap gap-x-2">
 									{thought.tags.map((tag) => {
 										const queryString = new URLSearchParams({
-											search: `[${tag}]`, // TODO: tag page
+											q: `[${tag}]`, // TODO: tag page
 										}).toString();
 										return (
 											<Link
 												key={tag}
-												to={`/results?${queryString}`}
+												to={`/search?${queryString}`}
 												className="font-bold leading-5 transition text-fg2 hover:text-fg1"
 											>
 												{tag}

@@ -5,9 +5,10 @@ import { Settings } from '../types/Settings';
 
 const homeDir = os.homedir();
 export const mindappRootPath = path.join(homeDir, '.mindapp');
-export const settingsPath = path.join(mindappRootPath, 'settings.json');
 export const timelinePath = path.join(mindappRootPath, 'timeline');
+export const settingsPath = path.join(mindappRootPath, 'settings.json');
 export const tagsPath = path.join(mindappRootPath, 'tags.json');
+export const indicesPath = path.join(mindappRootPath, 'indices.json');
 
 export const writeFile = (filePath: string, json: string) => {
 	return fs.writeFileSync(filePath, json);

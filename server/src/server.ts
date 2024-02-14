@@ -11,6 +11,7 @@ import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
 import {
 	getSettings,
+	indicesPath,
 	mindappRootPath,
 	mkdirIfDne,
 	parseFile,
@@ -46,8 +47,9 @@ app.use(((err, req, res, next) => {
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	touchIfDne(settingsPath, JSON.stringify(new Settings()));
 	mkdirIfDne(timelinePath);
+	touchIfDne(settingsPath, JSON.stringify(new Settings()));
+	touchIfDne(indicesPath, JSON.stringify({}));
 	global.startDate = getSettings().startDate;
 	console.log(`Server is running on http://localhost:${port}`);
 });

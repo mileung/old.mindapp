@@ -58,6 +58,7 @@ export default function Header() {
 							if (value.trim()) {
 								const queryString = new URLSearchParams({ q: value.trim() }).toString();
 								navigate(`/search?${queryString}`);
+								searchRef.current!.blur();
 							}
 						}
 					}}

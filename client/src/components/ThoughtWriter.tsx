@@ -30,12 +30,13 @@ export const ThoughtWriter = ({
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 
-	const filteredTags = useMemo(() => {
-		return matchSorter(tags?.map((a) => a.label) || [], tagFilter);
-	}, [tags, tagFilter]);
+	const filteredTags = useMemo(
+		() => matchSorter(tags?.map((a) => a.label) || [], tagFilter),
+		[tags, tagFilter],
+	);
 
 	const writeThought = useCallback(
-		(additionalTags: string[] = []) => {
+		(additionalTag?: string) => {
 			if (!contentTextArea.current!.value) return;
 			pinger<Thought>(buildUrl('write-thought'), {
 				method: 'POST',
@@ -47,7 +48,7 @@ export const ThoughtWriter = ({
 						authorId: personaId,
 						spaceId: null,
 						content: contentTextArea.current!.value,
-						tags: makeSortedUniqueArr([...thoughtTags, ...additionalTags]),
+						tags: makeSortedUniqueArr([...thoughtTags, ...(additionalTag ? [additionalTag] : [])]),
 					},
 				}),
 			})
@@ -55,36 +56,24 @@ export const ThoughtWriter = ({
 					// caching is premature optimization atm. Just ping local sever to update ui
 					onWrite && onWrite(thought);
 					contentTextArea.current!.value = '';
+					tagInput.current!.value = '';
 					thoughtTagsSet([]);
 					suggestTagsSet(false);
+
+					pinger<Tag[]>(buildUrl('get-tags'))
+						.then((data) => tagsSet(data))
+						.catch((err) => alert(JSON.stringify(err)));
 				})
 				.catch((err) => alert(JSON.stringify(err)));
-
-			let addedNewTags = false;
-			thoughtTags.forEach((label) => {
-				if (!tags!.find(({ label: labelOnDisk }) => labelOnDisk === label)) {
-					addedNewTags = true;
-					pinger(buildUrl('add-tag'), {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ label }),
-					}).catch((err) => alert(JSON.stringify(err)));
-				}
-			});
-			if (addedNewTags) {
-				pinger<Tag[]>(buildUrl('get-tags'))
-					.then((data) => tagsSet(data))
-					.catch((err) => alert(JSON.stringify(err)));
-			}
 		},
-		[editId, parentId, onWrite, thoughtTags]
+		[editId, parentId, onWrite, thoughtTags],
 	);
 
 	const onAddingTagBlur = useCallback(() => {
 		setTimeout(() => {
 			const focusedOnTagOptions = tagSuggestionsRefs.current.includes(
 				// @ts-ignore
-				document.activeElement
+				document.activeElement,
 			);
 			if (!focusedOnTagOptions && tagInput.current !== document.activeElement) {
 				suggestTagsSet(false);
@@ -100,17 +89,17 @@ export const ThoughtWriter = ({
 				isMetaDown = event.type === 'keydown';
 			} else if (event.key === 'Enter' && isMetaDown && !event.repeat) {
 				const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
-					(e) => e === document.activeElement
+					(e) => e === document.activeElement,
 				);
+				const focusedOnTagInput = document.activeElement === tagInput.current;
+				const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
 				const focusedOnThoughtWriter =
 					document.activeElement === contentTextArea.current ||
-					document.activeElement === tagInput.current ||
-					focusedSuggestionIndex !== -1;
+					focusedOnTagInput ||
+					focusedOnTagSuggestion;
 
 				if (focusedOnThoughtWriter) {
-					writeThought(
-						[tags![focusedSuggestionIndex]?.label, tagInput.current!.value].filter((e) => !!e)
-					);
+					writeThought(tags![focusedSuggestionIndex]?.label || tagInput.current!.value);
 				}
 			}
 		};
@@ -158,6 +147,7 @@ export const ThoughtWriter = ({
 											const newCats = [...thoughtTags];
 											newCats.splice(i, 1);
 											thoughtTagsSet(newCats);
+											tagInput.current?.focus();
 										}}
 									>
 										<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />

@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import fs from 'fs';
 import { Tag } from '../types/Tag';
 import { parseFile, tagsPath } from '../utils/files';
-import { makeSetArr } from '../utils/tags';
+import { aggregateSetArray } from '../utils/tags';
 
 const addTag: RequestHandler = (req, res) => {
 	// console.log('req.body:', req.body);
@@ -16,11 +16,12 @@ const addTag: RequestHandler = (req, res) => {
 	if (existingTagIndex !== -1) {
 		// Update existing tag with newTag information
 		const existingTag = tags[existingTagIndex];
-		existingTag.parentLabels = makeSetArr(existingTag.parentLabels, newTag.parentLabels).filter(
-			(label) => label !== existingTag.label
-		);
-		existingTag.subLabels = makeSetArr(existingTag.subLabels, newTag.subLabels).filter(
-			(label) => label !== existingTag.label
+		existingTag.parentLabels = aggregateSetArray(
+			existingTag.parentLabels,
+			newTag.parentLabels,
+		).filter((label) => label !== existingTag.label);
+		existingTag.subLabels = aggregateSetArray(existingTag.subLabels, newTag.subLabels).filter(
+			(label) => label !== existingTag.label,
 		);
 		parentLabelsSet = new Set(existingTag.parentLabels);
 		subLabelsSet = new Set(existingTag.subLabels);
@@ -34,10 +35,10 @@ const addTag: RequestHandler = (req, res) => {
 	tags.forEach((tag) => {
 		if (tag.label !== newTag.label) {
 			if (parentLabelsSet.has(tag.label)) {
-				tag.subLabels = makeSetArr(tag.subLabels, [newTag.label]);
+				tag.subLabels = aggregateSetArray(tag.subLabels, [newTag.label]);
 			}
 			if (subLabelsSet.has(tag.label)) {
-				tag.parentLabels = makeSetArr(tag.parentLabels, [newTag.label]);
+				tag.parentLabels = aggregateSetArray(tag.parentLabels, [newTag.label]);
 			}
 		}
 	});
