@@ -54,7 +54,7 @@ export class Thought {
 			childrenIds?: string[];
 		},
 		write?: boolean,
-		overwrite?: boolean
+		overwrite?: boolean,
 	) {
 		// save these props on disk
 		this.createDate = createDate;
@@ -140,7 +140,7 @@ export class Thought {
 			timelinePath,
 			period,
 			Math.floor(daysSince1970) + '',
-			`${createDate}.${authorId}.${spaceId}.json`
+			`${createDate}.${authorId}.${spaceId}.json`,
 		);
 	}
 

@@ -9,20 +9,20 @@ import { onFocus } from '../utils/input';
 
 export const ThoughtWriter = ({
 	initialContent,
-	initialThoughtTags,
+	initialTags = [],
 	editId,
 	parentId,
 	onWrite,
 }: {
 	initialContent?: string;
-	initialThoughtTags?: string[];
+	initialTags?: string[];
 	editId?: string;
 	parentId?: string;
 	onWrite?: (thought: Thought) => void;
 }) => {
 	const [tags, tagsSet] = tagsUse();
 	const [personaId] = personaUse();
-	const [thoughtTags, thoughtTagsSet] = useState<string[]>(initialThoughtTags || []);
+	const [thoughtTags, thoughtTagsSet] = useState<string[]>(initialTags);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = useRef<null | HTMLTextAreaElement>(null);
@@ -57,7 +57,7 @@ export const ThoughtWriter = ({
 					onWrite && onWrite(thought);
 					contentTextArea.current!.value = '';
 					tagInput.current!.value = '';
-					thoughtTagsSet([]);
+					// thoughtTagsSet([]);
 					suggestTagsSet(false);
 
 					pinger<Tag[]>(buildUrl('get-tags'))
@@ -99,7 +99,7 @@ export const ThoughtWriter = ({
 					focusedOnTagSuggestion;
 
 				if (focusedOnThoughtWriter) {
-					writeThought(tags![focusedSuggestionIndex]?.label || tagInput.current!.value);
+					writeThought(filteredTags![focusedSuggestionIndex] || tagInput.current!.value);
 				}
 			}
 		};
@@ -110,7 +110,9 @@ export const ThoughtWriter = ({
 			document.removeEventListener('keydown', handleKeyPress);
 			document.removeEventListener('keyup', handleKeyPress);
 		};
-	}, [tags, writeThought]);
+	}, [filteredTags, writeThought]);
+
+	useEffect(() => thoughtTagsSet(initialTags), [JSON.stringify(initialTags)]);
 
 	return (
 		<div className="w-full flex flex-col">
@@ -121,7 +123,7 @@ export const ThoughtWriter = ({
 				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
-				className="rounded text-xl font-medium p-3 w-full max-w-full resize-y bg-mg1 transition brightness-75 focus:brightness-100"
+				className="rounded text-xl font-medium px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-75 focus:brightness-100"
 			/>
 			<div className="mt-1 relative">
 				{!!thoughtTags.length && (

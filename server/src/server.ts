@@ -1,27 +1,24 @@
 import cors from 'cors';
 import express, { ErrorRequestHandler } from 'express';
-import path from 'path';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
 import getLocalThoughts from './routes/get-local-thoughts';
 import getTags from './routes/get-tags';
+import getThought from './routes/get-thought';
 import removeTag from './routes/remove-tag';
+import renameTag from './routes/rename-tag';
+import searchLocalThoughts from './routes/search-local-thoughts';
 import whoami from './routes/whoami';
 import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
 import {
 	getSettings,
 	indicesPath,
-	mindappRootPath,
 	mkdirIfDne,
-	parseFile,
 	settingsPath,
 	timelinePath,
 	touchIfDne,
 } from './utils/files';
-import renameTag from './routes/rename-tag';
-import getThought from './routes/get-thought';
-import { Thought } from './types/Thought';
 
 const app = express();
 const port = 3000;
@@ -38,7 +35,8 @@ app.get('/get-tags', getTags);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
 app.post('/rename-tag', renameTag);
-app.get('/get-local-thoughts', getLocalThoughts);
+app.post('/get-local-thoughts', getLocalThoughts);
+app.post('/search-local-thoughts', searchLocalThoughts);
 
 app.use(((err, req, res, next) => {
 	console.log('err:', err);

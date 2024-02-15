@@ -20,6 +20,7 @@ export const addTags = (labels: string[]) => {
 			tags.push(new Tag(label));
 		}
 	}
+	tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
 	writeFile(tagsPath, JSON.stringify(tags));
 };
 

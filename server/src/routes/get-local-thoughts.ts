@@ -8,13 +8,12 @@ import { Thought } from '../types/Thought';
 const rootsPerLoad = 8;
 const getLocalThoughts: RequestHandler = (req, res) => {
 	const roots: Thought[] = [];
-	// @ts-ignore
-	const ignoreRootIds: string[] = req.query.ignoreRootIds ? req.query.ignoreRootIds.split(',') : [];
-
-	// const searchedKeywords = req.query.searchedKeywords;
-	const oldToNew = req.query.oldToNew === 'true';
-	const thoughtsAfter = +req.query.thoughtsAfter!;
-	const startingDay = Math.floor(thoughtsAfter / day);
+	const { ignoreRootIds, rootsBefore } = req.body as {
+		ignoreRootIds: string[];
+		rootsBefore: number;
+	};
+	const oldToNew = !rootsBefore; // TODO: rootsAfter for new to old
+	const startingDay = Math.floor(rootsBefore / day);
 
 	const periodDirs = fs.readdirSync(timelinePath).sort((a, b) => (oldToNew ? +a - +b : +b - +a));
 	for (let i = 0; i < periodDirs.length; i++) {

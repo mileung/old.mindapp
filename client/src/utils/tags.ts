@@ -34,7 +34,7 @@ export const makeRecTags = (tags: Tag[]): RecTag[] => {
 		}
 
 		const recSubTags: RecTag[] = tag.subLabels.map((subsetLabel) =>
-			buildRecTag(subsetLabel, [...lineage, label])
+			buildRecTag(subsetLabel, [...lineage, label]),
 		);
 
 		return {

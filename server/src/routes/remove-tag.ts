@@ -4,33 +4,39 @@ import { Tag } from '../types/Tag';
 import { parseFile, tagsPath } from '../utils/files';
 
 const removeTag: RequestHandler = (req, res) => {
-	const spaceId = null;
-	const tags = parseFile<Tag[]>(tagsPath);
+	let tags = parseFile<Tag[]>(tagsPath);
 
 	const { currentTagLabel, parentLabel } = req.body;
+	console.log('currentTagLabel:', currentTagLabel);
+	console.log('parentLabel:', parentLabel);
 
 	if (parentLabel) {
-		// Remove the currentTagLabel from the subLabels of the parentLabel
-		const parentTag = tags.find((tag) => tag.label === parentLabel);
-		const currentTag = tags.find((tag) => tag.label === currentTagLabel);
-		if (parentTag) {
-			parentTag.subLabels = parentTag.subLabels.filter((subLabel) => subLabel !== currentTagLabel);
-		}
-		if (currentTag) {
-			currentTag.parentLabels = currentTag.parentLabels.filter(
-				(subLabel) => subLabel !== currentTagLabel
+		const parentTagsIndex = tags.findIndex((tag) => tag.label === parentLabel);
+		if (parentTagsIndex !== -1) {
+			const subLabelsIndex = tags[parentTagsIndex].subLabels.findIndex(
+				(subLabel) => subLabel !== currentTagLabel,
 			);
+			if (subLabelsIndex !== -1) {
+				tags[parentTagsIndex].subLabels.splice(subLabelsIndex, 1);
+			}
+		}
+		const currentTagsIndex = tags.findIndex((tag) => tag.label === currentTagLabel);
+		if (currentTagsIndex !== -1) {
+			const parentLabelsIndex = tags[currentTagsIndex].parentLabels.findIndex(
+				(subLabel) => subLabel !== currentTagLabel,
+			);
+			if (parentLabelsIndex !== -1) {
+				tags[currentTagsIndex].parentLabels.splice(parentLabelsIndex, 1);
+			}
 		}
 	} else {
-		// Remove all occurrences of currentTagLabel from tags
-		tags
-			.filter((tag) => tag.label !== currentTagLabel)
-			.forEach((tag) => {
-				tag.parentLabels = tag.parentLabels.filter(
-					(parentLabel) => parentLabel !== currentTagLabel
-				);
-				tag.subLabels = tag.subLabels.filter((subLabel) => subLabel !== currentTagLabel);
-			});
+		const currentTagsIndex = tags.findIndex((tag) => tag.label === currentTagLabel);
+		// const rootTag = tags.splice(currentTagsIndex, 1);
+		tags.splice(currentTagsIndex, 1);
+		tags.forEach((tag) => {
+			tag.parentLabels = tag.parentLabels.filter((parentLabel) => parentLabel !== currentTagLabel);
+			tag.subLabels = tag.subLabels.filter((subLabel) => subLabel !== currentTagLabel);
+		});
 	}
 
 	// Rewrite tags.json with the updated tags

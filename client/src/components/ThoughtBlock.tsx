@@ -5,11 +5,10 @@ import {
 	PlusIcon,
 	XMarkIcon,
 } from '@heroicons/react/16/solid';
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/time';
 import { ThoughtWriter } from './ThoughtWriter';
-import { resultsUse } from './GlobalState';
 
 export type Thought = {
 	createDate: number;
@@ -32,15 +31,20 @@ export type RecThought = {
 };
 
 export default function ThoughtBlock({
-	resultsIndices,
+	parentId,
+	roots,
+	onRootsChange,
+	rootsIndices,
 	thought,
 	depth = 0,
 }: {
-	resultsIndices: number[];
+	parentId?: string;
+	roots: (null | RecThought)[];
+	onRootsChange: (newRoots: (null | RecThought)[]) => void;
+	rootsIndices: number[];
 	thought: RecThought;
 	depth?: number;
 }) {
-	const [results, resultsSet] = resultsUse();
 	const [editing, editingSet] = useState(false);
 	const [open, openSet] = useState(true);
 	const [linking, linkingSet] = useState(false);
@@ -66,23 +70,24 @@ export default function ThoughtBlock({
 						<div className="mt-1">
 							<ThoughtWriter
 								editId={thoughId}
+								parentId={parentId}
 								initialContent={thought.content}
-								initialThoughtTags={thought.tags}
+								initialTags={thought.tags}
 								onWrite={(thought) => {
 									editingSet(false);
-									const newResults = [...results] as RecThought[];
-									let pointer = newResults;
-									for (let i = 0; i < resultsIndices.length - 1; i++) {
-										pointer = pointer[resultsIndices[i]].children!;
+									const newRoots = [...roots] as RecThought[];
+									let pointer = newRoots;
+									for (let i = 0; i < rootsIndices.length - 1; i++) {
+										pointer = pointer[rootsIndices[i]].children!;
 									}
-									pointer[resultsIndices[resultsIndices.length - 1]] = thought;
-									resultsSet(newResults);
+									pointer[rootsIndices[rootsIndices.length - 1]] = thought;
+									onRootsChange(newRoots);
 								}}
 							/>
 						</div>
 					) : (
 						<>
-							<p className="whitespace-pre-line font-medium mb-1">{thought.content}</p>
+							<p className="whitespace-pre-wrap break-all font-medium mb-1">{thought.content}</p>
 							{!!thought.tags?.length && (
 								<div className="flex flex-wrap gap-x-2">
 									{thought.tags.map((tag) => {
@@ -136,16 +141,16 @@ export default function ThoughtBlock({
 								parentId={thoughId}
 								onWrite={(thought) => {
 									linkingSet(false);
-									const newResults = [...results] as RecThought[];
-									let pointer = newResults;
-									for (let i = 0; i < resultsIndices.length; i++) {
-										if (!pointer[resultsIndices[i]].children) {
-											pointer[resultsIndices[i]].children = [];
+									const newRoots = [...roots] as RecThought[];
+									let pointer = newRoots;
+									for (let i = 0; i < rootsIndices.length; i++) {
+										if (!pointer[rootsIndices[i]].children) {
+											pointer[rootsIndices[i]].children = [];
 										}
-										pointer = pointer[resultsIndices[i]].children!;
+										pointer = pointer[rootsIndices[i]].children!;
 									}
 									pointer.push(thought);
-									resultsSet(newResults);
+									onRootsChange(newRoots);
 								}}
 							/>
 						</div>
@@ -157,7 +162,10 @@ export default function ThoughtBlock({
 									childThought && (
 										<ThoughtBlock
 											key={i}
-											resultsIndices={[...resultsIndices, i]}
+											parentId={thoughId}
+											roots={roots}
+											onRootsChange={onRootsChange}
+											rootsIndices={[...rootsIndices, i]}
 											thought={childThought}
 											depth={depth + 1}
 										/>

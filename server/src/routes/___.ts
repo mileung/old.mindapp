@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const ___: RequestHandler = (req, res) => {
-	res.send({});
+	res.sendStatus(200);
 };
 
 export default ___;

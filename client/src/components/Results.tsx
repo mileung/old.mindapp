@@ -1,35 +1,44 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ThoughtBlock, { RecThought } from '../components/ThoughtBlock';
 import { buildUrl, pinger } from '../utils/api';
-import { resultsUse } from '../components/GlobalState';
-import { useSearchParams } from 'react-router-dom';
+import { ThoughtWriter } from './ThoughtWriter';
+import { useLocation } from 'react-router-dom';
 
-export default function Results() {
-	const [searchParams] = useSearchParams();
-	const searchedKeywords = searchParams.get('search') || '';
-	const [roots, rootsSet] = resultsUse();
+export default function Results({
+	query,
+}: {
+	query?: {
+		tagLabels: string[];
+		other: string[];
+	};
+}) {
+	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
+	const location = useLocation();
 
 	const loadMoreThoughts = useCallback(() => {
 		const lastRoot = roots[roots.length - 1];
 		if (lastRoot === null) return;
-		const thoughtsAfter = roots.length ? lastRoot.createDate : Date.now();
-		pinger<RecThought[]>(
-			buildUrl('get-local-thoughts', {
-				thoughtsAfter,
-				oldToNew: false,
-				ignoreRootIds: roots.map(
-					(root) => root && root.createDate + '.' + root.authorId + '.' + root.spaceId,
-				),
+		const rootsBefore = roots.length ? lastRoot.createDate : Date.now();
+		const ignoreRootIds = roots.map(
+			(root) => root && root.createDate + '.' + root.authorId + '.' + root.spaceId,
+		);
+		pinger<RecThought[]>(buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				...query,
+				rootsBefore,
+				ignoreRootIds,
 			}),
-		)
+		})
 			.then((moreRoots) => {
 				const rootsPerLoad = 8;
-				const rootsNew = [...roots, ...moreRoots];
-				moreRoots.length < rootsPerLoad && rootsNew.push(null);
-				rootsSet(rootsNew);
+				const newRoots = [...roots, ...moreRoots];
+				moreRoots.length < rootsPerLoad && newRoots.push(null);
+				rootsSet(newRoots);
 			})
 			.catch((err) => alert(JSON.stringify(err)));
-	}, [roots]);
+	}, [roots, query]);
 
 	useEffect(() => {
 		let rootsLengthLastLoad: number;
@@ -49,24 +58,34 @@ export default function Results() {
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, [roots, loadMoreThoughts]);
 
-	useEffect(() => loadMoreThoughts(), []);
+	useEffect(() => {
+		if (!roots.length) {
+			loadMoreThoughts();
+		}
+	}, [roots, loadMoreThoughts]);
+
+	useEffect(() => rootsSet([]), [location]);
 
 	return (
-		<div className="">
+		<>
+			<ThoughtWriter
+				initialTags={query?.tagLabels}
+				onWrite={(thought) => rootsSet([thought, ...roots])}
+			/>
 			<div className="mt-3 space-y-1.5">
 				{roots.map(
 					(thought, i) =>
-						thought && <ThoughtBlock key={i} resultsIndices={[i]} thought={thought} />,
-				)}
-				{roots[roots.length - 1] !== null && (
-					<button
-						className="rounded self-center px-3 bg-mg1 hover:bg-mg2"
-						onClick={loadMoreThoughts}
-					>
-						Load more
-					</button>
+						thought && (
+							<ThoughtBlock
+								key={i}
+								roots={roots}
+								onRootsChange={(newRoots) => rootsSet(newRoots)}
+								rootsIndices={[i]}
+								thought={thought}
+							/>
+						),
 				)}
 			</div>
-		</div>
+		</>
 	);
 }

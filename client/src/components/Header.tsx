@@ -1,7 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
-import { FormEvent, useRef } from 'react';
-// import { TagIcon } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useRef } from 'react';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -31,9 +30,24 @@ export default function Header() {
 	// spaceIdUse
 	// personaUse
 	const [searchParams] = useSearchParams();
-	const searchedKeywords = searchParams.get('search') || '';
+	const searchedKeywords = searchParams.get('q') || '';
 	const searchRef = useRef<HTMLInputElement>(null);
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		searchRef.current!.value = searchedKeywords;
+		window.scrollTo(0, 0);
+	}, [searchedKeywords]);
+
+	const searchInput = useCallback(() => {
+		const { value } = searchRef.current!;
+		// console.log('value:', value);
+		if (value.trim()) {
+			const queryString = new URLSearchParams({ q: value.trim() }).toString();
+			navigate(`/search?${queryString}`);
+			searchRef.current!.blur();
+		}
+	}, [navigate]);
 
 	return (
 		<header
@@ -51,19 +65,9 @@ export default function Header() {
 					className="w-full h-full text-lg px-2"
 					placeholder="Search"
 					defaultValue={searchedKeywords || ''}
-					onKeyDown={(e) => {
-						if (e.key === 'Enter') {
-							const { value } = searchRef.current!;
-							// console.log('value:', value);
-							if (value.trim()) {
-								const queryString = new URLSearchParams({ q: value.trim() }).toString();
-								navigate(`/search?${queryString}`);
-								searchRef.current!.blur();
-							}
-						}
-					}}
+					onKeyDown={(e) => e.key === 'Enter' && searchInput()}
 				/>
-				<button className="xy px-2 transition text-fg2 hover:text-fg1" type="submit">
+				<button className="xy px-2 transition text-fg2 hover:text-fg1" onClick={searchInput}>
 					<MagnifyingGlassIcon className="h-7 w-7" />
 				</button>
 			</div>
