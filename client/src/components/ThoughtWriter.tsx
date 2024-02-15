@@ -37,7 +37,8 @@ export const ThoughtWriter = ({
 
 	const writeThought = useCallback(
 		(additionalTag?: string) => {
-			if (!contentTextArea.current!.value) return;
+			// if you want to "delete" a post, you can remove the content/tags
+			if (!editId && !contentTextArea.current!.value) return;
 			pinger<Thought>(buildUrl('write-thought'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },

@@ -87,7 +87,11 @@ export default function ThoughtBlock({
 						</div>
 					) : (
 						<>
-							<p className="whitespace-pre-wrap break-all font-medium mb-1">{thought.content}</p>
+							{thought.content ? (
+								<p className="whitespace-pre-wrap break-all font-medium">{thought.content}</p>
+							) : (
+								<p className="font-semibold text-fg2 italic">No content</p>
+							)}
 							{!!thought.tags?.length && (
 								<div className="flex flex-wrap gap-x-2">
 									{thought.tags.map((tag) => {
@@ -108,7 +112,7 @@ export default function ThoughtBlock({
 							)}
 						</>
 					)}
-					<div className="mt-1 fx gap-2 text-fg2">
+					<div className="mt-2 fx gap-2 text-fg2">
 						<button
 							className="h-4 w-4 xy hover:text-fg1 transition"
 							onClick={() => linkingSet(!linking)}
