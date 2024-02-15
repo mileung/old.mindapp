@@ -124,7 +124,7 @@ export const ThoughtWriter = ({
 				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
-				className="rounded text-xl font-medium px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-75 focus:brightness-100"
+				className="rounded text-xl font-medium px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100"
 			/>
 			<div className="mt-1 relative">
 				{!!thoughtTags.length && (
@@ -162,7 +162,7 @@ export const ThoughtWriter = ({
 				)}
 				<input
 					autoComplete="off"
-					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-75 focus:brightness-100 ${thoughtTags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
+					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 ${thoughtTags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Add tags with Enter"
 					ref={tagInput}
 					onFocus={() => suggestTagsSet(true)}

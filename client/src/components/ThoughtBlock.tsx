@@ -54,7 +54,9 @@ export default function ThoughtBlock({
 	);
 
 	return (
-		<div className={`flex rounded ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}>
+		<div
+			className={`flex rounded ${!depth ? 'shadow' : ''} ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}
+		>
 			<button
 				className="w-5 z-10 fy transition rounded text-fg2 hover:text-fg1 hover:bg-mg2"
 				onClick={() => openSet(!open)}
