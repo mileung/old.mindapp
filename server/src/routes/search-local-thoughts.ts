@@ -5,14 +5,15 @@ import { indicesPath, parseFile } from '../utils/files';
 const rootsPerLoad = 8;
 const searchLocalThoughts: RequestHandler = (req, res) => {
 	const roots: Thought[] = [];
-	const { tagLabels, other, ignoreRootIds, rootsBefore, rootsAfter } = req.body as {
+	const { oldToNew, tagLabels, other, ignoreRootIds, thoughtsBeyond, rootsAfter } = req.body as {
+		oldToNew: boolean;
 		tagLabels: string[];
 		other: string[];
 		ignoreRootIds: string[];
-		rootsBefore: number;
+		thoughtsBeyond: number;
 		rootsAfter: number;
 	};
-	const oldToNew = !rootsBefore; // TODO: rootsAfter for new to old
+	let latestCreateDate = oldToNew ? Infinity : 0;
 	const indices = parseFile<Record<string, string[]>>(indicesPath);
 	const thoughtIds: string[] = [];
 
@@ -24,9 +25,9 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 
 	for (let i = 0; i < thoughtIds.length; i++) {
 		const id = thoughtIds[i];
-		let thought = Thought.parse(id).getRootThought();
+		let thought = Thought.parse(id).rootThought;
 		if (
-			(oldToNew ? rootsAfter < thought.createDate : rootsBefore > thought.createDate) &&
+			(oldToNew ? rootsAfter < thought.createDate : thoughtsBeyond > thought.createDate) &&
 			!ignoreRootIds.find((id) => id === thought.id) &&
 			!roots.find((root) => root.id === thought.id)
 		) {
@@ -36,7 +37,7 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 		if (roots.length === rootsPerLoad) break;
 	}
 
-	res.send(roots);
+	res.send({ latestCreateDate, moreRoots: roots });
 };
 
 export default searchLocalThoughts;

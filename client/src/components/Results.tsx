@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import ThoughtBlock, { RecThought } from '../components/ThoughtBlock';
-import { buildUrl, pinger } from '../utils/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import ThoughtBlock, { RecThought, getThoughtId } from '../components/ThoughtBlock';
+import { buildUrl, ping } from '../utils/api';
 import { ThoughtWriter } from './ThoughtWriter';
 import { useLocation } from 'react-router-dom';
+import { BarsArrowDownIcon, BarsArrowUpIcon } from '@heroicons/react/16/solid';
 
 export default function Results({
+	initialTagLabels,
 	query,
 }: {
+	initialTagLabels?: string[];
 	query?: {
 		tagLabels: string[];
 		other: string[];
@@ -14,30 +17,39 @@ export default function Results({
 }) {
 	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
 	const location = useLocation();
+	const [oldToNew, oldToNewSet] = useState(false);
+	const thoughtsBeyond = useRef(oldToNew ? 0 : Date.now());
+	const pinging = useRef(false);
 
 	const loadMoreThoughts = useCallback(() => {
 		const lastRoot = roots[roots.length - 1];
 		if (lastRoot === null) return;
-		const rootsBefore = roots.length ? lastRoot.createDate : Date.now();
-		const ignoreRootIds = roots.map(
-			(root) => root && root.createDate + '.' + root.authorId + '.' + root.spaceId,
-		);
-		pinger<RecThought[]>(buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'), {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				...query,
-				rootsBefore,
-				ignoreRootIds,
-			}),
-		})
-			.then((moreRoots) => {
+		const ignoreRootIds = roots.map((root) => root && getThoughtId(root));
+		pinging.current = true;
+		ping<{ latestCreateDate: number; moreRoots: RecThought[] }>(
+			buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'),
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...query,
+					ignoreRootIds,
+					oldToNew,
+					thoughtsBeyond: thoughtsBeyond.current,
+				}),
+			},
+		)
+			.then(({ latestCreateDate, moreRoots }) => {
 				const rootsPerLoad = 8;
 				const newRoots = [...roots, ...moreRoots];
 				moreRoots.length < rootsPerLoad && newRoots.push(null);
+				thoughtsBeyond.current = latestCreateDate;
 				rootsSet(newRoots);
 			})
-			.catch((err) => alert(JSON.stringify(err)));
+			.catch((err) => alert(JSON.stringify(err)))
+			.finally(() => {
+				pinging.current = false;
+			});
 	}, [roots, query]);
 
 	useEffect(() => {
@@ -59,20 +71,34 @@ export default function Results({
 	}, [roots, loadMoreThoughts]);
 
 	useEffect(() => {
-		if (!roots.length) {
+		if (!roots.length && !pinging.current) {
+			thoughtsBeyond.current = oldToNew ? 0 : Date.now();
 			loadMoreThoughts();
 		}
-	}, [roots, loadMoreThoughts]);
+	}, [oldToNew, roots, loadMoreThoughts]);
 
 	useEffect(() => rootsSet([]), [location]);
 
 	return (
 		<>
 			<ThoughtWriter
-				initialTags={query?.tagLabels}
+				initialTagLabels={initialTagLabels}
 				onWrite={(thought) => rootsSet([thought, ...roots])}
 			/>
-			<div className="mt-3 space-y-1.5">
+			<div className="space-y-1.5">
+				<button
+					className="h-4 w-4 xy text-fg2 hover:text-fg1 transition"
+					onClick={() => {
+						oldToNewSet(!oldToNew);
+						rootsSet([]);
+					}}
+				>
+					{oldToNew ? (
+						<BarsArrowUpIcon className="absolute h-5 w-5" />
+					) : (
+						<BarsArrowDownIcon className="absolute h-5 w-5" />
+					)}
+				</button>
 				{roots.map(
 					(thought, i) =>
 						thought && (
@@ -84,6 +110,12 @@ export default function Results({
 								thought={thought}
 							/>
 						),
+				)}
+				{roots.length === 1 && roots[0] === null && (
+					<p className="text-2xl text-center">No thoughts found</p>
+				)}
+				{roots.length > 1 && roots[roots.length - 1] === null && (
+					<p className="text-xl text-fg2 text-center">End of results </p>
 				)}
 			</div>
 		</>

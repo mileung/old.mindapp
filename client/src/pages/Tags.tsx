@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { buildUrl, pinger } from '../utils/api';
+import { buildUrl, ping } from '../utils/api';
 import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecTag, Tag, makeRecTags } from '../utils/tags';
@@ -161,13 +161,13 @@ export default function Tags() {
 		if (tags) return makeRecTags(tags);
 	}, [tags]);
 	const refreshTags = useCallback(() => {
-		pinger<Tag[]>(buildUrl('get-tags'))
+		ping<Tag[]>(buildUrl('get-tags'))
 			.then((data) => tagsSet(data))
 			.catch((err) => alert(JSON.stringify(err)));
 	}, []);
 
 	const addTag = useCallback((label: string) => {
-		pinger(buildUrl('add-tag'), {
+		ping(buildUrl('add-tag'), {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ label }),
@@ -186,7 +186,7 @@ export default function Tags() {
 							key={tag.label}
 							tag={tag}
 							onSubset={(label, parentLabel) => {
-								pinger(buildUrl('add-tag'), {
+								ping(buildUrl('add-tag'), {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ label, parentLabels: [parentLabel] }),
@@ -195,7 +195,7 @@ export default function Tags() {
 									.catch((err) => alert(JSON.stringify(err)));
 							}}
 							onRename={(oldLabel, newLabel) => {
-								pinger(buildUrl('rename-tag'), {
+								ping(buildUrl('rename-tag'), {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ oldLabel, newLabel }),
@@ -204,7 +204,7 @@ export default function Tags() {
 									.catch((err) => alert(JSON.stringify(err)));
 							}}
 							onRemove={(currentTagLabel, parentLabel) => {
-								pinger(buildUrl('remove-tag'), {
+								ping(buildUrl('remove-tag'), {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ currentTagLabel, parentLabel }),

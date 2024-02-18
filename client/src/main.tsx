@@ -1,11 +1,12 @@
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import './styles/theme.ts';
-import './styles/globals.css';
 import '@fontsource-variable/quicksand';
+import '@fontsource-variable/fira-code';
+import './styles/globals.css';
+import './styles/theme.ts';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 	//<React.StrictMode>
-	<App />
+	<App />,
 	//</React.StrictMode>
 );

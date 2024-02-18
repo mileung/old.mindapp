@@ -2,40 +2,37 @@ import { useSearchParams } from 'react-router-dom';
 import Results from '../components/Results';
 import { Tag, makeSortedUniqueArr } from '../utils/tags';
 import { tagsUse } from '../components/GlobalState';
+import { useMemo } from 'react';
 
-function parseQuery(input: string, tags: Tag[]) {
+function parseQ(input: string, tags: Tag[]) {
 	const bracketRegex = /\[([^\[\]]+)]/g;
-	const tagLabels = (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
+	const explicitTagLabels = (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
 	const other = input
 		.replace(bracketRegex, ' ')
 		.split(/\s!/g)
 		.map((a) => a.trim())
 		.filter((a) => !!a);
 
-	const processedTags: Set<string> = new Set();
+	const processedTagLabels: Set<string> = new Set();
+	const subTagLabels: string[] = [];
 
-	// Helper function to recursively find tags and subtags
 	const findTags = (label: string) => {
 		const tag = tags.find((t) => t.label === label);
-		if (tag && !processedTags.has(tag.label)) {
-			// console.log('tag:', tag);
-			processedTags.add(tag.label);
-			tagLabels.push(tag.label);
-
-			// Recursively find parentLabels
-			tag.parentLabels.forEach(findTags);
-
-			// Recursively find subLabels
+		if (tag && !processedTagLabels.has(tag.label)) {
+			processedTagLabels.add(tag.label);
+			subTagLabels.push(tag.label);
 			tag.subLabels.forEach(findTags);
 		}
 	};
 
-	// Iterate through each label in the array
-	tagLabels.forEach(findTags);
+	explicitTagLabels.forEach(findTags);
 
 	return {
-		tagLabels: makeSortedUniqueArr(tagLabels),
-		other,
+		initialTagLabels: explicitTagLabels,
+		query: {
+			tagLabels: makeSortedUniqueArr(explicitTagLabels.concat(subTagLabels)),
+			other,
+		},
 	};
 }
 
@@ -43,6 +40,11 @@ export default function Search() {
 	const [tags] = tagsUse();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
+	const { initialTagLabels, query } = useMemo(() => parseQ(q, tags || []), [q, tags]);
 
-	return <div className="p-3">{tags && <Results query={parseQuery(q, tags)} />}</div>;
+	return (
+		<div className="p-3">
+			{tags && <Results initialTagLabels={initialTagLabels} query={query} />}
+		</div>
+	);
 }

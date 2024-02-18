@@ -1,7 +1,5 @@
 import Ajv from 'ajv';
-import path from 'path';
-import { parseFile, timelinePath, touchIfDne, writeFile } from '../utils/files';
-import { day } from '../utils/time';
+import { calcFilePath, parseFile, touchIfDne, writeFile } from '../utils/files';
 import { makeSortedUniqueArr } from '../utils/tags';
 
 const ajv = new Ajv();
@@ -13,17 +11,19 @@ const schema = {
 		authorId: { type: ['null', 'number'] },
 		spaceId: { type: ['null', 'number'] },
 		content: { type: 'string' },
-		tags: { type: 'array', items: { type: 'string' } },
+		tagLabels: { type: 'array', items: { type: 'string' } },
 		parentId: { type: 'string' },
 		childrenIds: { type: 'array', items: { type: 'string' } },
+		mentionedByIds: { type: 'array', items: { type: 'string' } },
 	},
-	required: ['createDate', 'authorId', 'spaceId', 'content'],
+	required: ['createDate', 'authorId', 'spaceId', 'content', 'tagLabels'],
 	additionalProperties: false,
 };
 
 export class Thought {
 	public id: string;
 	public filePath: string;
+	public mentionedIds: string[];
 	public parent?: Thought;
 	public children?: Thought[];
 	// Above are temporary. Below are saved on disk.
@@ -31,9 +31,10 @@ export class Thought {
 	public authorId: null | number;
 	public spaceId: null | number;
 	public content: string;
-	public tags?: string[];
+	public tagLabels: string[];
 	public parentId?: string;
-	public childrenIds?: string[] = [];
+	public childrenIds?: string[];
+	public mentionedByIds?: string[];
 
 	constructor(
 		{
@@ -41,55 +42,57 @@ export class Thought {
 			authorId,
 			spaceId,
 			content,
-			tags,
+			tagLabels,
 			parentId,
 			childrenIds,
+			mentionedByIds,
 		}: {
 			createDate: number;
 			authorId: null | number;
 			spaceId: null | number;
 			content: string;
-			tags?: string[];
+			tagLabels?: string[];
 			parentId?: string;
 			childrenIds?: string[];
+			mentionedByIds?: string[];
 		},
 		write?: boolean,
-		overwrite?: boolean,
 	) {
 		// save these props on disk
 		this.createDate = createDate;
 		this.authorId = authorId;
 		this.spaceId = spaceId;
 		this.content = content;
-		this.tags = !tags ? tags : makeSortedUniqueArr(tags);
+		this.tagLabels = makeSortedUniqueArr(tagLabels || []);
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
+		this.mentionedByIds = mentionedByIds;
 
 		// console.log("this:", this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Thought: ' + JSON.stringify(this));
 
 		// Saving these props is not necessary
 		this.id = createDate + '.' + authorId + '.' + spaceId;
-		this.filePath = Thought.calcFilePath(createDate, authorId, spaceId);
+		this.filePath = calcFilePath(createDate, authorId, spaceId);
+
+		const thoughtIdRegex = /\d{13}\.(null|\d{13})\.(null|\d{13})/g;
+		// mentionedIds instead of allowing multiple parentIds to avoid cyclic graphs which would make finding root thoughts impossible. mentionedIds is every thoughtId like `createDate.authorId.spaceId` mentioned in a thought's content
+		this.mentionedIds = this.content.match(thoughtIdRegex) || [];
 
 		if (write) {
 			if (parentId) {
-				// ensure parent exists
 				const parent = Thought.parse(parentId);
-				parent.childrenIds = parent.childrenIds || [];
-				parent.childrenIds.push(this.id);
-
+				parent.addChild(this.id);
 				this.parentId = parentId;
-				// Throws if filePath exists
-				this.write();
-
-				// overwrite parent when if it exists and child was written
 				parent.overwrite();
-			} else if (overwrite) {
-				this.overwrite();
-			} else {
-				this.write();
 			}
+
+			this.mentionedIds.forEach((id) => {
+				const mentionedThought = Thought.parse(id);
+				mentionedThought.mentionedByIds;
+			});
+
+			this.write();
 		}
 	}
 
@@ -99,18 +102,18 @@ export class Thought {
 			authorId: this.authorId,
 			spaceId: this.spaceId,
 			content: this.content,
-			tags: this.tags,
+			tagLabels: this.tagLabels,
 			parentId: this.parentId,
 			childrenIds: this.childrenIds,
+			mentionedByIds: this.mentionedByIds,
 		};
 	}
 
-	getRootThought(): Thought {
-		if (!this.parentId) return this;
-		return Thought.parse(this.parentId).getRootThought();
+	get rootThought(): Thought {
+		return !this.parentId ? this : Thought.parse(this.parentId).rootThought;
 	}
 
-	private write() {
+	write() {
 		const written = touchIfDne(this.filePath, JSON.stringify(this.criticalProps));
 		if (!written) {
 			// TODO: the client should retry so the user doesn't have to manually trigger again
@@ -118,7 +121,7 @@ export class Thought {
 		}
 	}
 
-	private overwrite() {
+	overwrite() {
 		return writeFile(this.filePath, JSON.stringify(this.criticalProps));
 	}
 
@@ -132,33 +135,29 @@ export class Thought {
 				});
 	}
 
-	static calcFilePath(createDate: number, authorId: null | number, spaceId: null | number) {
-		const daysSince1970 = +createDate / day;
-		const period = Math.floor(daysSince1970 / 100) * 100 + '';
+	addChild(thoughtId: string) {
+		this.childrenIds = this.childrenIds || [];
+		this.childrenIds = makeSortedUniqueArr(this.childrenIds.concat(thoughtId));
+	}
 
-		return path.join(
-			timelinePath,
-			period,
-			Math.floor(daysSince1970) + '',
-			`${createDate}.${authorId}.${spaceId}.json`,
-		);
+	addMention(thoughtId: string) {
+		this.mentionedByIds = this.mentionedByIds || [];
+		this.mentionedByIds = makeSortedUniqueArr(this.mentionedByIds.concat(thoughtId));
+	}
+
+	removeMention(thoughtId: string) {
+		if (this.mentionedByIds) {
+			const thoughtIdIndex = this.mentionedByIds.indexOf(thoughtId);
+			thoughtIdIndex !== -1 && this.mentionedByIds.splice(thoughtIdIndex, 1);
+		}
 	}
 
 	static parse(thoughtId: string) {
 		const [createDate, authorId, spaceId] = thoughtId.split('.');
-		return Thought.read(this.calcFilePath(+createDate, +authorId || null, +spaceId || null));
+		return Thought.read(calcFilePath(+createDate, +authorId || null, +spaceId || null));
 	}
 
 	static read(filePath: string) {
-		const o = parseFile<Thought>(filePath);
-		return new Thought({
-			createDate: o.createDate,
-			authorId: o.authorId,
-			spaceId: o.spaceId,
-			content: o.content,
-			tags: o.tags,
-			parentId: o.parentId,
-			childrenIds: o.childrenIds,
-		});
+		return new Thought(parseFile<Thought>(filePath));
 	}
 }

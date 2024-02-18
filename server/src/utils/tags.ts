@@ -11,7 +11,7 @@ export const makeSortedUniqueArr = (a: string[]) => {
 	return [...new Set(a)].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 };
 
-export const addTags = (labels: string[]) => {
+export const addTagsByLabel = (labels: string[]) => {
 	const tags = parseFile<Tag[]>(tagsPath);
 	const tagLabelsSet = new Set(tags.map(({ label }) => label));
 	for (let i = 0; i < labels.length; i++) {

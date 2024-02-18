@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { parseFile, tagsPath, timelinePath, touchIfDne } from '../utils/files';
+import { parseFile, tagsPath, touchIfDne } from '../utils/files';
 import { Tag } from '../types/Tag';
 
 const getTags: RequestHandler = (req, res) => {

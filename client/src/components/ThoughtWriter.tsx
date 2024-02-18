@@ -1,7 +1,7 @@
 import { CheckCircleIcon, PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { tagsUse, personaUse } from './GlobalState';
-import { buildUrl, pinger } from '../utils/api';
+import { buildUrl, ping } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { Tag, makeSortedUniqueArr } from '../utils/tags';
 import { Thought } from './ThoughtBlock';
@@ -9,20 +9,22 @@ import { onFocus } from '../utils/input';
 
 export const ThoughtWriter = ({
 	initialContent,
-	initialTags = [],
+	initialTagLabels = [],
 	editId,
 	parentId,
 	onWrite,
+	onContentBlur,
 }: {
 	initialContent?: string;
-	initialTags?: string[];
+	initialTagLabels?: string[];
 	editId?: string;
 	parentId?: string;
-	onWrite?: (thought: Thought) => void;
+	onWrite?: (thought: Thought, shiftKey: boolean, altKey: boolean) => void;
+	onContentBlur?: () => void;
 }) => {
 	const [tags, tagsSet] = tagsUse();
 	const [personaId] = personaUse();
-	const [thoughtTags, thoughtTagsSet] = useState<string[]>(initialTags);
+	const [tagLabels, tagLabelsSet] = useState<string[]>(initialTagLabels);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = useRef<null | HTMLTextAreaElement>(null);
@@ -36,38 +38,36 @@ export const ThoughtWriter = ({
 	);
 
 	const writeThought = useCallback(
-		(additionalTag?: string) => {
+		(additionalTag?: string, shiftKey?: boolean, altKey?: boolean) => {
 			// if you want to "delete" a post, you can remove the content/tags
 			if (!editId && !contentTextArea.current!.value) return;
-			pinger<Thought>(buildUrl('write-thought'), {
+			ping<Thought>(buildUrl('write-thought'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					parentId,
-					thought: {
-						createDate: +editId?.split('.')[0]! || undefined,
-						authorId: personaId,
-						spaceId: null,
-						content: contentTextArea.current!.value,
-						tags: makeSortedUniqueArr([...thoughtTags, ...(additionalTag ? [additionalTag] : [])]),
-					},
+					createDate: +editId?.split('.', 1)[0]! || undefined,
+					authorId: personaId,
+					spaceId: null,
+					content: contentTextArea.current!.value,
+					tagLabels: makeSortedUniqueArr([...tagLabels, ...(additionalTag ? [additionalTag] : [])]),
 				}),
 			})
 				.then((thought) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
-					onWrite && onWrite(thought);
+					onWrite && onWrite(thought, !!shiftKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagInput.current!.value = '';
-					// thoughtTagsSet([]);
+					// tagLabelsSet([]);
 					suggestTagsSet(false);
 
-					pinger<Tag[]>(buildUrl('get-tags'))
+					ping<Tag[]>(buildUrl('get-tags'))
 						.then((data) => tagsSet(data))
 						.catch((err) => alert(JSON.stringify(err)));
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[editId, parentId, onWrite, thoughtTags],
+		[editId, parentId, onWrite, tagLabels],
 	);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -100,7 +100,11 @@ export const ThoughtWriter = ({
 					focusedOnTagSuggestion;
 
 				if (focusedOnThoughtWriter) {
-					writeThought(filteredTags![focusedSuggestionIndex] || tagInput.current!.value);
+					writeThought(
+						filteredTags![focusedSuggestionIndex] || tagInput.current!.value,
+						event.shiftKey,
+						event.altKey,
+					);
 				}
 			}
 		};
@@ -113,7 +117,7 @@ export const ThoughtWriter = ({
 		};
 	}, [filteredTags, writeThought]);
 
-	useEffect(() => thoughtTagsSet(initialTags), [JSON.stringify(initialTags)]);
+	useEffect(() => tagLabelsSet(initialTagLabels), [JSON.stringify(initialTagLabels)]);
 
 	return (
 		<div className="w-full flex flex-col">
@@ -124,15 +128,21 @@ export const ThoughtWriter = ({
 				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
-				className="rounded text-xl font-medium px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100"
+				className="rounded text-xl font-medium font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
+				onKeyDown={(e) => {
+					if (e.key === 'Escape') {
+						contentTextArea.current?.blur();
+						onContentBlur && onContentBlur();
+					}
+				}}
 			/>
 			<div className="mt-1 relative">
-				{!!thoughtTags.length && (
+				{!!tagLabels.length && (
 					<div
 						className="mb-0.5 fx flex-wrap px-3 py-1 gap-1 rounded-t bg-bg2 text-lg"
 						onClick={() => tagInput.current!.focus()}
 					>
-						{thoughtTags.map((name, i) => {
+						{tagLabels.map((name, i) => {
 							return (
 								<div key={i} className="text-fg1 flex group">
 									<div
@@ -147,9 +157,9 @@ export const ThoughtWriter = ({
 										onClick={(e) => {
 											e.stopPropagation(); // this is needed to focus the next tag
 											tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
-											const newCats = [...thoughtTags];
+											const newCats = [...tagLabels];
 											newCats.splice(i, 1);
-											thoughtTagsSet(newCats);
+											tagLabelsSet(newCats);
 											tagInput.current?.focus();
 										}}
 									>
@@ -162,7 +172,7 @@ export const ThoughtWriter = ({
 				)}
 				<input
 					autoComplete="off"
-					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 ${thoughtTags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
+					className={`mt-1 px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tagLabels.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Add tags with Enter"
 					ref={tagInput}
 					onFocus={() => suggestTagsSet(true)}
@@ -172,18 +182,18 @@ export const ThoughtWriter = ({
 					onKeyDown={(e) => {
 						if (tagFilter && e.key === 'Enter' && !e.metaKey) {
 							tagInput.current!.value = '';
-							thoughtTagsSet([...new Set([...thoughtTags, tagFilter])]);
+							tagLabelsSet([...new Set([...tagLabels, tagFilter])]);
 							tagFilterSet('');
 						} else if (e.key === 'Escape') {
-							suggestTagsSet(!suggestTags);
+							tagInput.current?.blur();
 						}
 					}}
 				/>
 				{suggestTags && (
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
 						{filteredTags.map((label, i) => {
-							const tagIndex = thoughtTags.indexOf(label);
-							const inThoughtTags = tagIndex !== -1;
+							const tagIndex = tagLabels.indexOf(label);
+							const intagLabels = tagIndex !== -1;
 							return (
 								<button
 									key={i}
@@ -192,16 +202,16 @@ export const ThoughtWriter = ({
 									onBlur={onAddingTagBlur}
 									onKeyDown={(e) => e.key === 'Escape' && suggestTagsSet(false)}
 									onClick={() => {
-										if (inThoughtTags) {
-											const newThoughtTags = [...thoughtTags];
-											newThoughtTags.splice(tagIndex, 1);
-											thoughtTagsSet(newThoughtTags);
+										if (intagLabels) {
+											const newtagLabels = [...tagLabels];
+											newtagLabels.splice(tagIndex, 1);
+											tagLabelsSet(newtagLabels);
 										} else {
-											thoughtTagsSet([...new Set([...thoughtTags, label])]);
+											tagLabelsSet([...new Set([...tagLabels, label])]);
 										}
 									}}
 								>
-									{label} {inThoughtTags && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
+									{label} {intagLabels && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
 								</button>
 							);
 						})}

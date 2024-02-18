@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Preferences from './pages/Preferences';
 import Search from './pages/Search';
 import Tags from './pages/Tags';
+import ThoughtId from './pages/ThoughtId';
 
 function App() {
 	return (
@@ -17,6 +18,7 @@ function App() {
 					<Route path="/tags" Component={Tags} />
 					<Route path="/search" Component={Search} />
 					<Route path="/preferences" Component={Preferences} />
+					<Route path="/:thoughtId" Component={ThoughtId} />
 				</Routes>
 			</BrowserRouter>
 		</main>

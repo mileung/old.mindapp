@@ -1,19 +1,19 @@
 export function buildUrl(basePath: string, params?: Record<string, any>) {
 	let url: string;
 	if (!params) {
-		url = `http://localhost:3000/${basePath}`;
+		url = `http://localhost:2000/${basePath}`;
 	} else {
 		const queryString = Object.keys(params)
 			.map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
 			.join('&');
 
-		url = `http://localhost:3000/${basePath}?${queryString}`;
+		url = `http://localhost:2000/${basePath}?${queryString}`;
 	}
 	// console.log('url:', url);
 	return url;
 }
 
-export const pinger = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
+export const ping = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 	new Promise((resolve, reject) => {
 		fetch(...args).then(async (res) => {
 			const json = await res.json();

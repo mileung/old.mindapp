@@ -1,7 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import { Settings } from '../types/Settings';
+import { day } from './time';
 
 const homeDir = os.homedir();
 export const mindappRootPath = path.join(homeDir, '.mindapp');
@@ -16,10 +16,6 @@ export const writeFile = (filePath: string, json: string) => {
 
 export const parseFile = <T>(filePath: string) => {
 	return JSON.parse(fs.readFileSync(filePath).toString()) as T;
-};
-
-export const getSettings = () => {
-	return parseFile<Settings>(settingsPath);
 };
 
 export const mkdirIfDne = (dirPath: string) => {
@@ -46,4 +42,32 @@ export function isFile(path: string) {
 
 export function isDirectory(path: string) {
 	return fs.statSync(path).isDirectory();
+}
+
+export function getFilePath(fileName: string) {
+	const [createDate, authorId, spaceId] = fileName.split('.');
+	const thirdDotIndex = fileName.indexOf(
+		'.',
+		createDate.length + authorId.length + spaceId.length + 2,
+	);
+	const fileNameAfterThirdDot =
+		thirdDotIndex === -1 ? undefined : fileName.substring(1 + thirdDotIndex);
+	return calcFilePath(+createDate, +authorId || null, +spaceId || null, fileNameAfterThirdDot);
+}
+
+export function calcFilePath(
+	createDate: number,
+	authorId: null | number,
+	spaceId: null | number,
+	fileNameSuffix: string = 'json',
+) {
+	const daysSince1970 = +createDate / day;
+	const period = Math.floor(daysSince1970 / 100) * 100 + '';
+
+	return path.join(
+		timelinePath,
+		period,
+		Math.floor(daysSince1970) + '',
+		`${createDate}.${authorId}.${spaceId}.${fileNameSuffix}`,
+	);
 }

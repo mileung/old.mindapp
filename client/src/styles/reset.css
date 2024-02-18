@@ -4,7 +4,6 @@
 
 body {
 	@apply bg-bg1 text-fg1;
-	font-family: 'Quicksand Variable', sans-serif;
 }
 
 input,

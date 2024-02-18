@@ -1,45 +1,47 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
-import { addTagIndex, addTags, removeTagIndex } from '../utils/tags';
+import { addTagIndex, addTagsByLabel, removeTagIndex } from '../utils/tags';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
-	let {
-		parentId,
-		thought: { createDate, authorId, spaceId, content, tags },
-	} = req.body as {
-		parentId?: string;
-		thought: Thought;
-	};
-	const overwrite = !!createDate;
+	// return res.send({});
+	let { parentId, createDate, authorId, spaceId, content, tagLabels } = req.body as Thought;
+	const editing = !!createDate;
 	createDate = createDate || Date.now(); // can be used for editing
+	let thought: Thought;
+	if (editing) {
+		thought = Thought.parse(`${createDate}.${authorId}.${spaceId}`);
+		const oldTagLabels = thought.tagLabels;
+		const oldMentionedIds = thought.mentionedIds;
+		thought.content = content;
+		thought.tagLabels = tagLabels;
+		thought.overwrite();
 
-	let oldThought: Thought;
-	if (overwrite) {
-		oldThought = Thought.parse(`${createDate}.${authorId}.${spaceId}`);
-	}
+		const addedTagLabels = tagLabels.filter((x) => !oldTagLabels.includes(x));
+		const removedTagLabels = oldTagLabels.filter((x) => !tagLabels.includes(x));
+		addedTagLabels.forEach((label) => addTagIndex(label, thought.id));
+		removedTagLabels.forEach((label) => removeTagIndex(label, thought.id));
+		addTagsByLabel([...thought.tagLabels, ...oldTagLabels]);
 
-	const thought = new Thought(
-		{
-			createDate,
-			authorId,
-			spaceId,
-			content,
-			tags,
-			parentId,
-		},
-		true,
-		overwrite,
-	);
-
-	if (overwrite) {
-		const added = (thought.tags || []).filter((x) => !(oldThought.tags || []).includes(x));
-		const removed = (oldThought!.tags || []).filter((x) => !(thought.tags || []).includes(x));
-		added.forEach((label) => addTagIndex(label, thought.id));
-		removed.forEach((label) => removeTagIndex(label, thought.id));
-		addTags([...(thought.tags || []), ...(oldThought!.tags || [])]);
+		const newMentionedIds = thought.mentionedIds;
+		const addedMentionedIds = newMentionedIds.filter((x) => !oldMentionedIds.includes(x));
+		const removedMentionedIds = oldMentionedIds.filter((x) => !newMentionedIds.includes(x));
+		addedMentionedIds.forEach((id) => Thought.parse(id).addMention(thought.id));
+		removedMentionedIds.forEach((id) => Thought.parse(id).removeMention(thought.id));
 	} else {
-		(thought.tags || []).forEach((label) => addTagIndex(label, thought.id));
-		addTags(thought.tags || []);
+		thought = new Thought(
+			{
+				parentId,
+				createDate,
+				authorId,
+				spaceId,
+				content,
+				tagLabels,
+			},
+			true,
+		);
+		thought.tagLabels.forEach((label) => addTagIndex(label, thought.id));
+		addTagsByLabel(thought.tagLabels);
+		thought.mentionedIds.forEach((id) => Thought.parse(id).addMention(thought.id));
 	}
 
 	res.status(200).send(thought);

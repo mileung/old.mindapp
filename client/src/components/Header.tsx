@@ -26,6 +26,22 @@ window.addEventListener('scroll', () => {
 	lastScroll = currentScroll <= 0 ? 0 : currentScroll;
 });
 
+function useKeyPress(key: string, callback: () => void) {
+	useEffect(() => {
+		function handleKeyPress(event: KeyboardEvent) {
+			if (event.key === key) {
+				callback();
+			}
+		}
+
+		window.addEventListener('keydown', handleKeyPress);
+
+		return () => {
+			window.removeEventListener('keydown', handleKeyPress);
+		};
+	}, [key, callback]);
+}
+
 export default function Header() {
 	// spaceIdUse
 	// personaUse
@@ -39,15 +55,32 @@ export default function Header() {
 		window.scrollTo(0, 0);
 	}, [searchedKeywords]);
 
-	const searchInput = useCallback(() => {
-		const { value } = searchRef.current!;
-		// console.log('value:', value);
-		if (value.trim()) {
-			const queryString = new URLSearchParams({ q: value.trim() }).toString();
-			navigate(`/search?${queryString}`);
-			searchRef.current!.blur();
+	useKeyPress('/', () => {
+		const activeElement = document.activeElement!;
+		if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+			setTimeout(() => searchRef.current?.focus(), 0); // setTimeout prevents inputting '/' on focus
 		}
-	}, [navigate]);
+	});
+
+	const searchInput = useCallback(
+		(newTab = false) => {
+			const { value } = searchRef.current!;
+			// console.log('value:', value);
+			if (value.trim()) {
+				const queryString = new URLSearchParams({ q: value.trim() }).toString();
+				searchRef.current!.blur();
+				setTimeout(() => {
+					if (newTab) {
+						window.open(`/search?${queryString}`, '_blank');
+					} else {
+						navigate(`/search?${queryString}`);
+					}
+				}, 0);
+				// setTimeout prevents search from adding new line to contentTextarea on enter
+			}
+		},
+		[navigate],
+	);
 
 	return (
 		<header
@@ -59,15 +92,21 @@ export default function Header() {
 				<img src="mindapp-logo.svg" alt="logo" className="h-7" />
 				<p className="ml-2 text-2xl font-black">Mindapp</p>
 			</Link>
-			<div className="w-full mx-2 max-w-md flex rounded border-2 border-mg1 focus:border-white">
+			<div className="w-full mx-2 max-w-md flex">
 				<input
 					ref={searchRef}
-					className="w-full h-full text-lg px-2"
+					className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 focus:border-mg2"
 					placeholder="Search"
 					defaultValue={searchedKeywords || ''}
-					onKeyDown={(e) => e.key === 'Enter' && searchInput()}
+					onKeyDown={(e) => {
+						e.key === 'Enter' && searchInput(e.metaKey);
+						e.key === 'Escape' && searchRef.current?.blur();
+					}}
 				/>
-				<button className="xy px-2 transition text-fg2 hover:text-fg1" onClick={searchInput}>
+				<button
+					className="xy -ml-12 px-2 transition text-fg2 hover:text-fg1"
+					onClick={() => searchInput()}
+				>
 					<MagnifyingGlassIcon className="h-7 w-7" />
 				</button>
 			</div>

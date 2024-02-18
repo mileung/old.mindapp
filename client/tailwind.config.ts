@@ -5,6 +5,10 @@ const config: Config = {
 	darkMode: 'class',
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['Quicksand Variable', 'sans-serif'],
+				mono: ['Fira Code Variable', 'monospace'],
+			},
 			colors: {
 				clear: 'var(--clear)',
 				bg1: 'var(--bg1)',
