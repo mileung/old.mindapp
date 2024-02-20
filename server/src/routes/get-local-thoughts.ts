@@ -59,7 +59,7 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 		}
 	}
 
-	res.status(200).json({ latestCreateDate, moreRoots: roots });
+	res.send({ latestCreateDate, moreRoots: roots });
 };
 
 export default getLocalThoughts;

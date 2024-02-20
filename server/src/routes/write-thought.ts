@@ -1,6 +1,7 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
 import { addTagIndex, addTagsByLabel, removeTagIndex } from '../utils/tags';
+import { debouncedSnapshot } from '../utils/git';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
 	// return res.send({});
@@ -44,7 +45,8 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 		thought.mentionedIds.forEach((id) => Thought.parse(id).addMention(thought.id));
 	}
 
-	res.status(200).send(thought);
+	res.send(thought);
+	debouncedSnapshot();
 };
 
 export default writeThought;

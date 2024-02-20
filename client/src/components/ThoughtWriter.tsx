@@ -1,6 +1,6 @@
 import { CheckCircleIcon, PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { tagsUse, personaUse } from './GlobalState';
+import { useTags, usePersona } from './GlobalState';
 import { buildUrl, ping } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { Tag, makeSortedUniqueArr } from '../utils/tags';
@@ -22,8 +22,8 @@ export const ThoughtWriter = ({
 	onWrite?: (thought: Thought, shiftKey: boolean, altKey: boolean) => void;
 	onContentBlur?: () => void;
 }) => {
-	const [tags, tagsSet] = tagsUse();
-	const [personaId] = personaUse();
+	const [tags, tagsSet] = useTags();
+	const [personaId] = usePersona();
 	const [tagLabels, tagLabelsSet] = useState<string[]>(initialTagLabels);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
@@ -32,7 +32,7 @@ export const ThoughtWriter = ({
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 
-	const filteredTags = useMemo(
+	const suggestedTags = useMemo(
 		() => matchSorter(tags?.map((a) => a.label) || [], tagFilter),
 		[tags, tagFilter],
 	);
@@ -101,7 +101,7 @@ export const ThoughtWriter = ({
 
 				if (focusedOnThoughtWriter) {
 					writeThought(
-						filteredTags![focusedSuggestionIndex] || tagInput.current!.value,
+						suggestedTags![focusedSuggestionIndex] || tagInput.current!.value,
 						event.shiftKey,
 						event.altKey,
 					);
@@ -115,7 +115,7 @@ export const ThoughtWriter = ({
 			document.removeEventListener('keydown', handleKeyPress);
 			document.removeEventListener('keyup', handleKeyPress);
 		};
-	}, [filteredTags, writeThought]);
+	}, [suggestedTags, writeThought]);
 
 	useEffect(() => tagLabelsSet(initialTagLabels), [JSON.stringify(initialTagLabels)]);
 
@@ -128,7 +128,7 @@ export const ThoughtWriter = ({
 				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
-				className="rounded text-xl font-medium font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
+				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
 						contentTextArea.current?.blur();
@@ -191,7 +191,7 @@ export const ThoughtWriter = ({
 				/>
 				{suggestTags && (
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
-						{filteredTags.map((label, i) => {
+						{suggestedTags.map((label, i) => {
 							const tagIndex = tagLabels.indexOf(label);
 							const intagLabels = tagIndex !== -1;
 							return (

@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useRef } from 'react';
+import { CogIcon } from '@heroicons/react/24/outline';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -43,8 +44,8 @@ function useKeyPress(key: string, callback: () => void) {
 }
 
 export default function Header() {
-	// spaceIdUse
-	// personaUse
+	// useSpaceId
+	// usePersona
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchRef = useRef<HTMLInputElement>(null);
@@ -84,7 +85,7 @@ export default function Header() {
 
 	return (
 		<header
-			className="z-50 px-3 fixed top-0 w-screen flex justify-between py-1 h-12 transition-opacity bg-bg1"
+			className="z-50 fixed top-0 w-full px-3 flex justify-between py-1 h-12 transition-opacity bg-bg1"
 			style={{ opacity: 'var(--header-opacity)' }}
 			onMouseDown={() => setGlobalCssVariable('header-opacity', '1')}
 		>
@@ -95,7 +96,7 @@ export default function Header() {
 			<div className="w-full mx-2 max-w-md flex">
 				<input
 					ref={searchRef}
-					className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 focus:border-mg2"
+					className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 hover:border-mg2 focus:border-mg2"
 					placeholder="Search"
 					defaultValue={searchedKeywords || ''}
 					onKeyDown={(e) => {
@@ -110,9 +111,14 @@ export default function Header() {
 					<MagnifyingGlassIcon className="h-7 w-7" />
 				</button>
 			</div>
-			<Link to="/tags" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
-				<TagIcon className="h-7 w-7" />
-			</Link>
+			<div className="fx">
+				<Link to="/settings" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
+					<CogIcon className="h-7 w-7" />
+				</Link>
+				<Link to="/tags" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
+					<TagIcon className="h-7 w-7" />
+				</Link>
+			</div>
 		</header>
 	);
 }

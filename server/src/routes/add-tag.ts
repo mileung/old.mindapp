@@ -3,6 +3,7 @@ import fs from 'fs';
 import { Tag } from '../types/Tag';
 import { parseFile, tagsPath } from '../utils/files';
 import { aggregateSetArray } from '../utils/tags';
+import { debouncedSnapshot } from '../utils/git';
 
 const addTag: RequestHandler = (req, res) => {
 	// console.log('req.body:', req.body);
@@ -47,6 +48,7 @@ const addTag: RequestHandler = (req, res) => {
 	fs.writeFileSync(tagsPath, JSON.stringify(tags));
 
 	res.send({});
+	debouncedSnapshot();
 };
 
 export default addTag;

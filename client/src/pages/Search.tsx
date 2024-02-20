@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import Results from '../components/Results';
 import { Tag, makeSortedUniqueArr } from '../utils/tags';
-import { tagsUse } from '../components/GlobalState';
+import { useTags } from '../components/GlobalState';
 import { useMemo } from 'react';
 
 function parseQ(input: string, tags: Tag[]) {
@@ -37,7 +37,7 @@ function parseQ(input: string, tags: Tag[]) {
 }
 
 export default function Search() {
-	const [tags] = tagsUse();
+	const [tags] = useTags();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
 	const { initialTagLabels, query } = useMemo(() => parseQ(q, tags || []), [q, tags]);

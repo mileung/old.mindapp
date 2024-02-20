@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import fs from 'fs';
 import { Tag } from '../types/Tag';
 import { parseFile, tagsPath } from '../utils/files';
+import { debouncedSnapshot } from '../utils/git';
 
 const removeTag: RequestHandler = (req, res) => {
 	let tags = parseFile<Tag[]>(tagsPath);
@@ -43,6 +44,7 @@ const removeTag: RequestHandler = (req, res) => {
 	fs.writeFileSync(tagsPath, JSON.stringify(tags));
 
 	res.send({});
+	debouncedSnapshot();
 };
 
 export default removeTag;

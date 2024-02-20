@@ -2,25 +2,20 @@ import cors from 'cors';
 import express, { ErrorRequestHandler } from 'express';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
+import { getFile } from './routes/get-file';
 import getLocalThoughts from './routes/get-local-thoughts';
+import getSettings from './routes/get-settings';
 import getTags from './routes/get-tags';
 import getThought from './routes/get-thought';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
 import searchLocalThoughts from './routes/search-local-thoughts';
+import updateSettings from './routes/update-settings';
 import whoami from './routes/whoami';
 import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
-import {
-	indicesPath,
-	mkdirIfDne,
-	parseFile,
-	settingsPath,
-	timelinePath,
-	touchIfDne,
-} from './utils/files';
-import { getFile } from './routes/get-file';
 import { Thought } from './types/Thought';
+import { indicesPath, mkdirIfDne, settingsPath, timelinePath, touchIfDne } from './utils/files';
 import { day } from './utils/time';
 
 const app = express();
@@ -38,6 +33,8 @@ app.use(express.json());
 
 app.get('/', root);
 app.get('/whoami', whoami);
+app.get('/get-settings', getSettings);
+app.post('/update-settings', updateSettings);
 app.post('/write-thought', writeThought);
 app.get('/get-thought', getThought);
 app.get('/get-tags', getTags);
@@ -56,9 +53,9 @@ app.use(((err, req, res, next) => {
 
 app.listen(port, () => {
 	mkdirIfDne(timelinePath);
-	touchIfDne(settingsPath, JSON.stringify(new Settings()));
+	touchIfDne(settingsPath, JSON.stringify(new Settings({})));
 	touchIfDne(indicesPath, JSON.stringify({}));
-	global.startDate = parseFile<Settings>(settingsPath).startDate;
+	// global.startDate = parseFile<Settings>(settingsPath).startDate;
 	console.log(`Server is running on http://localhost:${port}`);
 
 	// test data

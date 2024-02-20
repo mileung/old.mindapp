@@ -3,6 +3,7 @@ import fs from 'fs';
 import { Tag } from '../types/Tag';
 import { parseFile, tagsPath } from '../utils/files';
 import { aggregateSetArray } from '../utils/tags';
+import { debouncedSnapshot } from '../utils/git';
 
 const renameTag: RequestHandler = (req, res) => {
 	// console.log('req.body:', req.body);
@@ -55,6 +56,7 @@ const renameTag: RequestHandler = (req, res) => {
 	}
 
 	res.send({});
+	debouncedSnapshot();
 };
 
 export default renameTag;

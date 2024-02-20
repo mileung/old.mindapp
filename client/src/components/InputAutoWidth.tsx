@@ -6,14 +6,13 @@ const useInputAutoWidth = (ref: React.RefObject<HTMLInputElement>) => {
 	useEffect(() => {
 		const listener = () => {
 			if (ref.current) {
-				// const inputStyle = window.getComputedStyle(ref.current);
-				// const inputWidth = inputStyle.width;
-				ref.current.style.width = 'auto'; // Set width to auto to get the scrollWidth accurately
+				ref.current.style.width = 'auto';
 				ref.current.style.width = ref.current.scrollWidth + 'px';
 			}
 		};
 
 		if (ref.current) {
+			listener();
 			ref.current.addEventListener('input', listener);
 		}
 

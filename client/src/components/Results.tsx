@@ -87,17 +87,18 @@ export default function Results({
 			/>
 			<div className="space-y-1.5">
 				<button
-					className="h-4 w-4 xy text-fg2 hover:text-fg1 transition"
+					className="h-4 fx text-fg2 hover:text-fg1 transition"
 					onClick={() => {
 						oldToNewSet(!oldToNew);
 						rootsSet([]);
 					}}
 				>
 					{oldToNew ? (
-						<BarsArrowUpIcon className="absolute h-5 w-5" />
+						<BarsArrowUpIcon className="h-5 w-5" />
 					) : (
-						<BarsArrowDownIcon className="absolute h-5 w-5" />
+						<BarsArrowDownIcon className="h-5 w-5" />
 					)}
+					<p className="ml-1 font-medium">{oldToNew ? 'Old to new' : 'New to old'}</p>
 				</button>
 				{roots.map(
 					(thought, i) =>

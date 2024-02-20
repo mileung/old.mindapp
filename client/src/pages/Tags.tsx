@@ -3,7 +3,7 @@ import { buildUrl, ping } from '../utils/api';
 import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecTag, Tag, makeRecTags } from '../utils/tags';
-import { tagsUse } from '../components/GlobalState';
+import { useTags } from '../components/GlobalState';
 
 const TagAdder = ({ onAdd, onBlur }: { onAdd: (label: string) => void; onBlur?: () => void }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -156,7 +156,7 @@ const TagEditor = ({
 };
 
 export default function Tags() {
-	const [tags, tagsSet] = tagsUse();
+	const [tags, tagsSet] = useTags();
 	const recTags = useMemo(() => {
 		if (tags) return makeRecTags(tags);
 	}, [tags]);
