@@ -5,16 +5,25 @@ import { buildUrl, ping } from '../utils/api';
 
 const thoughtIdRegex = /^\d{13}\.(null|\d{13})\.(null|\d{13})$/;
 
+type Response = {
+	moreMentions: Record<string, Thought>;
+	rootThought: null | Thought;
+};
+
 export default function ThoughtId() {
 	const { pathname } = useLocation();
 	const thoughtId = useMemo(() => pathname.substring(1), [pathname]);
+	const [mentionedThoughts, mentionedThoughtsSet] = useState<Record<string, Thought>>({});
 	const [rootThought, rootThoughtSet] = useState<null | Thought>();
 	const [invalidThoughtId, invalidThoughtIdSet] = useState(false);
 
 	useEffect(() => {
 		if (!thoughtIdRegex.test(thoughtId)) return invalidThoughtIdSet(true);
-		ping<{ rootThought: null | Thought }>(buildUrl('get-thought', { thoughtId }))
-			.then(({ rootThought }) => rootThoughtSet(rootThought))
+		ping<Response>(buildUrl('get-thought', { thoughtId }))
+			.then((res) => {
+				mentionedThoughtsSet(res.moreMentions);
+				rootThoughtSet(res.rootThought);
+			})
 			.catch((err) => alert(JSON.stringify(err)));
 	}, []);
 
@@ -32,10 +41,14 @@ export default function ThoughtId() {
 			)}
 			{rootThought && (
 				<ThoughtBlock
+					mentionedThoughts={mentionedThoughts!}
 					highlightedId={thoughtId}
 					parentId={rootThought.parentId}
 					roots={[rootThought]}
 					onRootsChange={(newRoots) => rootThoughtSet(newRoots[0])}
+					onMentions={(moreMentions) =>
+						mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions })
+					}
 					rootsIndices={[0]}
 					thought={rootThought}
 				/>

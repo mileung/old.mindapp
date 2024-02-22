@@ -6,6 +6,7 @@ import { matchSorter } from 'match-sorter';
 import { Tag, makeSortedUniqueArr } from '../utils/tags';
 import { Thought } from './ThoughtBlock';
 import { onFocus } from '../utils/input';
+import { PhotoIcon } from '@heroicons/react/24/outline';
 
 export const ThoughtWriter = ({
 	initialContent,
@@ -15,11 +16,15 @@ export const ThoughtWriter = ({
 	onWrite,
 	onContentBlur,
 }: {
-	initialContent?: string;
+	initialContent?: string | string[];
 	initialTagLabels?: string[];
 	editId?: string;
 	parentId?: string;
-	onWrite?: (thought: Thought, shiftKey: boolean, altKey: boolean) => void;
+	onWrite?: (
+		res: { mentionedThoughts: Record<string, Thought>; thought: Thought },
+		shiftKey: boolean,
+		altKey: boolean,
+	) => void;
 	onContentBlur?: () => void;
 }) => {
 	const [tags, tagsSet] = useTags();
@@ -39,23 +44,31 @@ export const ThoughtWriter = ({
 
 	const writeThought = useCallback(
 		(additionalTag?: string, shiftKey?: boolean, altKey?: boolean) => {
+			const content = contentTextArea.current!.value;
 			// if you want to "delete" a post, you can remove the content/tags
-			if (!editId && !contentTextArea.current!.value) return;
-			ping<Thought>(buildUrl('write-thought'), {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					parentId,
-					createDate: +editId?.split('.', 1)[0]! || undefined,
-					authorId: personaId,
-					spaceId: null,
-					content: contentTextArea.current!.value,
-					tagLabels: makeSortedUniqueArr([...tagLabels, ...(additionalTag ? [additionalTag] : [])]),
-				}),
-			})
-				.then((thought) => {
+			if (!editId && !content) return;
+
+			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
+				buildUrl('write-thought'),
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						parentId,
+						createDate: +editId?.split('.', 1)[0]! || undefined,
+						authorId: personaId,
+						spaceId: null,
+						content: separateMentions(content),
+						tagLabels: makeSortedUniqueArr([
+							...tagLabels,
+							...(additionalTag ? [additionalTag] : []),
+						]),
+					}),
+				},
+			)
+				.then((res) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
-					onWrite && onWrite(thought, !!shiftKey, !!altKey);
+					onWrite && onWrite(res, !!shiftKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagInput.current!.value = '';
 					// tagLabelsSet([]);
@@ -119,11 +132,16 @@ export const ThoughtWriter = ({
 
 	useEffect(() => tagLabelsSet(initialTagLabels), [JSON.stringify(initialTagLabels)]);
 
+	const defaultValue = useMemo(
+		() => (Array.isArray(initialContent) ? initialContent.join('') : initialContent),
+		[],
+	);
+
 	return (
 		<div className="w-full flex flex-col">
 			<textarea
 				autoFocus
-				defaultValue={initialContent}
+				defaultValue={defaultValue}
 				ref={contentTextArea}
 				onFocus={onFocus}
 				name="content"
@@ -218,12 +236,32 @@ export const ThoughtWriter = ({
 					</div>
 				)}
 			</div>
-			<button
-				className="mt-1 px-2 self-end rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
-				onClick={() => writeThought()}
-			>
-				<PlusIcon className="h-7 w-7" />
-			</button>
+			<div className="mt-1 fx justify-end gap-1.5">
+				<button className="px-2 transition text-fg2 hover:text-fg1" onClick={() => writeThought()}>
+					<PhotoIcon className="h-7 w-7" />
+				</button>
+				<button
+					className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
+					onClick={() => writeThought()}
+				>
+					<PlusIcon className="h-7 w-7" />
+				</button>
+			</div>
 		</div>
 	);
 };
+
+const thoughtIdRegex = /\d{13}\.(null|\d{13})\.(null|\d{13})/g;
+function separateMentions(text: string) {
+	const matches = text.matchAll(thoughtIdRegex);
+	const result: string[] = [];
+	let start = 0;
+	for (const match of matches) {
+		result.push(text.substring(start, match.index), match[0]);
+		start = match.index! + match[0].length;
+	}
+	if (start < text.length) {
+		result.push(text.substring(start));
+	}
+	return result.length > 1 ? result : text;
+}

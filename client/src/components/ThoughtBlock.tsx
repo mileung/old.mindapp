@@ -18,7 +18,7 @@ export type Thought = {
 	createDate: number;
 	authorId: null | number;
 	spaceId: null | number;
-	content: string;
+	content: string | string[];
 	tagLabels?: string[];
 	parentId?: string;
 	childrenIds?: string[];
@@ -28,7 +28,7 @@ export type RecThought = {
 	createDate: number;
 	authorId: null | number;
 	spaceId: null | number;
-	content: string;
+	content: string | string[];
 	tagLabels?: string[];
 	parent?: RecThought[];
 	children?: RecThought[];
@@ -38,7 +38,7 @@ export function getThoughtId(thought: Thought) {
 	return `${thought.createDate}.${thought.authorId}.${thought.spaceId}`;
 }
 
-const copyToClipboardAsync = (str = '') => {
+export const copyToClipboardAsync = (str = '') => {
 	if (navigator && navigator.clipboard && navigator.clipboard.writeText)
 		return navigator.clipboard.writeText(str);
 	return window.alert('The Clipboard API is not available.');
@@ -75,23 +75,27 @@ function Highlight({
 }
 
 export default function ThoughtBlock({
+	thought,
+	roots,
+	onRootsChange,
+	onMentions,
+	rootsIndices,
+	mentionedThoughts,
+	depth = 0,
 	initiallyLinking,
 	highlightedId,
 	parentId,
-	roots,
-	onRootsChange,
-	rootsIndices,
-	thought,
-	depth = 0,
 }: {
+	thought: RecThought;
+	roots: (null | RecThought)[];
+	onRootsChange: (newRoots: (null | RecThought)[]) => void;
+	onMentions: (mentionedThoughts: Record<string, Thought>) => void;
+	rootsIndices: number[];
+	mentionedThoughts: Record<string, Thought>;
+	depth?: number;
 	initiallyLinking?: boolean;
 	highlightedId?: string;
 	parentId?: string;
-	roots: (null | RecThought)[];
-	onRootsChange: (newRoots: (null | RecThought)[]) => void;
-	rootsIndices: number[];
-	thought: RecThought;
-	depth?: number;
 }) {
 	const [editing, editingSet] = useState(false);
 	const [open, openSet] = useState(true);
@@ -115,13 +119,31 @@ export default function ThoughtBlock({
 					</div>
 				</button>
 				<div className="mt-0.5 flex-1">
-					<Link
-						target="_blank"
-						to={`/${thoughtId}`}
-						className="text-sm font-bold transition text-fg2 hover:text-fg1"
-					>
-						{formatTimestamp(thought.createDate)}
-					</Link>
+					<div className="mr-1 fx gap-2 text-fg2">
+						<Link
+							target="_blank"
+							to={`/${thoughtId}`}
+							className="text-sm font-bold transition text-fg2 hover:text-fg1"
+						>
+							{formatTimestamp(thought.createDate)}
+						</Link>
+						<button
+							className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+							onClick={() => markdownSet(!markdown)}
+						>
+							{markdown ? (
+								<DocumentArrowDownIcon className="absolute h-4 w-4" />
+							) : (
+								<DocumentArrowUpIcon className="absolute h-4 w-4" />
+							)}
+						</button>
+						<button
+							className="h-4 w-4 xy hover:text-fg1 transition"
+							onClick={() => copyToClipboardAsync(`${thoughtId}`)}
+						>
+							<FingerPrintIcon className="absolute h-4 w-4" />
+						</button>
+					</div>
 					<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 						{editing ? (
 							<div className="mt-1">
@@ -131,7 +153,8 @@ export default function ThoughtBlock({
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
 									initialTagLabels={thought.tagLabels}
-									onWrite={(thought, shiftKey, altKey) => {
+									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
+										onMentions(mentionedThoughts);
 										editingSet(false);
 										altKey && linkingSet(true);
 										shiftKey && (linkingThoughtId.current = getThoughtId(thought));
@@ -151,7 +174,10 @@ export default function ThoughtBlock({
 							<>
 								{thought.content ? (
 									markdown ? (
-										<ContentParser text={thought.content} />
+										<ContentParser
+											mentionedThoughts={mentionedThoughts}
+											content={thought.content}
+										/>
 									) : (
 										<p className="whitespace-pre-wrap break-all font-thin font-mono">
 											{thought.content}
@@ -206,22 +232,6 @@ export default function ThoughtBlock({
 						</button> */}
 							{/* <button className="">Reference</button>
 						<button className="">Bookmark</button> */}
-							<button
-								className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
-								onClick={() => markdownSet(!markdown)}
-							>
-								{markdown ? (
-									<DocumentArrowDownIcon className="absolute h-4 w-4" />
-								) : (
-									<DocumentArrowUpIcon className="absolute h-4 w-4" />
-								)}
-							</button>
-							<button
-								className="h-4 w-4 xy hover:text-fg1 transition"
-								onClick={() => copyToClipboardAsync(`${location.host}/${thoughtId}`)}
-							>
-								<FingerPrintIcon className="absolute h-4 w-4" />
-							</button>
 						</div>
 						{thought.children && (
 							<div className="mt-1 space-y-1">
@@ -230,11 +240,13 @@ export default function ThoughtBlock({
 										childThought && (
 											<ThoughtBlock
 												key={i}
+												mentionedThoughts={mentionedThoughts}
 												initiallyLinking={linkingThoughtId.current === getThoughtId(childThought)}
 												highlightedId={highlightedId}
 												parentId={thoughtId}
 												roots={roots}
 												onRootsChange={onRootsChange}
+												onMentions={onMentions}
 												rootsIndices={[...rootsIndices, i]}
 												thought={childThought}
 												depth={depth + 1}
@@ -249,7 +261,8 @@ export default function ThoughtBlock({
 									parentId={thoughtId}
 									initialTagLabels={thought.tagLabels}
 									onContentBlur={() => linkingSet(false)}
-									onWrite={(thought, shiftKey, altKey) => {
+									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
+										onMentions(mentionedThoughts);
 										!altKey && linkingSet(false);
 										shiftKey && (linkingThoughtId.current = getThoughtId(thought));
 										const newRoots = [...roots] as RecThought[];

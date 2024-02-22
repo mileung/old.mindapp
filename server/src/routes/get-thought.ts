@@ -5,10 +5,11 @@ const getThought: RequestHandler = (req: Request & { body: Thought }, res) => {
 	try {
 		const thought = Thought.parse(req.query.thoughtId as string);
 		const { rootThought } = thought;
-		rootThought.expand();
-		res.send({ rootThought });
+		const moreMentions: Record<string, Thought> = {};
+		[...new Set(rootThought.expand())].forEach((id) => (moreMentions[id] = Thought.parse(id)));
+		res.send({ moreMentions, rootThought });
 	} catch (error) {
-		res.send({ rootThought: null });
+		res.send({ moreMentions: {}, rootThought: null });
 	}
 };
 

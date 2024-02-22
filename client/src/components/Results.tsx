@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ThoughtBlock, { RecThought, getThoughtId } from '../components/ThoughtBlock';
+import ThoughtBlock, { RecThought, Thought, getThoughtId } from '../components/ThoughtBlock';
 import { buildUrl, ping } from '../utils/api';
 import { ThoughtWriter } from './ThoughtWriter';
 import { useLocation } from 'react-router-dom';
@@ -15,6 +15,7 @@ export default function Results({
 		other: string[];
 	};
 }) {
+	const [mentionedThoughts, mentionedThoughtsSet] = useState<Record<string, Thought>>({});
 	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
 	const location = useLocation();
 	const [oldToNew, oldToNewSet] = useState(false);
@@ -26,20 +27,22 @@ export default function Results({
 		if (lastRoot === null) return;
 		const ignoreRootIds = roots.map((root) => root && getThoughtId(root));
 		pinging.current = true;
-		ping<{ latestCreateDate: number; moreRoots: RecThought[] }>(
-			buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'),
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					...query,
-					ignoreRootIds,
-					oldToNew,
-					thoughtsBeyond: thoughtsBeyond.current,
-				}),
-			},
-		)
-			.then(({ latestCreateDate, moreRoots }) => {
+		ping<{
+			moreMentions: Record<string, Thought>;
+			latestCreateDate: number;
+			moreRoots: RecThought[];
+		}>(buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				...query,
+				ignoreRootIds,
+				oldToNew,
+				thoughtsBeyond: thoughtsBeyond.current,
+			}),
+		})
+			.then(({ moreMentions, latestCreateDate, moreRoots }) => {
+				mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions });
 				const rootsPerLoad = 8;
 				const newRoots = [...roots, ...moreRoots];
 				moreRoots.length < rootsPerLoad && newRoots.push(null);
@@ -83,7 +86,10 @@ export default function Results({
 		<>
 			<ThoughtWriter
 				initialTagLabels={initialTagLabels}
-				onWrite={(thought) => rootsSet([thought, ...roots])}
+				onWrite={({ mentionedThoughts: mentions, thought }) => {
+					mentionedThoughtsSet({ ...mentionedThoughts, ...mentions });
+					rootsSet([thought, ...roots]);
+				}}
 			/>
 			<div className="space-y-1.5">
 				<button
@@ -106,7 +112,11 @@ export default function Results({
 							<ThoughtBlock
 								key={i}
 								roots={roots}
+								mentionedThoughts={mentionedThoughts}
 								onRootsChange={(newRoots) => rootsSet(newRoots)}
+								onMentions={(mentions) =>
+									mentionedThoughtsSet({ ...mentionedThoughts, ...mentions })
+								}
 								rootsIndices={[i]}
 								thought={thought}
 							/>

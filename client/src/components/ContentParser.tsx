@@ -1,16 +1,48 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
+import { Thought } from './ThoughtBlock';
+import MentionedThought from './MentionedThought';
+import { Link } from 'react-router-dom';
+import { formatTimestamp } from '../utils/time';
 
-interface ContentParserProps {
-	text: string;
+export default function ContentParser({
+	disableMentions,
+	mentionedThoughts,
+	content,
+}: {
+	disableMentions: boolean;
+	mentionedThoughts?: Record<string, Thought>;
+	content: string | string[];
+}): ReactNode[] {
+	const htmlNodes = useMemo(() => {
+		const arr = Array.isArray(content) ? content : [content];
+		return arr.map((str, i) => {
+			if (i % 2) {
+				return disableMentions ? (
+					<Link
+						key={i}
+						target="_blank"
+						to={`/${str}`}
+						className="px-1 border border-mg2 rounded text-sm font-bold transition text-fg2 hover:border-fg1 hover:text-fg1"
+					>
+						{formatTimestamp(+str.substring(0, str.indexOf('.')))}
+					</Link>
+				) : (
+					<MentionedThought key={i} thought={mentionedThoughts![str]} />
+				);
+			}
+			return parseMd(str);
+		});
+	}, [content]);
+
+	return htmlNodes;
 }
 
-export default function ContentParser({ text }: ContentParserProps): ReactNode[] {
+function parseMd(str: string) {
 	const htmlNodes: ReactNode[] = [];
-	text = text.trim();
 	let content = '';
 	let tagBeingParsed: undefined | 'p' | 'a' | 'img' | 'video';
-	for (let i = 0; i < text.length; i++) {
-		const char = text[i];
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
 		if (!tagBeingParsed) {
 			switch (char) {
 				// case '!':
@@ -23,7 +55,7 @@ export default function ContentParser({ text }: ContentParserProps): ReactNode[]
 					tagBeingParsed = 'p';
 			}
 		}
-		if (char === '\n' || i === text.length - 1) {
+		if (char === '\n' || i === str.length - 1) {
 			let reactNode: ReactNode;
 			switch (tagBeingParsed) {
 				case 'p':
@@ -44,6 +76,5 @@ export default function ContentParser({ text }: ContentParserProps): ReactNode[]
 			content += char;
 		}
 	}
-
 	return htmlNodes;
 }

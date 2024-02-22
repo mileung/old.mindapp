@@ -8,6 +8,9 @@ import { Thought } from '../types/Thought';
 const rootsPerLoad = 8;
 const getLocalThoughts: RequestHandler = (req, res) => {
 	const roots: Thought[] = [];
+	const mentionedIds = new Set<string>();
+	const moreMentions: Record<string, Thought> = {};
+
 	const { oldToNew, ignoreRootIds, thoughtsBeyond } = req.body as {
 		oldToNew: boolean;
 		ignoreRootIds: string[];
@@ -47,7 +50,7 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 						!ignoreRootIds.find((id) => id === thought.id) &&
 						!roots.find((root) => root.id === thought.id)
 					) {
-						thought.expand();
+						thought.expand().forEach((id) => mentionedIds.add(id));
 						roots.push(thought);
 						latestCreateDate = oldToNew
 							? Math.min(latestCreateDate, thought.createDate)
@@ -59,7 +62,9 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 		}
 	}
 
-	res.send({ latestCreateDate, moreRoots: roots });
+	mentionedIds.forEach((id) => (moreMentions[id] = Thought.parse(id)));
+
+	res.send({ latestCreateDate, moreMentions, moreRoots: roots });
 };
 
 export default getLocalThoughts;
