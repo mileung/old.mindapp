@@ -2,6 +2,7 @@ import simpleGit from 'simple-git';
 import { mindappRootPath } from './files';
 import { Settings } from '../types/Settings';
 import { debounce } from './performance';
+import { minute } from './time';
 
 const git = simpleGit(mindappRootPath);
 
@@ -45,4 +46,4 @@ export const snapshot = () => {
 	});
 };
 
-export const debouncedSnapshot = debounce(snapshot, 10000);
+export const debouncedSnapshot = debounce(snapshot, minute);

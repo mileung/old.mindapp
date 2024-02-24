@@ -1,14 +1,14 @@
 import { useCallback, useRef } from 'react';
 import { useSettings } from '../components/GlobalState';
 import InputAutoWidth from '../components/InputAutoWidth';
-import { buildUrl, ping } from '../utils/api';
+import { buildUrl, ping, post } from '../utils/api';
 
 export type Settings = {
-	gitSnapshotsEnabled: boolean;
-	// branchName: string;
-	gitRemoteUrl: null | string;
 	themeMode: string;
+	gitSnapshotsEnabled: boolean;
+	gitRemoteUrl: null | string;
 	preferredName: string;
+	developerMode: boolean;
 };
 
 function InputPicker({
@@ -85,13 +85,9 @@ export default function Settings() {
 
 	const updateSettings = useCallback(
 		(update: Partial<Settings>) => {
-			ping<Settings>(buildUrl('update-settings'), {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(update),
-			})
-				.then(() => {})
-				.catch((err) => alert('Error: ' + err));
+			ping<Settings>(buildUrl('update-settings'), post(update)).catch((err) =>
+				alert(JSON.stringify(err)),
+			);
 		},
 		[settings],
 	);
@@ -123,6 +119,15 @@ export default function Settings() {
 					defaultValue={settings.gitRemoteUrl || ''}
 					onSubmit={(v) => updateSettings({ gitRemoteUrl: v })}
 				/>
+				{/* <InputPicker
+					title="Developer mode"
+					options={['Off', 'On']}
+					value={settings.developerMode ? 'On' : 'Off'}
+					onSubmit={(v) => {
+						updateSettings({ developerMode: v === 'On' });
+						settingsSet({ ...settings, developerMode: v === 'On' });
+					}}
+				/> */}
 				{/* <p className="mt-3 leading-4 text font-semibold">{'Preferred name'}</p>
 			<InputSetter
 				placeholder="No name"

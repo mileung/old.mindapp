@@ -6,46 +6,46 @@ const ajv = new Ajv();
 const schema = {
 	type: 'object',
 	properties: {
-		gitSnapshotsEnabled: { type: 'boolean' },
-		// branchName: { type: 'string' },
-		gitRemoteUrl: { type: ['null', 'string'] },
 		themeMode: { type: 'string', enum: ['System', 'Light', 'Dark'] },
 		preferredName: { type: 'string' },
+		gitSnapshotsEnabled: { type: 'boolean' },
+		gitRemoteUrl: { type: ['null', 'string'] },
+		// developerMode: { type: 'boolean' },
 	},
 	required: [
-		'gitSnapshotsEnabled',
-		// 'branchName',
-		'gitRemoteUrl',
 		'themeMode',
 		'preferredName',
+		'gitSnapshotsEnabled',
+		'gitRemoteUrl',
+		// 'developerMode',
 	],
 	additionalProperties: false,
 };
 
 export class Settings {
-	public gitSnapshotsEnabled: boolean;
-	// public branchName: string;
-	public gitRemoteUrl: null | string;
 	public themeMode: string;
 	public preferredName: string;
+	public gitSnapshotsEnabled: boolean;
+	public gitRemoteUrl: null | string;
+	// public developerMode: boolean;
 	constructor({
-		gitSnapshotsEnabled = true,
-		// branchName = 'main',
-		gitRemoteUrl = null,
 		themeMode = 'System',
 		preferredName = '',
+		gitSnapshotsEnabled = true,
+		gitRemoteUrl = null,
+		// developerMode = false,
 	}: {
-		gitSnapshotsEnabled?: boolean;
-		// branchName?: string;
-		gitRemoteUrl?: null | string;
 		themeMode?: string;
 		preferredName?: string;
+		gitSnapshotsEnabled?: boolean;
+		gitRemoteUrl?: null | string;
+		// developerMode?: boolean;
 	}) {
-		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
-		// this.branchName = branchName;
-		this.gitRemoteUrl = gitRemoteUrl;
 		this.themeMode = themeMode;
 		this.preferredName = preferredName;
+		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
+		this.gitRemoteUrl = gitRemoteUrl;
+		// this.developerMode = developerMode;
 
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Settings: ' + JSON.stringify(this));
 	}

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import Results from '../components/Results';
-import { Tag, makeSortedUniqueArr } from '../utils/tags';
+import { Tag, sortUniArr } from '../utils/tags';
 import { useTags } from '../components/GlobalState';
 import { useMemo } from 'react';
 
@@ -30,7 +30,7 @@ function parseQ(input: string, tags: Tag[]) {
 	return {
 		initialTagLabels: explicitTagLabels,
 		query: {
-			tagLabels: makeSortedUniqueArr(explicitTagLabels.concat(subTagLabels)),
+			tagLabels: sortUniArr(explicitTagLabels.concat(subTagLabels)),
 			other,
 		},
 	};

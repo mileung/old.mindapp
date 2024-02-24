@@ -3,11 +3,11 @@ import { indicesPath, parseFile, tagsPath, writeFile } from './files';
 
 export type Indices = Record<string, string[]>;
 
-export const aggregateSetArray = (...arrays: string[][]) => {
-	return makeSortedUniqueArr(arrays.flatMap((a) => a));
-};
+// export const aggregateSetArray = (...arrays: string[][]) => {
+// 	return sortUniArr(arrays.flatMap((a) => a));
+// };
 
-export const makeSortedUniqueArr = (a: string[]) => {
+export const sortUniArr = (a: string[]) => {
 	return [...new Set(a)].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 };
 
@@ -17,7 +17,7 @@ export const addTagsByLabel = (labels: string[]) => {
 	for (let i = 0; i < labels.length; i++) {
 		const label = labels[i];
 		if (!tagLabelsSet.has(label)) {
-			tags.push(new Tag(label));
+			tags.push(new Tag({ label }));
 		}
 	}
 	tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
@@ -27,7 +27,7 @@ export const addTagsByLabel = (labels: string[]) => {
 export const addTagIndex = (label: string, thoughtId: string) => {
 	const indices = parseFile<Indices>(indicesPath);
 	indices[label] = indices[label] || [];
-	indices[label] = makeSortedUniqueArr([...indices[label], thoughtId]);
+	indices[label] = sortUniArr([...indices[label], thoughtId]);
 	writeFile(indicesPath, JSON.stringify(indices));
 };
 

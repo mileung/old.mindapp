@@ -16,6 +16,7 @@ import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
 import { Thought } from './types/Thought';
 import { indicesPath, mkdirIfDne, settingsPath, timelinePath, touchIfDne } from './utils/files';
+import { setUpGit } from './utils/git';
 import { day } from './utils/time';
 
 const app = express();
@@ -57,6 +58,7 @@ app.listen(port, () => {
 	touchIfDne(indicesPath, JSON.stringify({}));
 	// global.startDate = parseFile<Settings>(settingsPath).startDate;
 	console.log(`Server is running on http://localhost:${port}`);
+	setUpGit();
 
 	// test data
 	const makeTestData = false;

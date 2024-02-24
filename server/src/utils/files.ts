@@ -30,7 +30,7 @@ export const touchIfDne = (filePath: string, fileContent: string) => {
 	const dirPath = path.dirname(filePath);
 	mkdirIfDne(dirPath);
 	if (!fs.existsSync(filePath)) {
-		fs.writeFileSync(filePath, fileContent);
+		writeFile(filePath, fileContent);
 		return true;
 	}
 	return false;

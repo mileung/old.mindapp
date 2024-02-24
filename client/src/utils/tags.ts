@@ -64,6 +64,6 @@ export const makeRecTags = (tags: Tag[]): RecTag[] => {
 // const RecTags: RecTag[] = makeRecTags(tags);
 // console.log(RecTags);
 
-export const makeSortedUniqueArr = (a: string[]) => {
+export const sortUniArr = (a: string[]) => {
 	return [...new Set(a)].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 };

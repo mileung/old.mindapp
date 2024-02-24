@@ -1,6 +1,6 @@
 import Ajv from 'ajv';
 import { calcFilePath, parseFile, touchIfDne, writeFile } from '../utils/files';
-import { addTagIndex, makeSortedUniqueArr } from '../utils/tags';
+import { addTagIndex, sortUniArr } from '../utils/tags';
 
 const ajv = new Ajv();
 
@@ -51,6 +51,7 @@ export class Thought {
 			spaceId: null | number;
 			content: string | string[];
 			tagLabels?: string[];
+			// reactions: Record<string, number>; // emoji, personaId
 			parentId?: string;
 			childrenIds?: string[];
 			mentionedByIds?: string[];
@@ -62,7 +63,7 @@ export class Thought {
 		this.authorId = authorId;
 		this.spaceId = spaceId;
 		this.content = content;
-		this.tagLabels = makeSortedUniqueArr(tagLabels || []);
+		this.tagLabels = sortUniArr(tagLabels || []);
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
 		this.mentionedByIds = mentionedByIds;
@@ -138,13 +139,13 @@ export class Thought {
 
 	addChild(thoughtId: string) {
 		this.childrenIds = this.childrenIds || [];
-		this.childrenIds = makeSortedUniqueArr(this.childrenIds.concat(thoughtId));
+		this.childrenIds = sortUniArr(this.childrenIds.concat(thoughtId));
 		this.overwrite();
 	}
 
 	addMention(thoughtId: string) {
 		this.mentionedByIds = this.mentionedByIds || [];
-		this.mentionedByIds = makeSortedUniqueArr(this.mentionedByIds.concat(thoughtId));
+		this.mentionedByIds = sortUniArr(this.mentionedByIds.concat(thoughtId));
 		this.overwrite();
 	}
 

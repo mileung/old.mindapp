@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ThoughtBlock, { RecThought, Thought, getThoughtId } from '../components/ThoughtBlock';
-import { buildUrl, ping } from '../utils/api';
+import { buildUrl, ping, post } from '../utils/api';
 import { ThoughtWriter } from './ThoughtWriter';
 import { useLocation } from 'react-router-dom';
 import { BarsArrowDownIcon, BarsArrowUpIcon } from '@heroicons/react/16/solid';
@@ -31,16 +31,15 @@ export default function Results({
 			moreMentions: Record<string, Thought>;
 			latestCreateDate: number;
 			moreRoots: RecThought[];
-		}>(buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'), {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
+		}>(
+			buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'),
+			post({
 				...query,
 				ignoreRootIds,
 				oldToNew,
 				thoughtsBeyond: thoughtsBeyond.current,
 			}),
-		})
+		)
 			.then(({ moreMentions, latestCreateDate, moreRoots }) => {
 				mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions });
 				const rootsPerLoad = 8;

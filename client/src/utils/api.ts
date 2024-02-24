@@ -20,3 +20,9 @@ export const ping = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 			return res.status === 200 ? resolve(json) : reject(json);
 		});
 	});
+
+export const post = (body: object) => ({
+	method: 'POST',
+	headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify(body),
+});

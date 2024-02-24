@@ -1,9 +1,9 @@
 import { CheckCircleIcon, PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTags, usePersona } from './GlobalState';
-import { buildUrl, ping } from '../utils/api';
+import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { Tag, makeSortedUniqueArr } from '../utils/tags';
+import { Tag, sortUniArr } from '../utils/tags';
 import { Thought } from './ThoughtBlock';
 import { onFocus } from '../utils/input';
 import { PhotoIcon } from '@heroicons/react/24/outline';
@@ -50,21 +50,14 @@ export const ThoughtWriter = ({
 
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						parentId,
-						createDate: +editId?.split('.', 1)[0]! || undefined,
-						authorId: personaId,
-						spaceId: null,
-						content: separateMentions(content),
-						tagLabels: makeSortedUniqueArr([
-							...tagLabels,
-							...(additionalTag ? [additionalTag] : []),
-						]),
-					}),
-				},
+				post({
+					parentId,
+					createDate: +editId?.split('.', 1)[0]! || undefined,
+					authorId: personaId,
+					spaceId: null,
+					content: separateMentions(content),
+					tagLabels: sortUniArr([...tagLabels, ...(additionalTag ? [additionalTag] : [])]),
+				}),
 			)
 				.then((res) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
@@ -211,7 +204,7 @@ export const ThoughtWriter = ({
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
 						{suggestedTags.map((label, i) => {
 							const tagIndex = tagLabels.indexOf(label);
-							const intagLabels = tagIndex !== -1;
+							const inTagLabels = tagIndex !== -1;
 							return (
 								<button
 									key={i}
@@ -220,16 +213,18 @@ export const ThoughtWriter = ({
 									onBlur={onAddingTagBlur}
 									onKeyDown={(e) => e.key === 'Escape' && suggestTagsSet(false)}
 									onClick={() => {
-										if (intagLabels) {
-											const newtagLabels = [...tagLabels];
-											newtagLabels.splice(tagIndex, 1);
-											tagLabelsSet(newtagLabels);
+										if (inTagLabels) {
+											const newTagLabels = [...tagLabels];
+											newTagLabels.splice(tagIndex, 1);
+											tagLabelsSet(newTagLabels);
 										} else {
 											tagLabelsSet([...new Set([...tagLabels, label])]);
 										}
+										tagInput.current!.value = '';
+										tagInput.current!.focus();
 									}}
 								>
-									{label} {intagLabels && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
+									{label} {inTagLabels && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
 								</button>
 							);
 						})}

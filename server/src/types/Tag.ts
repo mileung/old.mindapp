@@ -14,11 +14,19 @@ const schema = {
 };
 
 export class Tag {
-	constructor(
-		public label: string,
-		public parentLabels: string[] = [],
-		public subLabels: string[] = []
-	) {
+	public label: string;
+	public parentLabels: string[];
+	public subLabels: string[];
+
+	constructor({
+		label,
+		parentLabels = [],
+		subLabels = [],
+	}: {
+		label: string;
+		parentLabels?: string[];
+		subLabels?: string[];
+	}) {
 		this.label = label;
 		this.parentLabels = parentLabels;
 		this.subLabels = subLabels;
