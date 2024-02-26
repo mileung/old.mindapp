@@ -1,5 +1,5 @@
 import { ReactNode, useMemo } from 'react';
-import { Thought } from './ThoughtBlock';
+import { Thought } from '../utils/thought';
 import MentionedThought from './MentionedThought';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/time';
@@ -9,7 +9,7 @@ export default function ContentParser({
 	mentionedThoughts,
 	content,
 }: {
-	disableMentions: boolean;
+	disableMentions?: boolean;
 	mentionedThoughts?: Record<string, Thought>;
 	content: string | string[];
 }): ReactNode[] {
@@ -61,7 +61,7 @@ function parseMd(str: string) {
 				case 'p':
 					content += char;
 					reactNode = (
-						<p key={i} className="whitespace-pre-wrap break-all font-medium">
+						<p key={i} className="whitespace-pre-wrap break-word font-medium">
 							{content}
 						</p>
 					);

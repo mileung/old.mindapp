@@ -4,26 +4,41 @@ import { indicesPath, parseFile } from '../utils/files';
 
 const rootsPerLoad = 8;
 const searchLocalThoughts: RequestHandler = (req, res) => {
-	const roots: Thought[] = [];
-	const mentionedIds = new Set<string>();
-	const moreMentions: Record<string, Thought> = {};
-
-	const { tagLabels, other, oldToNew, ignoreRootIds, thoughtsBeyond } = req.body as {
+	const {
+		thoughtId,
+		tagLabels = [],
+		other,
+		oldToNew,
+		ignoreRootIds,
+		thoughtsBeyond,
+	} = req.body as {
+		thoughtId: string;
 		tagLabels: string[];
 		other: string[];
 		oldToNew: boolean;
 		ignoreRootIds: string[];
 		thoughtsBeyond: number;
 	};
+	const roots: Thought[] = [];
+	const moreMentions: Record<string, Thought> = {};
+
+	if (thoughtId) {
+		try {
+			const thought = Thought.parse(thoughtId);
+			const { rootThought } = thought;
+			roots.push(rootThought);
+			[...new Set(rootThought.expand())].forEach((id) => (moreMentions[id] = Thought.parse(id)));
+		} catch (error) {
+			return res.send({ moreMentions: {}, moreRoots: [] });
+		}
+	}
+
+	const mentionedIds = new Set<string>();
 	let latestCreateDate = oldToNew ? Infinity : 0;
 	const indices = parseFile<Record<string, string[]>>(indicesPath);
-	const thoughtIds: string[] = [];
-
-	// Calculate sublabels on the client
-	tagLabels.forEach((label) => {
-		thoughtIds.push(...(indices[label] || []));
-	});
-	thoughtIds.sort((a, b) => (oldToNew ? a.localeCompare(b) : b.localeCompare(a)));
+	const thoughtIds = [...new Set(tagLabels.flatMap((label) => indices[label]))].sort((a, b) =>
+		oldToNew ? a.localeCompare(b) : b.localeCompare(a),
+	);
 
 	for (let i = 0; i < thoughtIds.length; i++) {
 		const id = thoughtIds[i];

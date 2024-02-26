@@ -71,3 +71,20 @@ export function calcFilePath(
 		`${createDate}.${authorId}.${spaceId}.${fileNameSuffix}`,
 	);
 }
+
+export const deletePath = (path: string) => {
+	try {
+		if (fs.existsSync(path)) {
+			const stats = fs.statSync(path);
+			if (stats.isFile()) {
+				fs.unlinkSync(path);
+			} else if (stats.isDirectory()) {
+				fs.rmdirSync(path, { recursive: true });
+			}
+		} else {
+			console.error(`Path does not exist: ${path}`);
+		}
+	} catch (error) {
+		console.error(`Error deleting path: ${path}`, error);
+	}
+};

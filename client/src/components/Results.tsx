@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import ThoughtBlock, { RecThought, Thought, getThoughtId } from '../components/ThoughtBlock';
-import { buildUrl, ping, post } from '../utils/api';
-import { ThoughtWriter } from './ThoughtWriter';
-import { useLocation } from 'react-router-dom';
 import { BarsArrowDownIcon, BarsArrowUpIcon } from '@heroicons/react/16/solid';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import ThoughtBlock from '../components/ThoughtBlock';
+import { buildUrl, ping, post } from '../utils/api';
+import { RecThought, Thought, getThoughtId } from '../utils/thought';
+import { ThoughtWriter } from './ThoughtWriter';
 
 export default function Results({
 	initialTagLabels,
@@ -11,16 +12,23 @@ export default function Results({
 }: {
 	initialTagLabels?: string[];
 	query?: {
-		tagLabels: string[];
-		other: string[];
+		tagLabels?: string[];
+		other?: string[];
+		thoughtId?: string;
 	};
 }) {
+	const location = useLocation();
 	const [mentionedThoughts, mentionedThoughtsSet] = useState<Record<string, Thought>>({});
 	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
-	const location = useLocation();
 	const [oldToNew, oldToNewSet] = useState(false);
+	const queriedThoughtId = query?.thoughtId;
+	const queriedThoughtRoot = !queriedThoughtId ? null : roots[0];
+	const queriedThoughtMentionedRoots = !queriedThoughtId ? null : roots.slice(1);
+	const showThoughtWriter = !queriedThoughtId || !!queriedThoughtRoot;
 	const thoughtsBeyond = useRef(oldToNew ? 0 : Date.now());
 	const pinging = useRef(false);
+	const rootTextArea = useRef<HTMLTextAreaElement>(null);
+	const linkingThoughtId = useRef('');
 
 	const loadMoreThoughts = useCallback(() => {
 		const lastRoot = roots[roots.length - 1];
@@ -49,9 +57,7 @@ export default function Results({
 				rootsSet(newRoots);
 			})
 			.catch((err) => alert(JSON.stringify(err)))
-			.finally(() => {
-				pinging.current = false;
-			});
+			.finally(() => (pinging.current = false));
 	}, [roots, query]);
 
 	useEffect(() => {
@@ -82,15 +88,36 @@ export default function Results({
 	useEffect(() => rootsSet([]), [location]);
 
 	return (
-		<>
-			<ThoughtWriter
-				initialTagLabels={initialTagLabels}
-				onWrite={({ mentionedThoughts: mentions, thought }) => {
-					mentionedThoughtsSet({ ...mentionedThoughts, ...mentions });
-					rootsSet([thought, ...roots]);
-				}}
-			/>
-			<div className="space-y-1.5">
+		<div className="space-y-1.5">
+			{queriedThoughtRoot && (
+				<ThoughtBlock
+					highlightedId={queriedThoughtId}
+					thought={queriedThoughtRoot}
+					roots={roots}
+					rootsIndices={[0]}
+					onNewRoot={() => rootTextArea.current?.focus()}
+					onRootsChange={(newRoots) => rootsSet(newRoots)}
+					mentionedThoughts={mentionedThoughts!}
+					onMentions={(moreMentions) =>
+						mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions })
+					}
+				/>
+			)}
+			{!queriedThoughtId && (
+				<ThoughtWriter
+					parentRef={rootTextArea}
+					initialContent={queriedThoughtId}
+					initialTagLabels={initialTagLabels}
+					onWrite={({ mentionedThoughts: mentions, thought }, shiftKey) => {
+						shiftKey && (linkingThoughtId.current = getThoughtId(thought));
+						setTimeout(() => {
+							mentionedThoughtsSet({ ...mentionedThoughts, ...mentions });
+							rootsSet([thought, ...roots]);
+						}, 0);
+					}}
+				/>
+			)}
+			{showThoughtWriter && roots.length > (queriedThoughtId ? 3 : 2) && (
 				<button
 					className="h-4 fx text-fg2 hover:text-fg1 transition"
 					onClick={() => {
@@ -105,29 +132,38 @@ export default function Results({
 					)}
 					<p className="ml-1 font-medium">{oldToNew ? 'Old to new' : 'New to old'}</p>
 				</button>
-				{roots.map(
-					(thought, i) =>
-						thought && (
-							<ThoughtBlock
-								key={i}
-								roots={roots}
-								mentionedThoughts={mentionedThoughts}
-								onRootsChange={(newRoots) => rootsSet(newRoots)}
-								onMentions={(mentions) =>
-									mentionedThoughtsSet({ ...mentionedThoughts, ...mentions })
-								}
-								rootsIndices={[i]}
-								thought={thought}
-							/>
-						),
-				)}
-				{roots.length === 1 && roots[0] === null && (
-					<p className="text-2xl text-center">No thoughts found</p>
-				)}
-				{roots.length > 1 && roots[roots.length - 1] === null && (
-					<p className="text-xl text-fg2 text-center">End of results </p>
-				)}
-			</div>
-		</>
+			)}
+			{(queriedThoughtMentionedRoots || roots).map((thought, i) => {
+				if (!thought) return;
+				const thoughtId = getThoughtId(thought);
+				return (
+					<ThoughtBlock
+						key={thoughtId}
+						initiallyLinking={linkingThoughtId.current === thoughtId}
+						thought={thought}
+						roots={roots}
+						rootsIndices={[i + (queriedThoughtRoot ? 1 : 0)]}
+						onNewRoot={() => rootTextArea.current?.focus()}
+						onRootsChange={(newRoots) => rootsSet(newRoots)}
+						mentionedThoughts={mentionedThoughts}
+						onMentions={(mentions) => mentionedThoughtsSet({ ...mentionedThoughts, ...mentions })}
+					/>
+				);
+			})}
+			{queriedThoughtId && roots[0] === null && (
+				<div className="xy h-40">
+					<p className="text-2xl">Thought not found</p>
+				</div>
+			)}
+			{queriedThoughtId && roots.length === 2 && (
+				<p className="text-xl text-fg2 text-center">No mentions</p>
+			)}
+			{!queriedThoughtId && roots[0] === null && (
+				<p className="text-2xl text-center">No thoughts found</p>
+			)}
+			{!queriedThoughtId && roots.length > 1 && roots[roots.length - 1] === null && (
+				<p className="text-xl text-fg2 text-center">End of results </p>
+			)}
+		</div>
 	);
 }

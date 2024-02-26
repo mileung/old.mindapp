@@ -1,14 +1,15 @@
 import { CheckCircleIcon, PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTags, usePersona } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { Tag, sortUniArr } from '../utils/tags';
-import { Thought } from './ThoughtBlock';
+import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
 import { PhotoIcon } from '@heroicons/react/24/outline';
 
 export const ThoughtWriter = ({
+	parentRef,
 	initialContent,
 	initialTagLabels = [],
 	editId,
@@ -16,6 +17,7 @@ export const ThoughtWriter = ({
 	onWrite,
 	onContentBlur,
 }: {
+	parentRef?: RefObject<HTMLTextAreaElement>;
 	initialContent?: string | string[];
 	initialTagLabels?: string[];
 	editId?: string;
@@ -32,7 +34,7 @@ export const ThoughtWriter = ({
 	const [tagLabels, tagLabelsSet] = useState<string[]>(initialTagLabels);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
-	const contentTextArea = useRef<null | HTMLTextAreaElement>(null);
+	const contentTextArea = parentRef || useRef<HTMLTextAreaElement>(null);
 	const tagInput = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -45,8 +47,8 @@ export const ThoughtWriter = ({
 	const writeThought = useCallback(
 		(additionalTag?: string, shiftKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
-			// if you want to "delete" a post, you can remove the content/tags
-			if (!editId && !content) return;
+
+			if (!content) return;
 
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
@@ -64,8 +66,10 @@ export const ThoughtWriter = ({
 					onWrite && onWrite(res, !!shiftKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagInput.current!.value = '';
-					// tagLabelsSet([]);
+					tagLabelsSet([]);
+					tagFilterSet('');
 					suggestTagsSet(false);
+					contentTextArea.current!.focus();
 
 					ping<Tag[]>(buildUrl('get-tags'))
 						.then((data) => tagsSet(data))
@@ -73,7 +77,7 @@ export const ThoughtWriter = ({
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[editId, parentId, onWrite, tagLabels],
+		[editId, parentId, personaId, onWrite, tagLabels],
 	);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -171,8 +175,9 @@ export const ThoughtWriter = ({
 											const newCats = [...tagLabels];
 											newCats.splice(i, 1);
 											tagLabelsSet(newCats);
-											tagInput.current?.focus();
+											(!newCats.length || i === newCats.length) && tagInput.current?.focus();
 										}}
+										onKeyDown={(e) => e.key === 'Escape' && contentTextArea.current?.focus()}
 									>
 										<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
 									</button>
@@ -196,7 +201,7 @@ export const ThoughtWriter = ({
 							tagLabelsSet([...new Set([...tagLabels, tagFilter])]);
 							tagFilterSet('');
 						} else if (e.key === 'Escape') {
-							tagInput.current?.blur();
+							contentTextArea.current?.focus();
 						}
 					}}
 				/>
@@ -211,7 +216,7 @@ export const ThoughtWriter = ({
 									className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
 									onBlur={onAddingTagBlur}
-									onKeyDown={(e) => e.key === 'Escape' && suggestTagsSet(false)}
+									onKeyDown={(e) => e.key === 'Escape' && tagInput.current?.focus()}
 									onClick={() => {
 										if (inTagLabels) {
 											const newTagLabels = [...tagLabels];

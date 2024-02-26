@@ -23,7 +23,6 @@ const schema = {
 export class Thought {
 	public id: string;
 	public filePath: string;
-	public parent?: Thought;
 	public children?: Thought[];
 	// Above are temporary. Below are saved on disk.
 	public createDate: number;
@@ -53,6 +52,7 @@ export class Thought {
 			tagLabels?: string[];
 			// reactions: Record<string, number>; // emoji, personaId
 			parentId?: string;
+			// isDeletedParent?: boolean;
 			childrenIds?: string[];
 			mentionedByIds?: string[];
 		},
@@ -113,6 +113,10 @@ export class Thought {
 		return !this.parentId ? this : Thought.parse(this.parentId).rootThought;
 	}
 
+	get parent(): null | Thought {
+		return !this.parentId ? null : Thought.parse(this.parentId);
+	}
+
 	write() {
 		const written = touchIfDne(this.filePath, JSON.stringify(this.criticalProps));
 		if (!written) {
@@ -141,6 +145,15 @@ export class Thought {
 		this.childrenIds = this.childrenIds || [];
 		this.childrenIds = sortUniArr(this.childrenIds.concat(thoughtId));
 		this.overwrite();
+	}
+
+	removeChild(thoughtId: string) {
+		const childIndex = (this.childrenIds || []).indexOf(thoughtId);
+		if (childIndex !== -1) {
+			this.childrenIds!.splice(childIndex, 1);
+			!this.childrenIds?.length && delete this.childrenIds;
+			this.overwrite();
+		}
 	}
 
 	addMention(thoughtId: string) {

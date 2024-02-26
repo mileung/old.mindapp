@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { buildUrl, ping, post } from '../utils/api';
-import { PlusIcon, ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/react/16/solid';
+import {
+	PlusIcon,
+	ArrowTopRightOnSquareIcon,
+	XMarkIcon,
+	TrashIcon,
+} from '@heroicons/react/16/solid';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecTag, Tag, makeRecTags } from '../utils/tags';
 import { useTags } from '../components/GlobalState';
@@ -68,7 +73,7 @@ export default function Tags() {
 
 	return (
 		<div className="flex min-h-screen -mt-12">
-			<div className="max-h-screen overflow-scroll pt-12 p-3 flex-1 min-w-80 max-w-96">
+			<div className="max-h-screen overflow-scroll pt-12 p-3 flex-1 min-w-80 max-w-[25rem]">
 				<TagAdder onAdd={addTag} />
 				{!recTags?.length ? (
 					<p className="text-xl">No tags</p>
@@ -240,13 +245,22 @@ const TagEditor = ({
 						<button
 							className="xy h-8 w-8 group"
 							ref={xRef}
+							title={
+								parentLabel
+									? `Unlink "${tag.label}" from "${parentLabel}"`
+									: `Delete "${tag.label}" and its descendants`
+							}
 							onClick={() => {
 								onRemove(tag.label, parentLabel);
 								editingSet(false);
 							}}
 							onKeyDown={(e) => e.key === 'Tab' && editingSet(false)}
 						>
-							<XMarkIcon className="h-7 w-7 transition text-fg2 group-hover:text-fg1" />
+							{parentLabel ? (
+								<XMarkIcon className="h-7 w-7 transition text-fg2 group-hover:text-fg1" />
+							) : (
+								<TrashIcon className="h-5 w-5 transition text-fg2 group-hover:text-fg1" />
+							)}
 						</button>
 					</>
 				)}
@@ -261,6 +275,7 @@ const TagEditor = ({
 				{expand &&
 					tag.recSubTags?.map((subtag) => (
 						<TagEditor
+							expand
 							key={subtag.label}
 							parentLabel={tag.label}
 							tag={subtag}

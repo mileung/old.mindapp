@@ -13,45 +13,21 @@ export type RecTag = {
 
 export const makeRecTags = (tags: Tag[]): RecTag[] => {
 	const tagMap: { [label: string]: Tag } = {};
-	const RecTags: RecTag[] = [];
+	tags.forEach((tag) => (tagMap[tag.label] = tag));
 
-	// Convert array of tags to map for easy lookup
-	tags.forEach((tag) => {
-		tagMap[tag.label] = tag;
-	});
-
-	const buildRecTag = (label: string, lineage: string[]): RecTag => {
+	const buildRecTag = (label: string, lineage: string[] = []): RecTag => {
 		const tag = tagMap[label];
-		!tag && console.log(label, tag);
-
-		// Check for loop in lineage
-		if (lineage.includes(label)) {
-			return {
-				lineage: [...lineage, label],
-				label,
-				recSubTags: null,
-			};
-		}
-
-		const recSubTags: RecTag[] = tag.subLabels.map((subsetLabel) =>
-			buildRecTag(subsetLabel, [...lineage, label]),
-		);
 
 		return {
-			lineage: [...lineage, label],
 			label,
-			recSubTags,
+			lineage: [...lineage, label],
+			recSubTags: lineage.includes(label)
+				? null
+				: tag.subLabels.map((subsetLabel) => buildRecTag(subsetLabel, [...lineage, label])),
 		};
 	};
 
-	// Build RecTags for each Tag
-	Object.keys(tagMap).forEach((tagLabel) => {
-		// if (!tagMap[tagLabel].parentLabels.length) {
-		RecTags.push(buildRecTag(tagLabel, []));
-		// }
-	});
-
-	return RecTags;
+	return tags.map(({ label }) => buildRecTag(label));
 };
 
 // Example usage:

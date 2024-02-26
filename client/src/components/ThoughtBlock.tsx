@@ -7,42 +7,16 @@ import {
 	XMarkIcon,
 	DocumentArrowDownIcon,
 	DocumentArrowUpIcon,
+	TrashIcon,
+	EllipsisHorizontalIcon,
 } from '@heroicons/react/16/solid';
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatTimestamp } from '../utils/time';
+import { formatTimestamp, minute } from '../utils/time';
 import { ThoughtWriter } from './ThoughtWriter';
 import ContentParser from './ContentParser';
-
-export type Thought = {
-	createDate: number;
-	authorId: null | number;
-	spaceId: null | number;
-	content: string | string[];
-	tagLabels?: string[];
-	parentId?: string;
-	childrenIds?: string[];
-};
-
-export type RecThought = {
-	createDate: number;
-	authorId: null | number;
-	spaceId: null | number;
-	content: string | string[];
-	tagLabels?: string[];
-	parent?: RecThought[];
-	children?: RecThought[];
-};
-
-export function getThoughtId(thought: Thought) {
-	return `${thought.createDate}.${thought.authorId}.${thought.spaceId}`;
-}
-
-export const copyToClipboardAsync = (str = '') => {
-	if (navigator && navigator.clipboard && navigator.clipboard.writeText)
-		return navigator.clipboard.writeText(str);
-	return window.alert('The Clipboard API is not available.');
-};
+import { buildUrl, ping, post } from '../utils/api';
+import { RecThought, Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
 
 function Highlight({
 	shadow,
@@ -79,24 +53,25 @@ export default function ThoughtBlock({
 	roots,
 	onRootsChange,
 	onMentions,
+	onNewRoot = () => {},
 	rootsIndices,
 	mentionedThoughts,
 	depth = 0,
 	initiallyLinking,
 	highlightedId,
-	parentId,
 }: {
 	thought: RecThought;
 	roots: (null | RecThought)[];
 	onRootsChange: (newRoots: (null | RecThought)[]) => void;
 	onMentions: (mentionedThoughts: Record<string, Thought>) => void;
+	onNewRoot?: () => void;
 	rootsIndices: number[];
 	mentionedThoughts: Record<string, Thought>;
 	depth?: number;
 	initiallyLinking?: boolean;
 	highlightedId?: string;
-	parentId?: string;
 }) {
+	const [moreOptionsOpen, moreOptionsOpenSet] = useState(false);
 	const [editing, editingSet] = useState(false);
 	const [open, openSet] = useState(true);
 	const [linking, linkingSet] = useState(!!initiallyLinking);
@@ -137,6 +112,11 @@ export default function ThoughtBlock({
 								<DocumentArrowUpIcon className="absolute h-4 w-4" />
 							)}
 						</button>
+						{/* <button className="h-4 w-4 xy hover:text-fg1 transition" onClick={() => {}}>
+							<ArrowDownTrayIcon className="absolute h-5 w-5" />
+						</button> */}
+						{/* <button className="">Reference</button>
+						<button className="">Bookmark</button> */}
 						<button
 							className="h-4 w-4 xy hover:text-fg1 transition"
 							onClick={() => copyToClipboardAsync(`${thoughtId}`)}
@@ -149,15 +129,15 @@ export default function ThoughtBlock({
 							<div className="mt-1">
 								<ThoughtWriter
 									editId={thoughtId}
-									parentId={parentId}
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
 									initialTagLabels={thought.tagLabels}
 									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
 										onMentions(mentionedThoughts);
 										editingSet(false);
-										altKey && linkingSet(true);
-										shiftKey && (linkingThoughtId.current = getThoughtId(thought));
+										moreOptionsOpenSet(false);
+										shiftKey && linkingSet(true);
+										altKey && onNewRoot();
 										const newRoots = [...roots] as RecThought[];
 										let pointer = newRoots;
 										for (let i = 0; i < rootsIndices.length - 1; i++) {
@@ -188,50 +168,83 @@ export default function ThoughtBlock({
 								)}
 								{!!thought.tagLabels?.length && (
 									<div className="flex flex-wrap gap-x-2">
-										{thought.tagLabels.map((label) => {
-											const queryString = new URLSearchParams({
-												q: `[${label}]`, // TODO: tag page
-											}).toString();
-											return (
-												<Link
-													key={label}
-													to={`/search?${queryString}`}
-													className="font-bold leading-5 transition text-fg2 hover:text-fg1"
-												>
-													{label}
-												</Link>
-											);
-										})}
+										{thought.tagLabels.map((label) => (
+											<Link
+												key={label}
+												to={`/search?${new URLSearchParams({ q: `[${label}]` }).toString()}`}
+												className="font-bold leading-5 transition text-fg2 hover:text-fg1"
+											>
+												{label}
+											</Link>
+										))}
 									</div>
 								)}
 							</>
 						)}
 						<div className="mt-2 fx gap-2 text-fg2">
 							<button
-								className="h-4 w-4 xy hover:text-fg1 transition"
+								className="mr-auto h-4 w-4 xy hover:text-fg1 transition"
 								onClick={() => linkingSet(!linking)}
 							>
-								{linking ? (
-									<XMarkIcon className="absolute h-6 w-6" />
-								) : (
-									<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
-								)}
+								<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
 							</button>
-							<button
-								className="h-4 w-4 xy hover:text-fg1 transition"
-								onClick={() => editingSet(!editing)}
-							>
-								{editing ? (
-									<XMarkIcon className="absolute h-6 w-6" />
-								) : (
-									<PencilIcon className="absolute h-5 w-5" />
-								)}
-							</button>
-							{/* <button className="h-4 w-4 xy hover:text-fg1 transition" onClick={() => {}}>
-							<ArrowDownTrayIcon className="absolute h-5 w-5" />
-						</button> */}
-							{/* <button className="">Reference</button>
-						<button className="">Bookmark</button> */}
+							{moreOptionsOpen ? (
+								<>
+									<button
+										className="h-4 w-4 xy hover:text-fg1 transition"
+										onClick={() => moreOptionsOpenSet(false)}
+									>
+										<XMarkIcon className="absolute h-6 w-6" />
+									</button>
+									<button
+										className="h-4 w-4 xy hover:text-fg1 transition"
+										onClick={() => {
+											const ok =
+												Date.now() - thought.createDate < minute ||
+												confirm(
+													'This thought has already been archived in the Git snapshot history; delete it anyways?',
+												);
+											if (!ok) return;
+
+											const newRoots = [...roots] as RecThought[];
+											let pointer = newRoots;
+											for (let i = 0; i < rootsIndices.length - 1; i++) {
+												pointer = pointer[rootsIndices[i]].children!;
+											}
+											const deletedThought = pointer[rootsIndices[rootsIndices.length - 1]];
+											const deletingParent = !!deletedThought.children?.length;
+											if (deletingParent) {
+												deletedThought.content = '';
+												deletedThought.tagLabels = [];
+											} else {
+												pointer.splice(rootsIndices[rootsIndices.length - 1], 1);
+											}
+
+											(deletingParent
+												? ping(buildUrl('write-thought'), post(deletedThought))
+												: ping(buildUrl('delete-thought'), post({ thoughtId }))
+											)
+												.then(() => onRootsChange(newRoots))
+												.catch((err) => alert(JSON.stringify(err)));
+										}}
+									>
+										<TrashIcon className="absolute h-5 w-5" />
+									</button>
+									<button
+										className="h-4 w-4 xy hover:text-fg1 transition"
+										onClick={() => editingSet(!editing)}
+									>
+										<PencilIcon className="absolute h-5 w-5" />
+									</button>
+								</>
+							) : (
+								<button
+									className="h-4 w-4 xy hover:text-fg1 transition"
+									onClick={() => moreOptionsOpenSet(true)}
+								>
+									<EllipsisHorizontalIcon className="absolute h-5 w-5" />
+								</button>
+							)}
 						</div>
 						{thought.children && (
 							<div className="mt-1 space-y-1">
@@ -243,7 +256,6 @@ export default function ThoughtBlock({
 												mentionedThoughts={mentionedThoughts}
 												initiallyLinking={linkingThoughtId.current === getThoughtId(childThought)}
 												highlightedId={highlightedId}
-												parentId={thoughtId}
 												roots={roots}
 												onRootsChange={onRootsChange}
 												onMentions={onMentions}
@@ -263,7 +275,7 @@ export default function ThoughtBlock({
 									onContentBlur={() => linkingSet(false)}
 									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
 										onMentions(mentionedThoughts);
-										!altKey && linkingSet(false);
+										altKey ? onNewRoot() : linkingSet(false);
 										shiftKey && (linkingThoughtId.current = getThoughtId(thought));
 										const newRoots = [...roots] as RecThought[];
 										let pointer = newRoots;
@@ -285,49 +297,3 @@ export default function ThoughtBlock({
 		</Highlight>
 	);
 }
-
-// // https://github.com/developit/snarkdown/issues/11#issuecomment-1232574727
-// // https://github.com/developit/snarkdown/issues/75
-// function snarkdownEnhanced(markdown: string = '') {
-// 	return markdown
-// 		.split(/(?:\r?\n){2,}/)
-// 		.map((l) =>
-// 			[' ', '\t', '#', '- ', '* ', '> '].some((char) => l.startsWith(char))
-// 				? snarkdown(l)
-// 				: `<p>${snarkdown(l)}</p>`
-// 		)
-// 		.join('\n');
-// }
-
-// // https://github.com/developit/snarkdown/issues/70#issuecomment-626863373
-// export function safeContentParser(markdown: string, ) {
-// 	// const html = snarkdown(markdown);
-// 	const html = snarkdownEnhanced(markdown);
-// 	const doc = parse(html);
-// 	_sanitize(doc, );
-// 	return doc.innerHTML;
-// }
-// function _sanitize(node: HTMLElement, ) {
-// 	if (node.nodeType === 3) return;
-// 	if (
-// 		node.nodeType !== 1 ||
-// 		// node.rawTagName === 'br' ||
-// 		/^(script|iframe|object|embed|svg)$/i.test(node.tagName)
-// 	) {
-// 		return node.remove();
-// 	}
-
-// 	if (node.tagName === 'A') {
-// 		node.setAttribute('target', '_blank');
-// 	}
-
-// 	for (const name in node.attributes) {
-// 		if (Object.prototype.hasOwnProperty.call(node.attributes, name)) {
-// 			if (!/^(class|id|name|href|src|alt|align|valign)$/i.test(name)) {
-// 				delete node.attributes[name];
-// 			}
-// 		}
-// 	}
-
-// 	node.childNodes.forEach((node) => _sanitize(node as HTMLElement, ));
-// }

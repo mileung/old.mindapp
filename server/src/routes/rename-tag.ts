@@ -39,15 +39,22 @@ const renameTag: RequestHandler = (req, res) => {
 	writeFile(tagsPath, JSON.stringify(tags));
 
 	const indices = parseFile<Record<string, string[]>>(indicesPath);
-	indices[newLabel] = [...(indices[oldLabel] || [])];
-	delete indices[oldLabel];
-	indices[newLabel].forEach((id) => {
+
+	indices[oldLabel].forEach((id) => {
 		const thought = Thought.parse(id);
 		thought.tagLabels = sortUniArr(
 			thought.tagLabels.filter((label) => label !== oldLabel).concat(newLabel),
 		);
 		thought.overwrite();
 	});
+
+	if (indices[newLabel]) {
+		indices[newLabel] = sortUniArr(indices[newLabel].concat(indices[oldLabel]));
+	} else {
+		indices[newLabel] = [...(indices[oldLabel] || [])];
+	}
+	delete indices[oldLabel];
+	writeFile(indicesPath, JSON.stringify(indices));
 
 	res.send({});
 	debouncedSnapshot();

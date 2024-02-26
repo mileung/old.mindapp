@@ -11,7 +11,9 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 	let thought: Thought;
 	if (editing) {
 		const oldThought = Thought.parse(`${createDate}.${body.authorId}.${body.spaceId}`);
-		thought = new Thought(body);
+		thought = Thought.parse(oldThought.id);
+		thought.content = body.content;
+		thought.tagLabels = body.tagLabels;
 		thought.overwrite();
 
 		thought.tagLabels

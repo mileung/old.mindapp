@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/time';
 import ContentParser from './ContentParser';
-import { Thought, copyToClipboardAsync, getThoughtId } from './ThoughtBlock';
+import { Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
 
 export default function MentionedThought({ thought }: { thought?: Thought }) {
 	// console.log('thought:', thought);
@@ -54,20 +54,15 @@ export default function MentionedThought({ thought }: { thought?: Thought }) {
 			)}
 			{!!thought.tagLabels?.length && (
 				<div className="flex flex-wrap gap-x-2">
-					{thought.tagLabels.map((label) => {
-						const queryString = new URLSearchParams({
-							q: `[${label}]`, // TODO: tag page
-						}).toString();
-						return (
-							<Link
-								key={label}
-								to={`/search?${queryString}`}
-								className="font-bold leading-5 transition text-fg2 hover:text-fg1"
-							>
-								{label}
-							</Link>
-						);
-					})}
+					{thought.tagLabels.map((label) => (
+						<Link
+							key={label}
+							to={`/search?${new URLSearchParams({ q: `[${label}]` }).toString()}`}
+							className="font-bold leading-5 transition text-fg2 hover:text-fg1"
+						>
+							{label}
+						</Link>
+					))}
 				</div>
 			)}
 		</div>
