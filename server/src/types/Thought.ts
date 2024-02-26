@@ -117,6 +117,10 @@ export class Thought {
 		return !this.parentId ? null : Thought.parse(this.parentId);
 	}
 
+	get mentionedIds() {
+		return Array.isArray(this.content) ? this.content.filter((_, i) => !!(i % 2)) : [];
+	}
+
 	write() {
 		const written = touchIfDne(this.filePath, JSON.stringify(this.criticalProps));
 		if (!written) {
@@ -130,12 +134,12 @@ export class Thought {
 	}
 
 	expand() {
-		const allMentionedIds = Thought.getMentionedIds(this.content);
+		const allMentionedIds = this.mentionedIds;
 		this.children = !this.childrenIds
 			? this.childrenIds
 			: this.childrenIds.map((id) => {
 					const child = Thought.parse(id);
-					allMentionedIds.push(...Thought.getMentionedIds(child.content), ...child.expand());
+					allMentionedIds.push(...child.mentionedIds, ...child.expand());
 					return child;
 				});
 		return allMentionedIds;
@@ -163,15 +167,13 @@ export class Thought {
 	}
 
 	removeMention(thoughtId: string) {
-		if (this.mentionedByIds) {
-			const thoughtIdIndex = this.mentionedByIds.indexOf(thoughtId);
-			thoughtIdIndex !== -1 && this.mentionedByIds.splice(thoughtIdIndex, 1);
+		const thoughtIdIndex = (this.mentionedByIds || []).indexOf(thoughtId);
+		if (thoughtIdIndex !== -1) {
+			this.mentionedByIds!.splice(thoughtIdIndex, 1);
+			!this.mentionedByIds?.length && delete this.mentionedByIds;
+			console.log('crit', this.criticalProps);
 			this.overwrite();
 		}
-	}
-
-	static getMentionedIds(content: string | string[]) {
-		return Array.isArray(content) ? content.filter((_, i) => !!(i % 2)) : [];
 	}
 
 	static parse(thoughtId: string) {

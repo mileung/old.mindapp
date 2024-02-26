@@ -4,7 +4,7 @@ import { Tag, sortUniArr } from '../utils/tags';
 import { useTags } from '../components/GlobalState';
 import { useMemo } from 'react';
 
-function parseQ(input: string, tags: Tag[]) {
+function parseQuery(input: string, tags: Tag[]) {
 	const bracketRegex = /\[([^\[\]]+)]/g;
 	const explicitTagLabels = (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
 	const other = input
@@ -28,11 +28,8 @@ function parseQ(input: string, tags: Tag[]) {
 	explicitTagLabels.forEach(findTags);
 
 	return {
-		initialTagLabels: explicitTagLabels,
-		query: {
-			tagLabels: sortUniArr(explicitTagLabels.concat(subTagLabels)),
-			other,
-		},
+		tagLabels: sortUniArr(explicitTagLabels.concat(subTagLabels)),
+		other,
 	};
 }
 
@@ -40,11 +37,7 @@ export default function Search() {
 	const [tags] = useTags();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
-	const { initialTagLabels, query } = useMemo(() => parseQ(q, tags || []), [q, tags]);
+	const query = useMemo(() => parseQuery(q, tags || []), [q, tags]);
 
-	return (
-		<div className="p-3">
-			{tags && <Results initialTagLabels={initialTagLabels} query={query} />}
-		</div>
-	);
+	return <div className="p-3">{tags && <Results query={query} />}</div>;
 }

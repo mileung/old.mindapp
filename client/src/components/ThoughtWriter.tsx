@@ -1,4 +1,4 @@
-import { CheckCircleIcon, PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
+import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTags, usePersona } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
@@ -24,7 +24,7 @@ export const ThoughtWriter = ({
 	parentId?: string;
 	onWrite?: (
 		res: { mentionedThoughts: Record<string, Thought>; thought: Thought },
-		shiftKey: boolean,
+		ctrlKey: boolean,
 		altKey: boolean,
 	) => void;
 	onContentBlur?: () => void;
@@ -45,11 +45,9 @@ export const ThoughtWriter = ({
 	);
 
 	const writeThought = useCallback(
-		(additionalTag?: string, shiftKey?: boolean, altKey?: boolean) => {
+		(additionalTag?: string, ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
-
 			if (!content) return;
-
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
 				post({
@@ -63,7 +61,7 @@ export const ThoughtWriter = ({
 			)
 				.then((res) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
-					onWrite && onWrite(res, !!shiftKey, !!altKey);
+					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagInput.current!.value = '';
 					tagLabelsSet([]);
@@ -93,12 +91,11 @@ export const ThoughtWriter = ({
 	}, []);
 
 	useEffect(() => {
-		let isMetaDown = false;
+		let isAboutToWrite = false;
 		const handleKeyPress = (event: KeyboardEvent) => {
-			// console.log(event.key, isMetaDown, !event.repeat);
-			if (event.key === 'Meta') {
-				isMetaDown = event.type === 'keydown';
-			} else if (event.key === 'Enter' && isMetaDown && !event.repeat) {
+			if (event.key === 'Meta' || event.key === 'Alt' || event.key === 'Control') {
+				isAboutToWrite = event.type === 'keydown';
+			} else if (event.key === 'Enter' && isAboutToWrite && !event.repeat) {
 				const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
 					(e) => e === document.activeElement,
 				);
@@ -112,7 +109,7 @@ export const ThoughtWriter = ({
 				if (focusedOnThoughtWriter) {
 					writeThought(
 						suggestedTags![focusedSuggestionIndex] || tagInput.current!.value,
-						event.shiftKey,
+						event.ctrlKey,
 						event.altKey,
 					);
 				}
@@ -126,8 +123,6 @@ export const ThoughtWriter = ({
 			document.removeEventListener('keyup', handleKeyPress);
 		};
 	}, [suggestedTags, writeThought]);
-
-	useEffect(() => tagLabelsSet(initialTagLabels), [JSON.stringify(initialTagLabels)]);
 
 	const defaultValue = useMemo(
 		() => (Array.isArray(initialContent) ? initialContent.join('') : initialContent),
@@ -157,33 +152,35 @@ export const ThoughtWriter = ({
 						className="mb-0.5 fx flex-wrap px-3 py-1 gap-1 rounded-t bg-bg2 text-lg"
 						onClick={() => tagInput.current!.focus()}
 					>
-						{tagLabels.map((name, i) => {
-							return (
-								<div key={i} className="text-fg1 flex group">
-									<div
-										className=""
-										// onMouseEnter={} TODO: show set hierarchy
-									>
-										{name}
-									</div>
-									<button
-										className="xy -ml-0.5 group h-7 w-7 rounded-full -outline-offset-4"
-										ref={(r) => (tagXs.current[i] = r)}
-										onClick={(e) => {
-											e.stopPropagation(); // this is needed to focus the next tag
-											tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
-											const newCats = [...tagLabels];
-											newCats.splice(i, 1);
-											tagLabelsSet(newCats);
-											(!newCats.length || i === newCats.length) && tagInput.current?.focus();
-										}}
-										onKeyDown={(e) => e.key === 'Escape' && contentTextArea.current?.focus()}
-									>
-										<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
-									</button>
+						{tagLabels.map((name, i) => (
+							<div key={i} className="text-fg1 flex group">
+								<div
+									className=""
+									// onMouseEnter={} TODO: show set hierarchy
+								>
+									{name}
 								</div>
-							);
-						})}
+								<button
+									className="xy -ml-0.5 group h-7 w-7 rounded-full -outline-offset-4"
+									ref={(r) => (tagXs.current[i] = r)}
+									onClick={(e) => {
+										e.stopPropagation(); // this is needed to focus the next tag
+										const newLabels = [...tagLabels];
+										newLabels.splice(i, 1);
+										tagLabelsSet(newLabels);
+										!newLabels.length || i === newLabels.length
+											? tagInput.current?.focus()
+											: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
+									}}
+									onKeyDown={(e) => {
+										e.key === 'Backspace' && tagXs.current[i]?.click();
+										e.key === 'Escape' && tagInput.current?.focus();
+									}}
+								>
+									<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
+								</button>
+							</div>
+						))}
 					</div>
 				)}
 				<input
@@ -196,12 +193,15 @@ export const ThoughtWriter = ({
 					onClick={() => suggestTagsSet(true)}
 					onChange={(e) => tagFilterSet(e.target.value.trim().replace(/\s\s+/g, ' '))}
 					onKeyDown={(e) => {
+						e.key === 'Escape' && contentTextArea.current?.focus();
 						if (tagFilter && e.key === 'Enter' && !e.metaKey) {
 							tagInput.current!.value = '';
 							tagLabelsSet([...new Set([...tagLabels, tagFilter])]);
 							tagFilterSet('');
-						} else if (e.key === 'Escape') {
-							contentTextArea.current?.focus();
+						}
+						if (e.key === 'ArrowDown') {
+							e.preventDefault();
+							tagSuggestionsRefs.current[0]?.focus();
 						}
 					}}
 				/>
@@ -209,27 +209,30 @@ export const ThoughtWriter = ({
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
 						{suggestedTags.map((label, i) => {
 							const tagIndex = tagLabels.indexOf(label);
-							const inTagLabels = tagIndex !== -1;
-							return (
+							return tagIndex !== -1 ? null : (
 								<button
 									key={i}
 									className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
 									onBlur={onAddingTagBlur}
-									onKeyDown={(e) => e.key === 'Escape' && tagInput.current?.focus()}
-									onClick={() => {
-										if (inTagLabels) {
-											const newTagLabels = [...tagLabels];
-											newTagLabels.splice(tagIndex, 1);
-											tagLabelsSet(newTagLabels);
-										} else {
-											tagLabelsSet([...new Set([...tagLabels, label])]);
+									onKeyDown={(e) => {
+										e.key === 'Escape' && tagInput.current?.focus();
+										if (e.key === 'ArrowUp') {
+											e.preventDefault();
+											!i ? tagInput.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
 										}
+										if (e.key === 'ArrowDown') {
+											e.preventDefault();
+											tagSuggestionsRefs.current[i + 1]?.focus();
+										}
+									}}
+									onClick={() => {
+										tagLabelsSet([...new Set([...tagLabels, label])]);
 										tagInput.current!.value = '';
 										tagInput.current!.focus();
 									}}
 								>
-									{label} {inTagLabels && <CheckCircleIcon className="ml-1 h-3.5 w-3.5" />}
+									{label}
 								</button>
 							);
 						})}

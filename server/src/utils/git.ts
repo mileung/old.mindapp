@@ -46,4 +46,8 @@ export const snapshot = () => {
 	});
 };
 
-export const debouncedSnapshot = debounce(snapshot, minute);
+const _debouncedSnapshot = debounce(snapshot, minute);
+export const debouncedSnapshot = () => {
+	console.log('debouncedSnapshot');
+	_debouncedSnapshot();
+};

@@ -7,10 +7,8 @@ import { RecThought, Thought, getThoughtId } from '../utils/thought';
 import { ThoughtWriter } from './ThoughtWriter';
 
 export default function Results({
-	initialTagLabels,
 	query,
 }: {
-	initialTagLabels?: string[];
 	query?: {
 		tagLabels?: string[];
 		other?: string[];
@@ -19,16 +17,18 @@ export default function Results({
 }) {
 	const location = useLocation();
 	const [mentionedThoughts, mentionedThoughtsSet] = useState<Record<string, Thought>>({});
+	const [queriedThoughtRoot, queriedThoughtRootSet] = useState<null | RecThought>(null);
 	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
 	const [oldToNew, oldToNewSet] = useState(false);
 	const queriedThoughtId = query?.thoughtId;
-	const queriedThoughtRoot = !queriedThoughtId ? null : roots[0];
 	const queriedThoughtMentionedRoots = !queriedThoughtId ? null : roots.slice(1);
-	const showThoughtWriter = !queriedThoughtId || !!queriedThoughtRoot;
 	const thoughtsBeyond = useRef(oldToNew ? 0 : Date.now());
 	const pinging = useRef(false);
 	const rootTextArea = useRef<HTMLTextAreaElement>(null);
 	const linkingThoughtId = useRef('');
+	useEffect(() => {
+		queriedThoughtId && roots[0] && queriedThoughtRootSet(roots[0]);
+	}, [roots]);
 
 	const loadMoreThoughts = useCallback(() => {
 		const lastRoot = roots[roots.length - 1];
@@ -96,20 +96,28 @@ export default function Results({
 					roots={roots}
 					rootsIndices={[0]}
 					onNewRoot={() => rootTextArea.current?.focus()}
-					onRootsChange={(newRoots) => rootsSet(newRoots)}
+					onRootsChange={(newRoots) => {
+						if (!newRoots[0] || getThoughtId(newRoots[0]) !== getThoughtId(queriedThoughtRoot))
+							queriedThoughtRootSet(null);
+						rootsSet(newRoots);
+					}}
 					mentionedThoughts={mentionedThoughts!}
 					onMentions={(moreMentions) =>
 						mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions })
 					}
 				/>
 			)}
+			{queriedThoughtId && roots.length > 1 && (
+				<p className="text-xl text-fg2 text-center">
+					{roots.length === 2 ? 'No mentions' : 'Mentions'}
+				</p>
+			)}
 			{!queriedThoughtId && (
 				<ThoughtWriter
 					parentRef={rootTextArea}
 					initialContent={queriedThoughtId}
-					initialTagLabels={initialTagLabels}
-					onWrite={({ mentionedThoughts: mentions, thought }, shiftKey) => {
-						shiftKey && (linkingThoughtId.current = getThoughtId(thought));
+					onWrite={({ mentionedThoughts: mentions, thought }, ctrlKey) => {
+						ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
 						setTimeout(() => {
 							mentionedThoughtsSet({ ...mentionedThoughts, ...mentions });
 							rootsSet([thought, ...roots]);
@@ -117,7 +125,7 @@ export default function Results({
 					}}
 				/>
 			)}
-			{showThoughtWriter && roots.length > (queriedThoughtId ? 3 : 2) && (
+			{(!queriedThoughtId || !!queriedThoughtRoot) && roots.length > (queriedThoughtId ? 3 : 2) && (
 				<button
 					className="h-4 fx text-fg2 hover:text-fg1 transition"
 					onClick={() => {
@@ -154,9 +162,6 @@ export default function Results({
 				<div className="xy h-40">
 					<p className="text-2xl">Thought not found</p>
 				</div>
-			)}
-			{queriedThoughtId && roots.length === 2 && (
-				<p className="text-xl text-fg2 text-center">No mentions</p>
 			)}
 			{!queriedThoughtId && roots[0] === null && (
 				<p className="text-2xl text-center">No thoughts found</p>

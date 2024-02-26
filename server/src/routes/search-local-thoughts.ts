@@ -21,6 +21,7 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 	};
 	const roots: Thought[] = [];
 	const moreMentions: Record<string, Thought> = {};
+	let thoughtIds: string[];
 
 	if (thoughtId) {
 		try {
@@ -28,17 +29,28 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 			const { rootThought } = thought;
 			roots.push(rootThought);
 			[...new Set(rootThought.expand())].forEach((id) => (moreMentions[id] = Thought.parse(id)));
+			thoughtIds = [thoughtId];
+
+			// going to a thoughtId page will just load all the mentions at once
+			// TODO: paginate later
+			thought.mentionedByIds?.length &&
+				thoughtIds.push(
+					...thought.mentionedByIds.sort((a, b) =>
+						oldToNew ? a.localeCompare(b) : b.localeCompare(a),
+					),
+				);
 		} catch (error) {
-			return res.send({ moreMentions: {}, moreRoots: [] });
+			return res.send({ moreMentions: {}, moreRoots: [], moreMentionedByRoots: [] });
 		}
+	} else {
+		const indices = parseFile<Record<string, string[]>>(indicesPath);
+		thoughtIds = [...new Set(tagLabels.flatMap((label) => indices[label] || []))].sort((a, b) =>
+			oldToNew ? a.localeCompare(b) : b.localeCompare(a),
+		);
 	}
 
 	const mentionedIds = new Set<string>();
 	let latestCreateDate = oldToNew ? Infinity : 0;
-	const indices = parseFile<Record<string, string[]>>(indicesPath);
-	const thoughtIds = [...new Set(tagLabels.flatMap((label) => indices[label]))].sort((a, b) =>
-		oldToNew ? a.localeCompare(b) : b.localeCompare(a),
-	);
 
 	for (let i = 0; i < thoughtIds.length; i++) {
 		const id = thoughtIds[i];

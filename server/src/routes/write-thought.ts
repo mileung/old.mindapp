@@ -24,8 +24,8 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 			.filter((x) => !thought.tagLabels.includes(x))
 			.forEach((label) => removeTagIndex(label, thought.id));
 
-		const oldMentionedIds = Thought.getMentionedIds(oldThought.content);
-		const newMentionedIds = Thought.getMentionedIds(thought.content);
+		const oldMentionedIds = oldThought.mentionedIds;
+		const newMentionedIds = thought.mentionedIds;
 		oldMentionedIds
 			.filter((x) => !newMentionedIds.includes(x))
 			.forEach((id) => Thought.parse(id).removeMention(thought.id));
@@ -38,9 +38,7 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 
 	addTagsByLabel(thought.tagLabels);
 	const mentionedThoughts: Record<string, Thought> = {};
-	Thought.getMentionedIds(thought.content).forEach(
-		(id) => (mentionedThoughts[id] = Thought.parse(id)),
-	);
+	thought.mentionedIds.forEach((id) => (mentionedThoughts[id] = Thought.parse(id)));
 	res.send({ mentionedThoughts, thought });
 	debouncedSnapshot();
 };

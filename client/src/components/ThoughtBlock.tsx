@@ -132,11 +132,11 @@ export default function ThoughtBlock({
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
 									initialTagLabels={thought.tagLabels}
-									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
+									onWrite={({ mentionedThoughts, thought }, ctrlKey, altKey) => {
 										onMentions(mentionedThoughts);
 										editingSet(false);
 										moreOptionsOpenSet(false);
-										shiftKey && linkingSet(true);
+										ctrlKey && linkingSet(true);
 										altKey && onNewRoot();
 										const newRoots = [...roots] as RecThought[];
 										let pointer = newRoots;
@@ -212,19 +212,17 @@ export default function ThoughtBlock({
 												pointer = pointer[rootsIndices[i]].children!;
 											}
 											const deletedThought = pointer[rootsIndices[rootsIndices.length - 1]];
-											const deletingParent = !!deletedThought.children?.length;
-											if (deletingParent) {
-												deletedThought.content = '';
-												deletedThought.tagLabels = [];
-											} else {
-												pointer.splice(rootsIndices[rootsIndices.length - 1], 1);
-											}
 
-											(deletingParent
-												? ping(buildUrl('write-thought'), post(deletedThought))
-												: ping(buildUrl('delete-thought'), post({ thoughtId }))
-											)
-												.then(() => onRootsChange(newRoots))
+											ping<{ softDelete: true }>(buildUrl('delete-thought'), post({ thoughtId }))
+												.then(({ softDelete }) => {
+													if (softDelete) {
+														deletedThought.content = '';
+														deletedThought.tagLabels = [];
+													} else {
+														pointer.splice(rootsIndices[rootsIndices.length - 1], 1);
+													}
+													onRootsChange(newRoots);
+												})
 												.catch((err) => alert(JSON.stringify(err)));
 										}}
 									>
@@ -271,12 +269,11 @@ export default function ThoughtBlock({
 							<div className={`${depth % 2 === 0 ? 'bg-bg1' : 'bg-bg2'} p-1 rounded mt-1`}>
 								<ThoughtWriter
 									parentId={thoughtId}
-									initialTagLabels={thought.tagLabels}
 									onContentBlur={() => linkingSet(false)}
-									onWrite={({ mentionedThoughts, thought }, shiftKey, altKey) => {
+									onWrite={({ mentionedThoughts, thought }, ctrlKey, altKey) => {
 										onMentions(mentionedThoughts);
 										altKey ? onNewRoot() : linkingSet(false);
-										shiftKey && (linkingThoughtId.current = getThoughtId(thought));
+										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
 										const newRoots = [...roots] as RecThought[];
 										let pointer = newRoots;
 										for (let i = 0; i < rootsIndices.length; i++) {

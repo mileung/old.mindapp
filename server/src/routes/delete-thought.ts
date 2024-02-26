@@ -9,13 +9,23 @@ const deleteThought: RequestHandler = (req: Request & { body: Thought }, res) =>
 
 	const thought = Thought.parse(thoughtId);
 
-	if (!thought.childrenIds?.length) {
+	const softDelete = !!thought.childrenIds?.length || thought.mentionedByIds?.length;
+
+	thought.tagLabels.forEach((label) => removeTagIndex(label, thought.id));
+	thought.mentionedIds.forEach((id) =>
+		(id === thoughtId ? thought : Thought.parse(id)).removeMention(thought.id),
+	);
+
+	if (softDelete) {
+		thought.content = '';
+		thought.tagLabels = [];
+		thought.overwrite();
+	} else {
 		thought.parent?.removeChild(thoughtId);
-		thought.tagLabels.forEach((label) => removeTagIndex(label, thought.id));
 		deletePath(thought.filePath);
 	}
 
-	res.send({});
+	res.send({ softDelete });
 	debouncedSnapshot();
 };
 
