@@ -1,12 +1,13 @@
 import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
-import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
+import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useTags, usePersona } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { Tag, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
-import { PhotoIcon } from '@heroicons/react/24/outline';
+import { useKeyPress } from '../utils/keyboard';
 
 export const ThoughtWriter = ({
 	parentRef,
@@ -40,8 +41,11 @@ export const ThoughtWriter = ({
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 
 	const suggestedTags = useMemo(
-		() => matchSorter(tags?.map((a) => a.label) || [], tagFilter),
-		[tags, tagFilter],
+		() =>
+			matchSorter(tags?.map((a) => a.label) || [], tagFilter).filter(
+				(label) => !tagLabels.includes(label),
+			),
+		[tags, tagFilter, tagLabels],
 	);
 
 	const writeThought = useCallback(
@@ -90,39 +94,29 @@ export const ThoughtWriter = ({
 		}, 0);
 	}, []);
 
-	useEffect(() => {
-		let isAboutToWrite = false;
-		const handleKeyPress = (event: KeyboardEvent) => {
-			if (event.key === 'Meta' || event.key === 'Alt' || event.key === 'Control') {
-				isAboutToWrite = event.type === 'keydown';
-			} else if (event.key === 'Enter' && isAboutToWrite && !event.repeat) {
-				const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
-					(e) => e === document.activeElement,
+	useKeyPress(
+		{ key: 'Enter', modifiers: ['Meta', 'Alt', 'Control'] },
+		(event) => {
+			const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
+				(e) => e === document.activeElement,
+			);
+			const focusedOnTagInput = document.activeElement === tagInput.current;
+			const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
+			const focusedOnThoughtWriter =
+				document.activeElement === contentTextArea.current ||
+				focusedOnTagInput ||
+				focusedOnTagSuggestion;
+
+			if (focusedOnThoughtWriter) {
+				writeThought(
+					suggestedTags![focusedSuggestionIndex] || tagInput.current!.value,
+					event.ctrlKey,
+					event.altKey,
 				);
-				const focusedOnTagInput = document.activeElement === tagInput.current;
-				const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
-				const focusedOnThoughtWriter =
-					document.activeElement === contentTextArea.current ||
-					focusedOnTagInput ||
-					focusedOnTagSuggestion;
-
-				if (focusedOnThoughtWriter) {
-					writeThought(
-						suggestedTags![focusedSuggestionIndex] || tagInput.current!.value,
-						event.ctrlKey,
-						event.altKey,
-					);
-				}
 			}
-		};
-
-		document.addEventListener('keydown', handleKeyPress);
-		document.addEventListener('keyup', handleKeyPress);
-		return () => {
-			document.removeEventListener('keydown', handleKeyPress);
-			document.removeEventListener('keyup', handleKeyPress);
-		};
-	}, [suggestedTags, writeThought]);
+		},
+		[suggestedTags, writeThought],
+	);
 
 	const defaultValue = useMemo(
 		() => (Array.isArray(initialContent) ? initialContent.join('') : initialContent),
@@ -185,7 +179,7 @@ export const ThoughtWriter = ({
 				)}
 				<input
 					autoComplete="off"
-					className={`mt-1 px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tagLabels.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
+					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tagLabels.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Add tags with Enter"
 					ref={tagInput}
 					onFocus={() => suggestTagsSet(true)}
@@ -208,8 +202,7 @@ export const ThoughtWriter = ({
 				{suggestTags && (
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
 						{suggestedTags.map((label, i) => {
-							const tagIndex = tagLabels.indexOf(label);
-							return tagIndex !== -1 ? null : (
+							return (
 								<button
 									key={i}
 									className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
@@ -230,6 +223,7 @@ export const ThoughtWriter = ({
 										tagLabelsSet([...new Set([...tagLabels, label])]);
 										tagInput.current!.value = '';
 										tagInput.current!.focus();
+										tagFilterSet('');
 									}}
 								>
 									{label}
@@ -241,7 +235,7 @@ export const ThoughtWriter = ({
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
 				<button className="px-2 transition text-fg2 hover:text-fg1" onClick={() => writeThought()}>
-					<PhotoIcon className="h-7 w-7" />
+					<ArrowUpOnSquareIcon className="h-6 w-6" />
 				</button>
 				<button
 					className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"

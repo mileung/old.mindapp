@@ -4,9 +4,13 @@ import { Tag, sortUniArr } from '../utils/tags';
 import { useTags } from '../components/GlobalState';
 import { useMemo } from 'react';
 
+export const bracketRegex = /\[([^\[\]]+)]/g;
+export function getTagLabels(input: string) {
+	return (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
+}
+
 function parseQuery(input: string, tags: Tag[]) {
-	const bracketRegex = /\[([^\[\]]+)]/g;
-	const explicitTagLabels = (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
+	const tagLabels = getTagLabels(input);
 	const other = input
 		.replace(bracketRegex, ' ')
 		.split(/\s!/g)
@@ -25,10 +29,10 @@ function parseQuery(input: string, tags: Tag[]) {
 		}
 	};
 
-	explicitTagLabels.forEach(findTags);
+	tagLabels.forEach(findTags);
 
 	return {
-		tagLabels: sortUniArr(explicitTagLabels.concat(subTagLabels)),
+		tagLabels: sortUniArr(tagLabels.concat(subTagLabels)),
 		other,
 	};
 }

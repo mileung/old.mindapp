@@ -1,7 +1,11 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
+import { useTags } from './GlobalState';
+import { matchSorter } from 'match-sorter';
+import { bracketRegex, getTagLabels } from '../pages/Search';
+import { useKeyPress } from '../utils/keyboard';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -27,32 +31,32 @@ window.addEventListener('scroll', () => {
 	lastScroll = currentScroll <= 0 ? 0 : currentScroll;
 });
 
-function useKeyPress(key: string, callback: () => void) {
-	useEffect(() => {
-		function handleKeyPress(event: KeyboardEvent) {
-			if (event.key === key) {
-				callback();
-			}
-		}
-
-		window.addEventListener('keydown', handleKeyPress);
-
-		return () => {
-			window.removeEventListener('keydown', handleKeyPress);
-		};
-	}, [key, callback]);
-}
-
 export default function Header() {
 	// useSpaceId
 	// usePersona
+	const navigate = useNavigate();
+	const [tags] = useTags();
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchRef = useRef<HTMLInputElement>(null);
-	const navigate = useNavigate();
+	const magnifyingGlassRef = useRef<HTMLButtonElement>(null);
+	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
+	const [suggestTags, suggestTagsSet] = useState(false);
+	const [searchText, searchTextSet] = useState(searchedKeywords || '');
+
+	const tagLabels = useMemo(() => getTagLabels(searchText), [searchText]);
+	const tagFilter = useMemo(
+		() => searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim(),
+		[searchText],
+	);
+	const suggestedTags = useMemo(() => {
+		return matchSorter(tags?.map((a) => a.label) || [], tagFilter).filter(
+			(label) => !tagLabels.includes(label),
+		);
+	}, [searchText, tags, tagLabels]);
 
 	useEffect(() => {
-		searchRef.current!.value = searchedKeywords;
+		searchTextSet(searchedKeywords);
 		window.scrollTo(0, 0);
 	}, [searchedKeywords]);
 
@@ -83,6 +87,20 @@ export default function Header() {
 		[navigate],
 	);
 
+	const onAddingTagBlur = useCallback(() => {
+		setTimeout(() => {
+			const focusedOnTagOptions =
+				document.activeElement === magnifyingGlassRef.current ||
+				tagSuggestionsRefs.current.includes(
+					// @ts-ignore
+					document.activeElement,
+				);
+			if (!focusedOnTagOptions && searchRef.current !== document.activeElement) {
+				suggestTagsSet(false);
+			}
+		}, 0);
+	}, []);
+
 	return (
 		<header
 			className="z-50 fixed top-0 w-full px-3 flex justify-between py-1 h-12 transition-opacity bg-bg1"
@@ -93,23 +111,70 @@ export default function Header() {
 				<img src="mindapp-logo.svg" alt="logo" className="h-7" />
 				<p className="ml-2 text-2xl font-black">Mindapp</p>
 			</Link>
-			<div className="w-full mx-2 max-w-md flex">
-				<input
-					ref={searchRef}
-					className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 hover:border-mg2 focus:border-mg2"
-					placeholder="Search"
-					defaultValue={searchedKeywords || ''}
-					onKeyDown={(e) => {
-						e.key === 'Enter' && searchInput(e.metaKey);
-						e.key === 'Escape' && searchRef.current?.blur();
-					}}
-				/>
-				<button
-					className="xy -ml-12 px-2 transition text-fg2 hover:text-fg1"
-					onClick={() => searchInput()}
-				>
-					<MagnifyingGlassIcon className="h-7 w-7" />
-				</button>
+			<div className="relative mx-2 w-full max-w-3xl">
+				<div className="flex h-full">
+					<input
+						ref={searchRef}
+						value={searchText}
+						className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 hover:border-mg2 focus:border-mg2"
+						placeholder="Search"
+						onFocus={() => suggestTagsSet(true)}
+						onBlur={onAddingTagBlur}
+						onChange={(e) => searchTextSet(e.target.value)}
+						onKeyDown={(e) => {
+							e.key === 'Escape' && searchRef.current?.blur();
+							e.key === 'Enter' && searchInput(e.metaKey);
+
+							if (e.key === 'ArrowDown') {
+								e.preventDefault();
+								tagSuggestionsRefs.current[0]?.focus();
+							}
+						}}
+					/>
+					<button
+						ref={magnifyingGlassRef}
+						className="xy -ml-12 px-2 transition text-fg2 hover:text-fg1"
+						onClick={() => searchInput()}
+					>
+						<MagnifyingGlassIcon className="h-7 w-7" />
+					</button>
+				</div>
+				{suggestTags && (
+					<div className="z-20 flex flex-col overflow-scroll rounded mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
+						{suggestedTags.map((label, i) => {
+							return (
+								<button
+									key={i}
+									className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
+									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
+									onBlur={onAddingTagBlur}
+									onMouseDown={(e) => e.preventDefault()}
+									onKeyDown={(e) => {
+										e.key === 'Escape' && searchRef.current?.focus();
+										if (e.key === 'ArrowUp') {
+											e.preventDefault();
+											!i ? searchRef.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
+										}
+										if (e.key === 'ArrowDown') {
+											e.preventDefault();
+											tagSuggestionsRefs.current[i + 1]?.focus();
+										}
+									}}
+									onClick={(e) => {
+										e.preventDefault();
+										searchTextSet(
+											`${searchText.replace(tagFilter, '').trim()} [${label}] `.trimStart(),
+										);
+										searchRef.current!.focus();
+										searchRef.current?.scrollTo({ left: Number.MAX_SAFE_INTEGER });
+									}}
+								>
+									{label}
+								</button>
+							);
+						})}
+					</div>
+				)}
 			</div>
 			<div className="fx">
 				<Link to="/settings" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">

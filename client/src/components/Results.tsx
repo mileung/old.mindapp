@@ -112,7 +112,7 @@ export default function Results({
 					{roots.length === 2 ? 'No mentions' : 'Mentions'}
 				</p>
 			)}
-			{!queriedThoughtId && (
+			{!query && (
 				<ThoughtWriter
 					parentRef={rootTextArea}
 					initialContent={queriedThoughtId}

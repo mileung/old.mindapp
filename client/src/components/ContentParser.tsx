@@ -37,44 +37,48 @@ export default function ContentParser({
 	return htmlNodes;
 }
 
-function parseMd(str: string) {
-	const htmlNodes: ReactNode[] = [];
-	let content = '';
-	let tagBeingParsed: undefined | 'p' | 'a' | 'img' | 'video';
-	for (let i = 0; i < str.length; i++) {
-		const char = str[i];
-		if (!tagBeingParsed) {
-			switch (char) {
-				// case '!':
-				// 	tagBeingParsed = 'img';
-				// 	break;
-				// case '[':
-				// 	tagBeingParsed = 'a';
-				// 	break;
-				default:
-					tagBeingParsed = 'p';
-			}
-		}
-		if (char === '\n' || i === str.length - 1) {
-			let reactNode: ReactNode;
-			switch (tagBeingParsed) {
-				case 'p':
-					content += char;
-					reactNode = (
-						<p key={i} className="whitespace-pre-wrap break-word font-medium">
-							{content}
-						</p>
-					);
-					break;
+function parseMd(text: string) {
+	// const assetRegex = /!\[([^\]]*)\]\(([^\)]*)\)/g;
+	// const linkRegex = /\[([^\]]*)\]\(([^\)]*)\)/g;
+	const uriRegex = /([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(\S+)/g;
+	// const assetMatches = text.matchAll(assetRegex);
+	// const linkMatches = text.matchAll(linkRegex);
+	const uriMatches = text.matchAll(uriRegex);
 
-				default:
-					break;
-			}
-			htmlNodes.push(reactNode);
-			content = '';
-		} else {
-			content += char;
-		}
+	type A = { text: string; uri: string };
+	type Img = { alt: string; imageUri: string };
+	type Video = { alt: string; videoUri: string };
+	type Audio = { alt: string; audioUri: string };
+	const result: (string | A | Img | Video | Audio)[] = [];
+
+	let start = 0;
+	for (const match of uriMatches) {
+		result.push(text.substring(start, match.index), { text: match[0], uri: match[0] });
+		start = match.index! + match[0].length;
 	}
-	return htmlNodes;
+	if (start < text.length) {
+		result.push(text.substring(start));
+	}
+
+	return result.map((tag, i) => {
+		// console.log('tag:', tag);
+		if (typeof tag === 'string') {
+			return tag === '' ? null : (
+				<p key={i} className="whitespace-pre-wrap inline font-medium">
+					{tag}
+				</p>
+			);
+		} else if ('uri' in tag) {
+			return (
+				<a
+					key={i}
+					target="_blank"
+					href={tag.uri}
+					className="font-medium inline break-all transition text-sky-600 text hover:text-sky-500 dark:text-cyan-400 dark:hover:text-cyan-300"
+				>
+					{tag.text}
+				</a>
+			);
+		}
+	});
 }

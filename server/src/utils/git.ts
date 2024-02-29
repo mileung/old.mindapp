@@ -37,7 +37,7 @@ export const snapshot = () => {
 	const remoteName = 'origin';
 	const branchName = 'master';
 	git.removeRemote(remoteName); // in case the url changes
-	git.addRemote(remoteName, gitRemoteUrl).push(['-u', remoteName, branchName, '-f'], (error) => {
+	git.addRemote(remoteName, gitRemoteUrl).push(['-u', remoteName, branchName], (error) => {
 		if (error) {
 			console.error('Error pushing to remote:', error);
 		} else {
