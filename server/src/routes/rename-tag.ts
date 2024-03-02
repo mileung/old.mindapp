@@ -40,7 +40,7 @@ const renameTag: RequestHandler = (req, res) => {
 
 	const indices = parseFile<Record<string, string[]>>(indicesPath);
 
-	indices[oldLabel].forEach((id) => {
+	(indices[oldLabel] || []).forEach((id) => {
 		const thought = Thought.parse(id);
 		thought.tagLabels = sortUniArr(
 			thought.tagLabels.filter((label) => label !== oldLabel).concat(newLabel),

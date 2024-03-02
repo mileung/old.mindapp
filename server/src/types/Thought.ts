@@ -1,3 +1,4 @@
+import path from 'path';
 import Ajv from 'ajv';
 import { calcFilePath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
 import { addTagIndex, sortUniArr } from '../utils/tags';
@@ -24,10 +25,10 @@ export class Thought {
 	public id: string;
 	public filePath: string;
 	public children?: Thought[];
-	// Above are temporary. Below are saved on disk.
 	public createDate: number;
 	public authorId: null | number;
 	public spaceId: null | number;
+	// Above are temporary. Below are saved on disk.
 	public content: string | string[];
 	public tagLabels: string[];
 	public parentId?: string;
@@ -98,9 +99,6 @@ export class Thought {
 
 	get criticalProps() {
 		return {
-			createDate: this.createDate,
-			authorId: this.authorId,
-			spaceId: this.spaceId,
 			content: this.content,
 			tagLabels: this.tagLabels,
 			parentId: this.parentId,
@@ -171,7 +169,6 @@ export class Thought {
 		if (thoughtIdIndex !== -1) {
 			this.mentionedByIds!.splice(thoughtIdIndex, 1);
 			!this.mentionedByIds?.length && delete this.mentionedByIds;
-			console.log('crit', this.criticalProps);
 			this.overwrite();
 		}
 	}
@@ -182,6 +179,12 @@ export class Thought {
 	}
 
 	static read(filePath: string) {
-		return new Thought(parseFile<Thought>(filePath));
+		const [createDate, authorId, spaceId] = path.basename(filePath).split('.');
+		return new Thought({
+			...parseFile<Thought>(filePath),
+			createDate: +createDate,
+			authorId: +authorId || null,
+			spaceId: +spaceId || null,
+		});
 	}
 }
