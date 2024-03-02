@@ -11,7 +11,7 @@ import ThoughtId from './pages/ThoughtId';
 
 function App() {
 	return (
-		<main className="mt-12 min-h-[calc(100vh-3rem)] flex flex-col">
+		<main>
 			<GlobalState />
 			<BrowserRouter>
 				<Header />

@@ -167,8 +167,11 @@ export const ThoughtWriter = ({
 											: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
 									}}
 									onKeyDown={(e) => {
-										e.key === 'Backspace' && tagXs.current[i]?.click();
-										e.key === 'Escape' && tagInput.current?.focus();
+										if (e.key === 'Backspace' || e.key === 'Enter') {
+											tagXs.current[i]?.click();
+										} else {
+											tagInput.current?.focus();
+										}
 									}}
 								>
 									<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
@@ -209,14 +212,14 @@ export const ThoughtWriter = ({
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
 									onBlur={onAddingTagBlur}
 									onKeyDown={(e) => {
-										e.key === 'Escape' && tagInput.current?.focus();
 										if (e.key === 'ArrowUp') {
 											e.preventDefault();
 											!i ? tagInput.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
-										}
-										if (e.key === 'ArrowDown') {
+										} else if (e.key === 'ArrowDown') {
 											e.preventDefault();
 											tagSuggestionsRefs.current[i + 1]?.focus();
+										} else if (!['Enter', 'Tab', 'Shift'].includes(e.key)) {
+											tagInput.current?.focus();
 										}
 									}}
 									onClick={() => {

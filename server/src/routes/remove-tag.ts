@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { Tag } from '../types/Tag';
-import { indicesPath, parseFile, tagsPath, writeFile } from '../utils/files';
+import { indicesPath, parseFile, tagsPath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
 
 const removeTag: RequestHandler = (req, res) => {
@@ -29,11 +29,11 @@ const removeTag: RequestHandler = (req, res) => {
 		});
 	}
 
-	writeFile(tagsPath, JSON.stringify(tags));
+	writeObjectFile(tagsPath, tags);
 	if (!parentLabel) {
 		const indices = parseFile<Record<string, string[]>>(indicesPath);
 		delete indices[tagLabel];
-		writeFile(indicesPath, JSON.stringify(indices));
+		writeObjectFile(indicesPath, indices);
 	}
 
 	res.send({});

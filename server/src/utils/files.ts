@@ -11,7 +11,11 @@ export const tagsPath = path.join(mindappRootPath, 'tags.json');
 export const indicesPath = path.join(mindappRootPath, 'indices.json');
 
 export const writeFile = (filePath: string, json: string) => {
-	return fs.writeFileSync(filePath, json);
+	fs.writeFileSync(filePath, json);
+};
+
+export const writeObjectFile = (filePath: string, obj: object, format = false) => {
+	writeFile(filePath, JSON.stringify(obj, null, format ? 2 : 0));
 };
 
 export const parseFile = <T>(filePath: string) => {

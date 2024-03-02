@@ -1,5 +1,5 @@
 import { Tag } from '../types/Tag';
-import { indicesPath, parseFile, tagsPath, writeFile } from './files';
+import { indicesPath, parseFile, tagsPath, writeObjectFile } from './files';
 
 export type Indices = Record<string, string[]>;
 
@@ -21,14 +21,14 @@ export const addTagsByLabel = (labels: string[]) => {
 		}
 	}
 	tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
-	writeFile(tagsPath, JSON.stringify(tags));
+	writeObjectFile(tagsPath, tags);
 };
 
 export const addTagIndex = (label: string, thoughtId: string) => {
 	const indices = parseFile<Indices>(indicesPath);
 	indices[label] = indices[label] || [];
 	indices[label] = sortUniArr([...indices[label], thoughtId]);
-	writeFile(indicesPath, JSON.stringify(indices));
+	writeObjectFile(indicesPath, indices);
 };
 
 export const removeTagIndex = (label: string, thoughtId: string) => {
@@ -41,5 +41,5 @@ export const removeTagIndex = (label: string, thoughtId: string) => {
 	if (!indices[label].length) {
 		delete indices[label];
 	}
-	writeFile(indicesPath, JSON.stringify(indices));
+	writeObjectFile(indicesPath, indices);
 };

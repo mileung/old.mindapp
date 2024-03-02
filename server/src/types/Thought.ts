@@ -1,5 +1,5 @@
 import Ajv from 'ajv';
-import { calcFilePath, parseFile, touchIfDne, writeFile } from '../utils/files';
+import { calcFilePath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
 import { addTagIndex, sortUniArr } from '../utils/tags';
 
 const ajv = new Ajv();
@@ -130,7 +130,7 @@ export class Thought {
 	}
 
 	overwrite() {
-		return writeFile(this.filePath, JSON.stringify(this.criticalProps));
+		writeObjectFile(this.filePath, this.criticalProps);
 	}
 
 	expand() {

@@ -13,6 +13,9 @@ export function useKeyPress(
 	useEffect(() => {
 		const { key, modifiers = [] } = typeof input === 'string' ? { key: input } : input;
 		let isAboutToTrigger = !modifiers.length;
+		const resetTrigger = () => {
+			isAboutToTrigger = !modifiers.length;
+		};
 		const handleKeyMove = (event: KeyboardEvent) => {
 			if (modifiers.includes(event.key)) {
 				isAboutToTrigger = event.type === 'keydown';
@@ -21,9 +24,11 @@ export function useKeyPress(
 			}
 		};
 
+		document.addEventListener('visibilitychange', resetTrigger);
 		document.addEventListener('keydown', handleKeyMove);
 		modifiers.length && document.addEventListener('keyup', handleKeyMove);
 		return () => {
+			document.removeEventListener('visibilitychange', resetTrigger);
 			document.removeEventListener('keydown', handleKeyMove);
 			document.removeEventListener('keyup', handleKeyMove);
 		};

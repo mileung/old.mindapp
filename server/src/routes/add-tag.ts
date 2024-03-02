@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { Tag } from '../types/Tag';
-import { parseFile, tagsPath, writeFile } from '../utils/files';
+import { parseFile, tagsPath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
 import { sortUniArr } from '../utils/tags';
 
@@ -29,7 +29,7 @@ const addTag: RequestHandler = (req, res) => {
 		tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
 	}
 
-	writeFile(tagsPath, JSON.stringify(tags));
+	writeObjectFile(tagsPath, tags);
 
 	res.send({});
 	debouncedSnapshot();

@@ -1,36 +1,32 @@
-import { useEffect, useRef, InputHTMLAttributes, forwardRef } from 'react';
+import { useRef, InputHTMLAttributes, forwardRef } from 'react';
 
-interface InputAutoWidthProps extends InputHTMLAttributes<HTMLInputElement> {}
-
-const useInputAutoWidth = (ref: React.RefObject<HTMLInputElement>) => {
-	useEffect(() => {
-		const listener = () => {
-			if (ref.current) {
-				ref.current.style.width = 'auto';
-				ref.current.style.width = ref.current.scrollWidth + 'px';
-			}
-		};
-
-		if (ref.current) {
-			listener();
-			ref.current.addEventListener('input', listener);
-		}
-
-		return () => {
-			if (ref.current) {
-				ref.current.removeEventListener('input', listener);
-			}
-		};
-	}, [ref]);
+const resize = (node: HTMLInputElement) => {
+	node.style.width = 'auto';
+	node.style.width = node.scrollWidth + 'px';
 };
 
-const InputAutoWidth = forwardRef((props: InputAutoWidthProps, parentRef) => {
-	const ref = parentRef || useRef<HTMLInputElement>(null);
-	// @ts-ignore
-	useInputAutoWidth(ref);
+const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>, parentRef) => {
+	const internalRef = useRef<null | HTMLInputElement>(null);
 
-	// @ts-ignore
-	return <input ref={ref} {...props} />;
+	return (
+		<input
+			{...props}
+			ref={(ref) => {
+				ref && resize(ref);
+				internalRef.current = ref;
+				if (typeof parentRef === 'function') {
+					parentRef(ref);
+				} else {
+					parentRef && (parentRef.current = ref);
+				}
+			}}
+			onChange={() => {
+				if (internalRef.current) {
+					resize(internalRef.current);
+				}
+			}}
+		/>
+	);
 });
 
 export default InputAutoWidth;

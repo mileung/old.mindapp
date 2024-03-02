@@ -1,5 +1,5 @@
 import Ajv from 'ajv';
-import { parseFile, settingsPath, writeFile } from '../utils/files';
+import { parseFile, settingsPath, writeObjectFile } from '../utils/files';
 
 const ajv = new Ajv();
 
@@ -55,6 +55,6 @@ export class Settings {
 	}
 
 	overwrite() {
-		return writeFile(settingsPath, JSON.stringify(this));
+		writeObjectFile(settingsPath, this);
 	}
 }

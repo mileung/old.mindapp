@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { Tag } from '../types/Tag';
-import { indicesPath, parseFile, tagsPath, writeFile } from '../utils/files';
+import { indicesPath, parseFile, tagsPath, writeObjectFile } from '../utils/files';
 import { sortUniArr } from '../utils/tags';
 import { debouncedSnapshot } from '../utils/git';
 import { Thought } from '../types/Thought';
@@ -36,7 +36,7 @@ const renameTag: RequestHandler = (req, res) => {
 	tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
 
 	// Write the updated tags array back to the file
-	writeFile(tagsPath, JSON.stringify(tags));
+	writeObjectFile(tagsPath, tags);
 
 	const indices = parseFile<Record<string, string[]>>(indicesPath);
 
@@ -54,7 +54,7 @@ const renameTag: RequestHandler = (req, res) => {
 		indices[newLabel] = [...(indices[oldLabel] || [])];
 	}
 	delete indices[oldLabel];
-	writeFile(indicesPath, JSON.stringify(indices));
+	writeObjectFile(indicesPath, indices);
 
 	res.send({});
 	debouncedSnapshot();
