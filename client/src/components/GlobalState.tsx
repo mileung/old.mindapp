@@ -4,6 +4,7 @@ import { buildUrl, ping } from '../utils/api';
 import { TagTree } from '../utils/tags';
 import { Settings } from '../pages/Settings';
 import { setTheme } from '../utils/theme';
+import { getLocalState } from '../utils/localStorage';
 
 export const createAtom = <T,>(initialValue: T) => {
 	const atomInstance = atom<T>(initialValue);
@@ -18,7 +19,7 @@ export const useSettings = createAtom<null | Settings>(null);
 export const GlobalState = () => {
 	const [, tagTreeSet] = useTagTree();
 	const [settings, settingsSet] = useSettings();
-	const themeModeRef = useRef('');
+	const themeRef = useRef(getLocalState().theme);
 
 	useEffect(() => {
 		ping<TagTree>(buildUrl('get-tag-tree'))
@@ -31,15 +32,15 @@ export const GlobalState = () => {
 		// does not exist on older browsers
 		if (window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener) {
 			window?.matchMedia('(prefers-color-scheme: dark)')?.addEventListener('change', () => {
-				setTheme(themeModeRef.current);
+				setTheme(themeRef.current);
 			});
 		}
 	}, []);
 
 	useEffect(() => {
 		if (settings) {
-			themeModeRef.current = settings.themeMode;
-			setTheme(settings.themeMode);
+			themeRef.current = settings.theme;
+			setTheme(settings.theme);
 		}
 	}, [settings]);
 

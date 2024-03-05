@@ -273,10 +273,7 @@ export default function ThoughtBlock({
 							</div>
 						)}
 						{linking && (
-							<div
-								ref={linkingDiv}
-								className={`${depth % 2 === 0 ? 'bg-bg1' : 'bg-bg2'} p-1 rounded mt-1`}
-							>
+							<div ref={linkingDiv} className="bg-bg1 p-1 rounded mt-1">
 								<ThoughtWriter
 									parentId={thoughtId}
 									onContentBlur={() => linkingSet(false)}

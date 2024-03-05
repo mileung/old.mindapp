@@ -22,6 +22,7 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 	const roots: Thought[] = [];
 	const moreMentions: Record<string, Thought> = {};
 	let thoughtIds: string[];
+	console.log('other:', other);
 
 	if (thoughtId) {
 		try {

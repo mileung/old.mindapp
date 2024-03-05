@@ -1,7 +1,10 @@
+import { Settings } from '../pages/Settings';
+import { getLocalState, updateLocalState } from './localStorage';
+
 export const isDarkMode = () => document.documentElement.classList.contains('dark');
 
-export const setTheme = (theme: string) => {
-	localStorage.theme = theme;
+export const setTheme = (theme: Settings['theme']) => {
+	updateLocalState({ theme });
 	const systemTheme = theme === 'System';
 	const systemThemeIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 	if (theme === 'Dark' || (systemTheme && systemThemeIsDark)) {
@@ -11,4 +14,4 @@ export const setTheme = (theme: string) => {
 	}
 };
 
-setTheme(localStorage.theme);
+setTheme(getLocalState().theme);

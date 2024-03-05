@@ -5,10 +5,10 @@
 @layer base {
 	:root {
 		--bg1: #ffffff;
-		--bg2: #ededed;
+		--bg2: #efefef;
 		--fg1: #000000;
-		--fg2: #5e5e5e;
-		--mg1: #efefef;
+		--fg2: #787878;
+		--mg1: #f1f1f1;
 		--mg2: #dddddd;
 	}
 	.dark {

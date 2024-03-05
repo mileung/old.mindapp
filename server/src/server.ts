@@ -3,12 +3,12 @@ import express, { ErrorRequestHandler } from 'express';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
 import { getFile } from './routes/get-file';
-import getLocalThoughts from './routes/get-local-thoughts';
+import getLocalThoughts from './routes/get-roots';
 import getSettings from './routes/get-settings';
 import getTagTree from './routes/get-tag-tree';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
-import searchLocalThoughts from './routes/search-local-thoughts';
+import searchLocalThoughts from './routes/search-thoughts';
 import updateSettings from './routes/update-settings';
 import whoami from './routes/whoami';
 import writeThought from './routes/write-thought';
@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 	next();
 });
 
-// QUESTION: Why does get-local-thoughts need cors but not whoami?
+// QUESTION: Why does get-roots need cors but not whoami?
 app.use(cors());
 app.use(express.json());
 
@@ -42,8 +42,8 @@ app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
 app.post('/rename-tag', renameTag);
 app.post('/delete-thought', deleteThought);
-app.post('/get-local-thoughts', getLocalThoughts);
-app.post('/search-local-thoughts', searchLocalThoughts);
+app.post('/get-roots', getLocalThoughts);
+app.post('/search-thoughts', searchLocalThoughts);
 app.get('/file/:fileName', getFile);
 
 app.use(((err, req, res, next) => {

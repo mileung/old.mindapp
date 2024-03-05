@@ -40,7 +40,7 @@ export default function Results({
 			latestCreateDate: number;
 			moreRoots: RecThought[];
 		}>(
-			buildUrl(query ? 'search-local-thoughts' : 'get-local-thoughts'),
+			buildUrl(query ? 'search-thoughts' : 'get-roots'),
 			post({
 				...query,
 				ignoreRootIds,

@@ -165,7 +165,9 @@ export default function Header() {
 											} else if (e.key === 'ArrowDown') {
 												e.preventDefault();
 												tagSuggestionsRefs.current[i + 1]?.focus();
-											} else if (!['Enter', 'Tab', 'Shift'].includes(e.key)) {
+											} else if (
+												!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
+											) {
 												searchIpt.current?.focus();
 											}
 										}}

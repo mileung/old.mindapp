@@ -62,7 +62,7 @@ export const ThoughtWriter = ({
 					createDate: +editId?.split('.', 1)[0]! || undefined,
 					authorId: personaId,
 					spaceId: null,
-					content: separateMentions(content),
+					content: separateMentions(content.trim()),
 					tags: sortUniArr(tags.concat(additionalTag || [])),
 				}),
 			)
@@ -103,11 +103,10 @@ export const ThoughtWriter = ({
 			const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
 				(e) => e === document.activeElement,
 			);
-			const focusedOnTagInput = document.activeElement === tagIpt.current;
 			const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
-				focusedOnTagInput ||
+				document.activeElement === tagIpt.current ||
 				focusedOnTagSuggestion;
 
 			if (focusedOnThoughtWriter) {
@@ -135,7 +134,7 @@ export const ThoughtWriter = ({
 				onFocus={onFocus}
 				name="content"
 				placeholder="New thought"
-				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
+				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
 						contentTextArea.current?.blur();
@@ -185,7 +184,7 @@ export const ThoughtWriter = ({
 				)}
 				<input
 					autoComplete="off"
-					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
+					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Add tags with Enter"
 					ref={tagIpt}
 					onFocus={() => suggestTagsSet(true)}
@@ -194,10 +193,13 @@ export const ThoughtWriter = ({
 					onChange={(e) => tagFilterSet(e.target.value.trim().replace(/\s\s+/g, ' '))}
 					onKeyDown={(e) => {
 						e.key === 'Escape' && contentTextArea.current?.focus();
-						if (tagFilter && e.key === 'Enter' && !e.metaKey) {
-							tagIpt.current!.value = '';
-							tagsSet([...new Set([...tags, tagFilter])]);
-							tagFilterSet('');
+						if (tagFilter && e.key === 'Enter') {
+							setTimeout(() => {
+								// setTimeout allows focusedOnThoughtWriter to be true. Else tagIpt would change refs and not be document.activeElement
+								tagIpt.current!.value = '';
+								tagsSet([...new Set([...tags, tagFilter])]);
+								tagFilterSet('');
+							}, 0);
 						}
 						if (e.key === 'ArrowDown') {
 							e.preventDefault();
@@ -221,7 +223,9 @@ export const ThoughtWriter = ({
 										} else if (e.key === 'ArrowDown') {
 											e.preventDefault();
 											tagSuggestionsRefs.current[i + 1]?.focus();
-										} else if (!['Enter', 'Tab', 'Shift'].includes(e.key)) {
+										} else if (
+											!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
+										) {
 											tagIpt.current?.focus();
 										}
 									}}

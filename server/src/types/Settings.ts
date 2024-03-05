@@ -6,14 +6,14 @@ const ajv = new Ajv();
 const schema = {
 	type: 'object',
 	properties: {
-		themeMode: { type: 'string', enum: ['System', 'Light', 'Dark'] },
+		theme: { type: 'string', enum: ['System', 'Light', 'Dark'] },
 		preferredName: { type: 'string' },
 		gitSnapshotsEnabled: { type: 'boolean' },
 		gitRemoteUrl: { type: ['null', 'string'] },
 		// developerMode: { type: 'boolean' },
 	},
 	required: [
-		'themeMode',
+		'theme',
 		'preferredName',
 		'gitSnapshotsEnabled',
 		'gitRemoteUrl',
@@ -23,25 +23,25 @@ const schema = {
 };
 
 export class Settings {
-	public themeMode: string;
+	public theme: string;
 	public preferredName: string;
 	public gitSnapshotsEnabled: boolean;
 	public gitRemoteUrl: null | string;
 	// public developerMode: boolean;
 	constructor({
-		themeMode = 'System',
+		theme = 'System',
 		preferredName = '',
 		gitSnapshotsEnabled = true,
 		gitRemoteUrl = null,
 		// developerMode = false,
 	}: {
-		themeMode?: string;
+		theme?: string;
 		preferredName?: string;
 		gitSnapshotsEnabled?: boolean;
 		gitRemoteUrl?: null | string;
 		// developerMode?: boolean;
 	}) {
-		this.themeMode = themeMode;
+		this.theme = theme;
 		this.preferredName = preferredName;
 		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
 		this.gitRemoteUrl = gitRemoteUrl;

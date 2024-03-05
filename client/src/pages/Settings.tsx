@@ -4,7 +4,7 @@ import InputAutoWidth from '../components/InputAutoWidth';
 import { buildUrl, ping, post } from '../utils/api';
 
 export type Settings = {
-	themeMode: string;
+	theme: 'System' | 'Light' | 'Dark';
 	gitSnapshotsEnabled: boolean;
 	gitRemoteUrl: null | string;
 	preferredName: string;
@@ -96,12 +96,13 @@ export default function Settings() {
 		settings && (
 			<div className="p-3 space-y-3">
 				<InputPicker
-					title="Theme mode"
+					title="Theme"
 					options={['System', 'Light', 'Dark']}
-					value={settings.themeMode}
-					onSubmit={(v) => {
-						updateSettings({ themeMode: v });
-						settingsSet({ ...settings, themeMode: v });
+					value={settings.theme}
+					// @ts-ignore // QUESTION how do I change the type of onSubmit for Settings['theme']
+					onSubmit={(theme: Settings['theme']) => {
+						updateSettings({ theme });
+						settingsSet({ ...settings, theme });
 					}}
 				/>
 				<InputPicker
