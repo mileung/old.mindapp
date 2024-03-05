@@ -132,7 +132,7 @@ export default function ThoughtBlock({
 									editId={thoughtId}
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
-									initialTagLabels={thought.tagLabels}
+									initialTags={thought.tags}
 									onWrite={({ mentionedThoughts, thought }, ctrlKey, altKey) => {
 										onMentions(mentionedThoughts);
 										editingSet(false);
@@ -146,7 +146,7 @@ export default function ThoughtBlock({
 										}
 										const editedThought = pointer[rootsIndices[rootsIndices.length - 1]];
 										editedThought.content = thought.content;
-										editedThought.tagLabels = thought.tagLabels;
+										editedThought.tags = thought.tags;
 										onRootsChange(newRoots);
 									}}
 								/>
@@ -167,15 +167,15 @@ export default function ThoughtBlock({
 								) : (
 									<p className="font-semibold text-fg2 italic">No content</p>
 								)}
-								{!!thought.tagLabels?.length && (
+								{!!thought.tags?.length && (
 									<div className="flex flex-wrap gap-x-2">
-										{thought.tagLabels.map((label) => (
+										{thought.tags.map((tag) => (
 											<Link
-												key={label}
-												to={`/search?${new URLSearchParams({ q: `[${label}]` }).toString()}`}
+												key={tag}
+												to={`/search?${new URLSearchParams({ q: `[${tag}]` }).toString()}`}
 												className="font-bold leading-5 transition text-fg2 hover:text-fg1"
 											>
-												{label}
+												{tag}
 											</Link>
 										))}
 									</div>
@@ -224,7 +224,7 @@ export default function ThoughtBlock({
 												.then(({ softDelete }) => {
 													if (softDelete) {
 														deletedThought.content = '';
-														deletedThought.tagLabels = [];
+														deletedThought.tags = [];
 													} else {
 														pointer.splice(rootsIndices[rootsIndices.length - 1], 1);
 													}

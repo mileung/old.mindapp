@@ -24,7 +24,7 @@ function InputPicker({
 }) {
 	return (
 		<div>
-			<p className="leading-4 text font-semibold">{title}</p>
+			<p className="leading-4 font-semibold">{title}</p>
 			<div className="mt-1.5 fx gap-2">
 				{options.map((option) => (
 					<button
@@ -51,11 +51,11 @@ function InputSetter({
 	defaultValue: string;
 	onSubmit: (value: string) => void;
 }) {
-	const inputRef = useRef<HTMLInputElement>(null);
+	const autoWidthIpt = useRef<HTMLInputElement>(null);
 	const keyDown = useRef(false);
 
 	const updateSetting = useCallback(() => {
-		const value = inputRef.current!.value.trim();
+		const value = autoWidthIpt.current!.value.trim();
 		onSubmit(value);
 	}, [onSubmit]);
 
@@ -63,15 +63,15 @@ function InputSetter({
 		<div>
 			<p className="leading-4 text font-semibold">{title}</p>
 			<InputAutoWidth
-				ref={inputRef}
+				ref={autoWidthIpt}
 				defaultValue={defaultValue}
 				size={1}
 				placeholder={placeholder}
 				className="leading-3 min-w-[15rem] border-b-2 text-2xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
 				onKeyDown={(e) => {
 					keyDown.current = true;
-					e.key === 'Enter' && (updateSetting(), inputRef.current?.blur());
-					e.key === 'Escape' && inputRef.current?.blur();
+					e.key === 'Enter' && (updateSetting(), autoWidthIpt.current?.blur());
+					e.key === 'Escape' && autoWidthIpt.current?.blur();
 				}}
 				onKeyUp={() => (keyDown.current = true)}
 				onBlur={() => !keyDown.current && updateSetting()}

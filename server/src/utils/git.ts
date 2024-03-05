@@ -29,10 +29,10 @@ export const snapshot = () => {
 
 	console.log('snapshot');
 	git
-		.add(['timeline', 'indices.json', 'settings.json', 'tags.json'])
+		.add(['timeline', 'indices.json', 'settings.json', 'tagTree.json'])
 		.commit(`Snapshot at ${Date.now()}`);
 
-	if (!gitRemoteUrl) return;
+	if (!gitRemoteUrl) throw new Error('No gitRemoteUrl');
 
 	const remoteName = 'origin';
 	const branchName = 'master';
@@ -41,7 +41,7 @@ export const snapshot = () => {
 		if (error) {
 			console.error('Error pushing to remote:', error);
 		} else {
-			console.log('Changes pushed to remote');
+			console.log(`Changes pushed to ${remoteName} (${gitRemoteUrl})`);
 		}
 	});
 };

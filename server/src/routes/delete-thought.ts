@@ -11,14 +11,14 @@ const deleteThought: RequestHandler = (req: Request & { body: Thought }, res) =>
 
 	const softDelete = !!thought.childrenIds?.length || thought.mentionedByIds?.length;
 
-	thought.tagLabels.forEach((label) => removeTagIndex(label, thought.id));
+	thought.tags.forEach((tag) => removeTagIndex(tag, thought.id));
 	thought.mentionedIds.forEach((id) =>
 		(id === thoughtId ? thought : Thought.parse(id)).removeMention(thought.id),
 	);
 
 	if (softDelete) {
 		thought.content = '';
-		thought.tagLabels = [];
+		thought.tags = [];
 		thought.overwrite();
 	} else {
 		thought.parent?.removeChild(thoughtId);

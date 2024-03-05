@@ -1,41 +1,44 @@
 import { RequestHandler } from 'express';
-import { Tag } from '../types/Tag';
-import { indicesPath, parseFile, tagsPath, writeObjectFile } from '../utils/files';
+import TagTree from '../types/TagTree';
+import { indicesPath, parseFile, tagTreePath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
+import { sortUniArr } from '../utils/tags';
 
 const removeTag: RequestHandler = (req, res) => {
-	let tags = parseFile<Tag[]>(tagsPath);
+	const tagTree = parseFile<TagTree>(tagTreePath);
+	const { tag, parentTag } = req.body as { tag: string; parentTag: string };
 
-	const { tagLabel, parentLabel } = req.body;
-
-	const tagIndex = tags.findIndex((tag) => tag.label === tagLabel);
-	if (tagIndex === -1) throw new Error('tagLabel Tag dne');
-
-	if (parentLabel) {
-		const parentLabelIndex = tags[tagIndex].parentLabels.findIndex((l) => l === parentLabel);
-		if (parentLabelIndex === -1) throw new Error('parentLabel dne in tag parentLabels');
-		tags[tagIndex].parentLabels.splice(parentLabelIndex, 1);
-
-		const parentTagIndex = tags.findIndex((tag) => tag.label === parentLabel);
-		if (parentTagIndex === -1) throw new Error('parentLabel Tag dne');
-		const subLabelIndex = tags[parentTagIndex].subLabels.findIndex((label) => label === tagLabel);
-		if (subLabelIndex === -1) throw new Error('tagLabel Tag dne in parent subLabels');
-		tags[parentTagIndex].subLabels.splice(subLabelIndex, 1);
-	} else {
-		tags.splice(tagIndex, 1);
-		tags.forEach((tag) => {
-			tag.parentLabels = tag.parentLabels.filter((label) => label !== tagLabel);
-			tag.subLabels = tag.subLabels.filter((label) => label !== tagLabel);
+	if (parentTag && tag) {
+		if (!tagTree.branchNodes[parentTag]) throw new Error(`parentTag "${parentTag}" dne`);
+		const tagIndex = tagTree.branchNodes[parentTag].findIndex((l) => l === tag);
+		if (tagIndex === -1) throw new Error(`tag "${tag}" isn't a subtag of "${parentTag}"`);
+		tagTree.branchNodes[parentTag].splice(tagIndex, 1);
+		if (!tagTree.branchNodes[parentTag].length) {
+			delete tagTree.branchNodes[parentTag];
+			tagTree.leafNodes = sortUniArr(tagTree.leafNodes.concat(parentTag));
+		}
+	} else if (tag) {
+		if (tagTree.branchNodes[tag]) {
+			delete tagTree.branchNodes[tag];
+		} else {
+			const tagIndex = tagTree.leafNodes.findIndex((label) => label === tag);
+			if (tagIndex === -1) throw new Error(`tag "${tag}" dne`);
+			tagTree.leafNodes.splice(tagIndex, 1);
+		}
+		Object.entries(tagTree.branchNodes).forEach(([otherParentTag, subtags]) => {
+			const tagIndex = subtags.findIndex((label) => label === tag);
+			if (tagIndex !== -1) subtags.splice(tagIndex, 1);
+			if (!subtags.length) {
+				delete tagTree.branchNodes[otherParentTag];
+				tagTree.leafNodes = sortUniArr(tagTree.leafNodes.concat(otherParentTag));
+			}
 		});
-	}
-
-	writeObjectFile(tagsPath, tags);
-	if (!parentLabel) {
 		const indices = parseFile<Record<string, string[]>>(indicesPath);
-		delete indices[tagLabel];
+		delete indices[tag];
 		writeObjectFile(indicesPath, indices);
 	}
 
+	writeObjectFile(tagTreePath, tagTree);
 	res.send({});
 	debouncedSnapshot();
 };

@@ -1,5 +1,5 @@
-import { Tag } from '../types/Tag';
-import { indicesPath, parseFile, tagsPath, writeObjectFile } from './files';
+import TagTree from '../types/TagTree';
+import { indicesPath, parseFile, tagTreePath, writeObjectFile } from './files';
 
 export type Indices = Record<string, string[]>;
 
@@ -11,35 +11,40 @@ export const sortUniArr = (a: string[]) => {
 	return [...new Set(a)].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 };
 
-export const addTagsByLabel = (labels: string[]) => {
-	const tags = parseFile<Tag[]>(tagsPath);
-	const tagLabelsSet = new Set(tags.map(({ label }) => label));
-	for (let i = 0; i < labels.length; i++) {
-		const label = labels[i];
-		if (!tagLabelsSet.has(label)) {
-			tags.push(new Tag({ label }));
-		}
-	}
-	tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
-	writeObjectFile(tagsPath, tags);
+export const addTagsByLabel = (tags: string[]) => {
+	const tagTree = parseFile<TagTree>(tagTreePath);
+	tagTree.leafNodes = sortUniArr(
+		tagTree.leafNodes.concat(tags.filter((tag) => !tagTree.branchNodes[tag])),
+	);
+	writeObjectFile(tagTreePath, tagTree);
 };
 
-export const addTagIndex = (label: string, thoughtId: string) => {
+export const addTagIndex = (tag: string, thoughtId: string) => {
 	const indices = parseFile<Indices>(indicesPath);
-	indices[label] = indices[label] || [];
-	indices[label] = sortUniArr([...indices[label], thoughtId]);
+	indices[tag] = indices[tag] || [];
+	indices[tag] = sortUniArr([...indices[tag], thoughtId]);
 	writeObjectFile(indicesPath, indices);
 };
 
-export const removeTagIndex = (label: string, thoughtId: string) => {
+export const removeTagIndex = (tag: string, thoughtId: string) => {
 	const indices = parseFile<Indices>(indicesPath);
-	indices[label] = indices[label] || [];
-	const labelIndex = indices[label].indexOf(thoughtId);
-	if (labelIndex !== -1) {
-		indices[label].splice(labelIndex, 1);
+	indices[tag] = indices[tag] || [];
+	const tagIndex = indices[tag].indexOf(thoughtId);
+	if (tagIndex !== -1) {
+		indices[tag].splice(tagIndex, 1);
 	}
-	if (!indices[label].length) {
-		delete indices[label];
+	if (!indices[tag].length) {
+		delete indices[tag];
 	}
 	writeObjectFile(indicesPath, indices);
 };
+
+export function sortObjectProps(obj: Record<string, any>) {
+	Object.keys(obj)
+		.sort()
+		.forEach((key) => {
+			const temp = obj[key];
+			delete obj[key];
+			obj[key] = temp;
+		});
+}

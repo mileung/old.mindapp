@@ -1,47 +1,48 @@
 import { useSearchParams } from 'react-router-dom';
 import Results from '../components/Results';
-import { Tag, sortUniArr } from '../utils/tags';
-import { useTags } from '../components/GlobalState';
+import { TagTree, sortUniArr } from '../utils/tags';
+import { useTagTree } from '../components/GlobalState';
 import { useMemo } from 'react';
 
 export const bracketRegex = /\[([^\[\]]+)]/g;
-export function getTagLabels(input: string) {
+export function getTags(input: string) {
 	return (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
 }
 
-function parseQuery(input: string, tags: Tag[]) {
-	const tagLabels = getTagLabels(input);
+function parseQuery(input: string, tagTree: TagTree) {
+	const tags = getTags(input);
 	const other = input
 		.replace(bracketRegex, ' ')
 		.split(/\s!/g)
 		.map((a) => a.trim())
 		.filter((a) => !!a);
 
-	const processedTagLabels: Set<string> = new Set();
-	const subTagLabels: string[] = [];
+	const processedTags: Set<string> = new Set();
+	const subTags: string[] = [];
 
-	const findTags = (label: string) => {
-		const tag = tags.find((t) => t.label === label);
-		if (tag && !processedTagLabels.has(tag.label)) {
-			processedTagLabels.add(tag.label);
-			subTagLabels.push(tag.label);
-			tag.subLabels.forEach(findTags);
+	const getSubTags = (tag: string) => {
+		if (tag && !processedTags.has(tag)) {
+			processedTags.add(tag);
+			subTags.push(tag);
+			(tagTree.branchNodes[tag] || []).forEach(getSubTags);
 		}
 	};
-
-	tagLabels.forEach(findTags);
+	tags.forEach(getSubTags);
 
 	return {
-		tagLabels: sortUniArr(tagLabels.concat(subTagLabels)),
+		tags: sortUniArr(tags.concat(subTags)),
 		other,
 	};
 }
 
 export default function Search() {
-	const [tags] = useTags();
+	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
-	const query = useMemo(() => parseQuery(q, tags || []), [q, tags]);
+	const query = useMemo(
+		() => parseQuery(q, tagTree || { branchNodes: {}, leafNodes: [] }),
+		[q, tagTree],
+	);
 
-	return <div className="p-3">{tags && <Results query={query} />}</div>;
+	return <div className="p-3">{tagTree && <Results query={query} />}</div>;
 }

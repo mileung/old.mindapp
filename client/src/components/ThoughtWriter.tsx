@@ -1,10 +1,10 @@
 import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
 import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { useTags, usePersona } from './GlobalState';
+import { useTagTree, usePersona } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { Tag, sortUniArr } from '../utils/tags';
+import { TagTree, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
 import { useKeyPress } from '../utils/keyboard';
@@ -12,7 +12,7 @@ import { useKeyPress } from '../utils/keyboard';
 export const ThoughtWriter = ({
 	parentRef,
 	initialContent,
-	initialTagLabels = [],
+	initialTags = [],
 	editId,
 	parentId,
 	onWrite,
@@ -20,7 +20,7 @@ export const ThoughtWriter = ({
 }: {
 	parentRef?: RefObject<HTMLTextAreaElement>;
 	initialContent?: string | string[];
-	initialTagLabels?: string[];
+	initialTags?: string[];
 	editId?: string;
 	parentId?: string;
 	onWrite?: (
@@ -30,22 +30,25 @@ export const ThoughtWriter = ({
 	) => void;
 	onContentBlur?: () => void;
 }) => {
-	const [tags, tagsSet] = useTags();
+	const [tagTree, tagTreeSet] = useTagTree();
 	const [personaId] = usePersona();
-	const [tagLabels, tagLabelsSet] = useState<string[]>(initialTagLabels);
+	const [tags, tagsSet] = useState<string[]>(initialTags);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = parentRef || useRef<HTMLTextAreaElement>(null);
-	const tagInput = useRef<null | HTMLInputElement>(null);
+	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 
 	const suggestedTags = useMemo(
 		() =>
-			matchSorter(tags?.map((a) => a.label) || [], tagFilter).filter(
-				(label) => !tagLabels.includes(label),
+			matchSorter(
+				Object.keys(tagTree?.branchNodes || [])
+					.filter((tag) => !tags.includes(tag))
+					.concat((tagTree?.leafNodes || []).filter((tag) => !tags.includes(tag))),
+				tagFilter,
 			),
-		[tags, tagFilter, tagLabels],
+		[tagTree, tagFilter, tags],
 	);
 
 	const writeThought = useCallback(
@@ -60,26 +63,26 @@ export const ThoughtWriter = ({
 					authorId: personaId,
 					spaceId: null,
 					content: separateMentions(content),
-					tagLabels: sortUniArr([...tagLabels, ...(additionalTag ? [additionalTag] : [])]),
+					tags: sortUniArr(tags.concat(additionalTag || [])),
 				}),
 			)
 				.then((res) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
 					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';
-					tagInput.current!.value = '';
-					tagLabelsSet([]);
+					tagIpt.current!.value = '';
+					tagsSet([]);
 					tagFilterSet('');
 					suggestTagsSet(false);
 					contentTextArea.current!.focus();
 
-					ping<Tag[]>(buildUrl('get-tags'))
-						.then((data) => tagsSet(data))
+					ping<TagTree>(buildUrl('get-tag-tree'))
+						.then((data) => tagTreeSet(data))
 						.catch((err) => alert(JSON.stringify(err)));
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[editId, parentId, personaId, onWrite, tagLabels],
+		[editId, parentId, personaId, onWrite, tags],
 	);
 
 	const onAddingTagBlur = useCallback(() => {
@@ -88,7 +91,7 @@ export const ThoughtWriter = ({
 				// @ts-ignore
 				document.activeElement,
 			);
-			if (!focusedOnTagOptions && tagInput.current !== document.activeElement) {
+			if (!focusedOnTagOptions && tagIpt.current !== document.activeElement) {
 				suggestTagsSet(false);
 			}
 		}, 0);
@@ -100,7 +103,7 @@ export const ThoughtWriter = ({
 			const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
 				(e) => e === document.activeElement,
 			);
-			const focusedOnTagInput = document.activeElement === tagInput.current;
+			const focusedOnTagInput = document.activeElement === tagIpt.current;
 			const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
@@ -109,7 +112,7 @@ export const ThoughtWriter = ({
 
 			if (focusedOnThoughtWriter) {
 				writeThought(
-					suggestedTags![focusedSuggestionIndex] || tagInput.current!.value,
+					suggestedTags![focusedSuggestionIndex] || tagIpt.current!.value,
 					event.ctrlKey,
 					event.altKey,
 				);
@@ -141,12 +144,12 @@ export const ThoughtWriter = ({
 				}}
 			/>
 			<div className="mt-1 relative">
-				{!!tagLabels.length && (
+				{!!tags.length && (
 					<div
 						className="mb-0.5 fx flex-wrap px-3 py-1 gap-1 rounded-t bg-bg2 text-lg"
-						onClick={() => tagInput.current!.focus()}
+						onClick={() => tagIpt.current!.focus()}
 					>
-						{tagLabels.map((name, i) => (
+						{tags.map((name, i) => (
 							<div key={i} className="text-fg1 flex group">
 								<div
 									className=""
@@ -159,18 +162,18 @@ export const ThoughtWriter = ({
 									ref={(r) => (tagXs.current[i] = r)}
 									onClick={(e) => {
 										e.stopPropagation(); // this is needed to focus the next tag
-										const newLabels = [...tagLabels];
-										newLabels.splice(i, 1);
-										tagLabelsSet(newLabels);
-										!newLabels.length || i === newLabels.length
-											? tagInput.current?.focus()
+										const newTags = [...tags];
+										newTags.splice(i, 1);
+										tagsSet(newTags);
+										!newTags.length || i === newTags.length
+											? tagIpt.current?.focus()
 											: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
 									}}
 									onKeyDown={(e) => {
 										if (e.key === 'Backspace' || e.key === 'Enter') {
 											tagXs.current[i]?.click();
 										} else {
-											tagInput.current?.focus();
+											tagIpt.current?.focus();
 										}
 									}}
 								>
@@ -182,9 +185,9 @@ export const ThoughtWriter = ({
 				)}
 				<input
 					autoComplete="off"
-					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tagLabels.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
+					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-95 dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Add tags with Enter"
-					ref={tagInput}
+					ref={tagIpt}
 					onFocus={() => suggestTagsSet(true)}
 					onBlur={onAddingTagBlur}
 					onClick={() => suggestTagsSet(true)}
@@ -192,8 +195,8 @@ export const ThoughtWriter = ({
 					onKeyDown={(e) => {
 						e.key === 'Escape' && contentTextArea.current?.focus();
 						if (tagFilter && e.key === 'Enter' && !e.metaKey) {
-							tagInput.current!.value = '';
-							tagLabelsSet([...new Set([...tagLabels, tagFilter])]);
+							tagIpt.current!.value = '';
+							tagsSet([...new Set([...tags, tagFilter])]);
 							tagFilterSet('');
 						}
 						if (e.key === 'ArrowDown') {
@@ -204,7 +207,7 @@ export const ThoughtWriter = ({
 				/>
 				{suggestTags && (
 					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
-						{suggestedTags.map((label, i) => {
+						{suggestedTags.map((tag, i) => {
 							return (
 								<button
 									key={i}
@@ -214,22 +217,22 @@ export const ThoughtWriter = ({
 									onKeyDown={(e) => {
 										if (e.key === 'ArrowUp') {
 											e.preventDefault();
-											!i ? tagInput.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
+											!i ? tagIpt.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
 										} else if (e.key === 'ArrowDown') {
 											e.preventDefault();
 											tagSuggestionsRefs.current[i + 1]?.focus();
 										} else if (!['Enter', 'Tab', 'Shift'].includes(e.key)) {
-											tagInput.current?.focus();
+											tagIpt.current?.focus();
 										}
 									}}
 									onClick={() => {
-										tagLabelsSet([...new Set([...tagLabels, label])]);
-										tagInput.current!.value = '';
-										tagInput.current!.focus();
+										tagsSet([...new Set([...tags, tag])]);
+										tagIpt.current!.value = '';
+										tagIpt.current!.focus();
 										tagFilterSet('');
 									}}
 								>
-									{label}
+									{tag}
 								</button>
 							);
 						})}

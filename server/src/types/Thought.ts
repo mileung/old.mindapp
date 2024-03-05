@@ -12,12 +12,12 @@ const schema = {
 		authorId: { type: ['null', 'number'] },
 		spaceId: { type: ['null', 'number'] },
 		content: { anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-		tagLabels: { type: 'array', items: { type: 'string' } },
+		tags: { type: 'array', items: { type: 'string' } },
 		parentId: { type: 'string' },
 		childrenIds: { type: 'array', items: { type: 'string' } },
 		mentionedByIds: { type: 'array', items: { type: 'string' } },
 	},
-	required: ['createDate', 'authorId', 'spaceId', 'content', 'tagLabels'],
+	required: ['createDate', 'authorId', 'spaceId', 'content', 'tags'],
 	additionalProperties: false,
 };
 
@@ -30,7 +30,7 @@ export class Thought {
 	public spaceId: null | number;
 	// Above are temporary. Below are saved on disk.
 	public content: string | string[];
-	public tagLabels: string[];
+	public tags: string[];
 	public parentId?: string;
 	public childrenIds?: string[];
 	public mentionedByIds?: string[];
@@ -41,7 +41,7 @@ export class Thought {
 			authorId,
 			spaceId,
 			content,
-			tagLabels,
+			tags,
 			parentId,
 			childrenIds,
 			mentionedByIds,
@@ -50,7 +50,7 @@ export class Thought {
 			authorId: null | number;
 			spaceId: null | number;
 			content: string | string[];
-			tagLabels?: string[];
+			tags?: string[];
 			// reactions: Record<string, number>; // emoji, personaId
 			parentId?: string;
 			// isDeletedParent?: boolean;
@@ -64,7 +64,7 @@ export class Thought {
 		this.authorId = authorId;
 		this.spaceId = spaceId;
 		this.content = content;
-		this.tagLabels = sortUniArr(tagLabels || []);
+		this.tags = sortUniArr(tags || []);
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
 		this.mentionedByIds = mentionedByIds;
@@ -84,7 +84,7 @@ export class Thought {
 				this.parentId = parentId;
 			}
 
-			this.tagLabels.forEach((label) => addTagIndex(label, this.id));
+			this.tags.forEach((tag) => addTagIndex(tag, this.id));
 			Array.isArray(this.content) &&
 				this.content.forEach((id, i) => {
 					if (i % 2) {
@@ -100,7 +100,7 @@ export class Thought {
 	get criticalProps() {
 		return {
 			content: this.content,
-			tagLabels: this.tagLabels,
+			tags: this.tags,
 			parentId: this.parentId,
 			childrenIds: this.childrenIds,
 			mentionedByIds: this.mentionedByIds,

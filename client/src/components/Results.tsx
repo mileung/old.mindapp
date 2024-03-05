@@ -10,7 +10,7 @@ export default function Results({
 	query,
 }: {
 	query?: {
-		tagLabels?: string[];
+		tags?: string[];
 		other?: string[];
 		thoughtId?: string;
 	};
@@ -51,7 +51,7 @@ export default function Results({
 			.then(({ moreMentions, latestCreateDate, moreRoots }) => {
 				mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions });
 				const rootsPerLoad = 8;
-				const newRoots = [...roots, ...moreRoots];
+				const newRoots = roots.concat(moreRoots);
 				moreRoots.length < rootsPerLoad && newRoots.push(null);
 				thoughtsBeyond.current = latestCreateDate;
 				rootsSet(newRoots);

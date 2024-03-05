@@ -5,7 +5,7 @@ import addTag from './routes/add-tag';
 import { getFile } from './routes/get-file';
 import getLocalThoughts from './routes/get-local-thoughts';
 import getSettings from './routes/get-settings';
-import getTags from './routes/get-tags';
+import getTagTree from './routes/get-tag-tree';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
 import searchLocalThoughts from './routes/search-local-thoughts';
@@ -37,7 +37,7 @@ app.get('/whoami', whoami);
 app.get('/get-settings', getSettings);
 app.post('/update-settings', updateSettings);
 app.post('/write-thought', writeThought);
-app.get('/get-tags', getTags);
+app.get('/get-tag-tree', getTagTree);
 app.post('/add-tag', addTag);
 app.post('/remove-tag', removeTag);
 app.post('/rename-tag', renameTag);
@@ -75,7 +75,7 @@ app.listen(port, () => {
 					authorId: null,
 					spaceId: null,
 					content: `${i}`,
-					// tagLabels,
+					// tags,
 					// mentionIds,
 				},
 				true,

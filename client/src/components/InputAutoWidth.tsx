@@ -1,8 +1,10 @@
 import { useRef, InputHTMLAttributes, forwardRef } from 'react';
 
 const resize = (node: HTMLInputElement) => {
-	node.style.width = 'auto';
-	node.style.width = node.scrollWidth + 'px';
+	setTimeout(() => {
+		node.style.width = 'auto';
+		node.style.width = node.scrollWidth + 'px';
+	}, 0);
 };
 
 const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>, parentRef) => {

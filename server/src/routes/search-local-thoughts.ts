@@ -6,14 +6,14 @@ const rootsPerLoad = 8;
 const searchLocalThoughts: RequestHandler = (req, res) => {
 	const {
 		thoughtId,
-		tagLabels = [],
+		tags = [],
 		other,
 		oldToNew,
 		ignoreRootIds,
 		thoughtsBeyond,
 	} = req.body as {
 		thoughtId: string;
-		tagLabels: string[];
+		tags: string[];
 		other: string[];
 		oldToNew: boolean;
 		ignoreRootIds: string[];
@@ -44,7 +44,7 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 		}
 	} else {
 		const indices = parseFile<Record<string, string[]>>(indicesPath);
-		thoughtIds = [...new Set(tagLabels.flatMap((label) => indices[label] || []))].sort((a, b) =>
+		thoughtIds = [...new Set(tags.flatMap((tag) => indices[tag] || []))].sort((a, b) =>
 			oldToNew ? a.localeCompare(b) : b.localeCompare(a),
 		);
 	}

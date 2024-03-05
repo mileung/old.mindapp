@@ -1,36 +1,29 @@
 import { RequestHandler } from 'express';
-import { Tag } from '../types/Tag';
-import { parseFile, tagsPath, writeObjectFile } from '../utils/files';
+import TagTree from '../types/TagTree';
+import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
-import { sortUniArr } from '../utils/tags';
+import { sortObjectProps, sortUniArr } from '../utils/tags';
 
 const addTag: RequestHandler = (req, res) => {
-	const parentLabel = (req.body.parentLabel || '').trim();
-	const newTag = new Tag({
-		label: req.body.label.trim(),
-		parentLabels: parentLabel ? [parentLabel] : [],
-	});
-	const tags = parseFile<Tag[]>(tagsPath);
+	const tagTree = parseFile<TagTree>(tagTreePath);
+	const parentTag = (req.body.parentTag || '').trim();
+	const tag = (req.body.tag || '').trim();
 
-	const parentTagIndex = tags.findIndex((tag) => tag.label === parentLabel);
-	if (parentTagIndex !== -1) {
-		tags[parentTagIndex].subLabels = sortUniArr(
-			tags[parentTagIndex].subLabels.concat(newTag.label),
-		);
+	if (parentTag) {
+		if (tagTree.branchNodes[parentTag]) {
+			tagTree.branchNodes[parentTag] = sortUniArr(tagTree.branchNodes[parentTag].concat(tag));
+		} else {
+			const parentTagIndex = tagTree.leafNodes.findIndex((tag) => tag === parentTag);
+			if (parentTagIndex === -1) throw new Error(`Parent tag "${parentTag}" dne`);
+			tagTree.leafNodes.splice(parentTagIndex, 1);
+			tagTree.branchNodes[parentTag] = [tag];
+		}
 	}
-
-	const existingTagIndex = tags.findIndex((tag) => tag.label === newTag.label);
-	if (existingTagIndex !== -1) {
-		tags[existingTagIndex].parentLabels = sortUniArr(
-			tags[existingTagIndex].parentLabels.concat(newTag.parentLabels),
-		);
-	} else {
-		tags.push(newTag);
-		tags.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+	if (!tagTree.branchNodes[tag]) {
+		tagTree.leafNodes = sortUniArr(tagTree.leafNodes.concat(tag));
 	}
-
-	writeObjectFile(tagsPath, tags);
-
+	sortObjectProps(tagTree.branchNodes);
+	writeObjectFile(tagTreePath, tagTree);
 	res.send({});
 	debouncedSnapshot();
 };

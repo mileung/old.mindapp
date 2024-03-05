@@ -52,15 +52,15 @@ export default function MentionedThought({ thought }: { thought?: Thought }) {
 			) : (
 				<p className="font-semibold text-fg2 italic">No content</p>
 			)}
-			{!!thought.tagLabels?.length && (
+			{!!thought.tags?.length && (
 				<div className="flex flex-wrap gap-x-2">
-					{thought.tagLabels.map((label) => (
+					{thought.tags.map((tag) => (
 						<Link
-							key={label}
-							to={`/search?${new URLSearchParams({ q: `[${label}]` }).toString()}`}
+							key={tag}
+							to={`/search?${new URLSearchParams({ q: `[${tag}]` }).toString()}`}
 							className="font-bold leading-5 transition text-fg2 hover:text-fg1"
 						>
-							{label}
+							{tag}
 						</Link>
 					))}
 				</div>

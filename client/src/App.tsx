@@ -17,7 +17,7 @@ function App() {
 				<Header />
 				<Routes>
 					<Route path="/" Component={Home} />
-					<Route path="/tags" Component={Tags} />
+					<Route path="/tags/:tag?" Component={Tags} />
 					<Route path="/search" Component={Search} />
 					<Route path="/Settings" Component={Settings} />
 					<Route path="/:thoughtId" Component={ThoughtId} />

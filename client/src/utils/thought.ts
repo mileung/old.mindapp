@@ -3,7 +3,7 @@ export type Thought = {
 	authorId: null | number;
 	spaceId: null | number;
 	content: string | string[];
-	tagLabels?: string[];
+	tags?: string[];
 	parentId?: string;
 	childrenIds?: string[];
 };
@@ -13,7 +13,7 @@ export type RecThought = {
 	authorId: null | number;
 	spaceId: null | number;
 	content: string | string[];
-	tagLabels?: string[];
+	tags?: string[];
 	parent?: RecThought[];
 	children?: RecThought[];
 };

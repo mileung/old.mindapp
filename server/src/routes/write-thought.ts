@@ -13,16 +13,16 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 		const oldThought = Thought.parse(`${createDate}.${body.authorId}.${body.spaceId}`);
 		thought = Thought.parse(oldThought.id);
 		thought.content = body.content;
-		thought.tagLabels = body.tagLabels;
+		thought.tags = body.tags;
 		thought.overwrite();
 
-		thought.tagLabels
-			.filter((x) => !oldThought.tagLabels.includes(x))
-			.forEach((label) => addTagIndex(label, thought.id));
+		thought.tags
+			.filter((x) => !oldThought.tags.includes(x))
+			.forEach((tag) => addTagIndex(tag, thought.id));
 
-		oldThought.tagLabels
-			.filter((x) => !thought.tagLabels.includes(x))
-			.forEach((label) => removeTagIndex(label, thought.id));
+		oldThought.tags
+			.filter((x) => !thought.tags.includes(x))
+			.forEach((tag) => removeTagIndex(tag, thought.id));
 
 		const oldMentionedIds = oldThought.mentionedIds;
 		const newMentionedIds = thought.mentionedIds;
@@ -36,7 +36,7 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 		thought = new Thought({ ...body, createDate }, true);
 	}
 
-	addTagsByLabel(thought.tagLabels);
+	addTagsByLabel(thought.tags);
 	const mentionedThoughts: Record<string, Thought> = {};
 	thought.mentionedIds.forEach((id) => (mentionedThoughts[id] = Thought.parse(id)));
 	res.send({ mentionedThoughts, thought });
