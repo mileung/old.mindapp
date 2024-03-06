@@ -3,7 +3,6 @@ import { Settings } from '../pages/Settings';
 
 type LocalState = {
 	theme: Settings['theme'];
-	lastUsedTags: string[];
 };
 
 export const getLocalState = (): LocalState => {
@@ -12,7 +11,6 @@ export const getLocalState = (): LocalState => {
 		? JSON.parse(storedLocalState)
 		: {
 				theme: 'System',
-				lastUsedTags: [],
 			};
 };
 

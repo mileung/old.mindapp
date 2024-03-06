@@ -15,6 +15,7 @@ export const useSpaceId = createAtom<null | number>(null);
 export const usePersona = createAtom<null | number>(null);
 export const useTagTree = createAtom<null | TagTree>(null);
 export const useSettings = createAtom<null | Settings>(null);
+export const useLastUsedTags = createAtom<string[]>([]);
 
 export const GlobalState = () => {
 	const [, tagTreeSet] = useTagTree();

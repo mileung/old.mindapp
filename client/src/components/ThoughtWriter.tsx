@@ -1,10 +1,10 @@
 import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
 import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { useTagTree, usePersona } from './GlobalState';
+import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { TagTree, sortUniArr } from '../utils/tags';
+import { TagTree } from '../utils/tags';
 import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
 import { useKeyPress } from '../utils/keyboard';
@@ -30,29 +30,35 @@ export const ThoughtWriter = ({
 	) => void;
 	onContentBlur?: () => void;
 }) => {
+	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
 	const [personaId] = usePersona();
 	const [tags, tagsSet] = useState<string[]>(initialTags);
 	const [tagFilter, tagFilterSet] = useState('');
+	const [tagIndex, tagIndexSet] = useState(0);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = parentRef || useRef<HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
+	const fileBtn = useRef<null | HTMLButtonElement>(null);
 
-	const suggestedTags = useMemo(
-		() =>
-			matchSorter(
-				Object.keys(tagTree?.branchNodes || [])
-					.filter((tag) => !tags.includes(tag))
-					.concat((tagTree?.leafNodes || []).filter((tag) => !tags.includes(tag))),
-				tagFilter,
-			),
-		[tagTree, tagFilter, tags],
-	);
+	const suggestedTags = useMemo(() => {
+		let arr = matchSorter(
+			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
+			tagFilter,
+		);
+		if (tagFilter) {
+			arr.push(tagFilter);
+		} else {
+			arr.unshift(...lastUsedTags);
+		}
+		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
+		return arr;
+	}, [tagTree, tagFilter, lastUsedTags, tags]);
 
 	const writeThought = useCallback(
-		(additionalTag?: string, ctrlKey?: boolean, altKey?: boolean) => {
+		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
 			if (!content) return;
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
@@ -63,14 +69,13 @@ export const ThoughtWriter = ({
 					authorId: personaId,
 					spaceId: null,
 					content: separateMentions(content.trim()),
-					tags: sortUniArr(tags.concat(additionalTag || [])),
+					tags,
 				}),
 			)
 				.then((res) => {
 					// caching is premature optimization atm. Just ping local sever to update ui
 					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';
-					tagIpt.current!.value = '';
 					tagsSet([]);
 					tagFilterSet('');
 					suggestTagsSet(false);
@@ -85,36 +90,15 @@ export const ThoughtWriter = ({
 		[editId, parentId, personaId, onWrite, tags],
 	);
 
-	const onAddingTagBlur = useCallback(() => {
-		setTimeout(() => {
-			const focusedOnTagOptions = tagSuggestionsRefs.current.includes(
-				// @ts-ignore
-				document.activeElement,
-			);
-			if (!focusedOnTagOptions && tagIpt.current !== document.activeElement) {
-				suggestTagsSet(false);
-			}
-		}, 0);
-	}, []);
-
 	useKeyPress(
 		{ key: 'Enter', modifiers: ['Meta', 'Alt', 'Control'] },
-		(event) => {
-			const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
-				(e) => e === document.activeElement,
-			);
-			const focusedOnTagSuggestion = focusedSuggestionIndex !== -1;
+		(e) => {
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
-				document.activeElement === tagIpt.current ||
-				focusedOnTagSuggestion;
+				document.activeElement === tagIpt.current;
 
 			if (focusedOnThoughtWriter) {
-				writeThought(
-					suggestedTags![focusedSuggestionIndex] || tagIpt.current!.value,
-					event.ctrlKey,
-					event.altKey,
-				);
+				writeThought(e.ctrlKey, e.altKey);
 			}
 		},
 		[suggestedTags, writeThought],
@@ -164,14 +148,16 @@ export const ThoughtWriter = ({
 										const newTags = [...tags];
 										newTags.splice(i, 1);
 										tagsSet(newTags);
-										!newTags.length || i === newTags.length
+										!newTags.length || (i === newTags.length && !e.shiftKey)
 											? tagIpt.current?.focus()
 											: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
 									}}
 									onKeyDown={(e) => {
-										if (e.key === 'Backspace' || e.key === 'Enter') {
+										if (e.key === 'Backspace') {
 											tagXs.current[i]?.click();
-										} else {
+										} else if (
+											!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
+										) {
 											tagIpt.current?.focus();
 										}
 									}}
@@ -185,25 +171,57 @@ export const ThoughtWriter = ({
 				<input
 					autoComplete="off"
 					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
-					placeholder="Add tags with Enter"
+					placeholder="Search tags"
 					ref={tagIpt}
 					onFocus={() => suggestTagsSet(true)}
-					onBlur={onAddingTagBlur}
+					onBlur={() => {
+						setTimeout(() => {
+							const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
+								(e) => e === document.activeElement,
+							);
+							if (document.activeElement !== tagIpt.current && focusedSuggestionIndex === -1) {
+								tagIndexSet(0);
+								suggestTagsSet(false);
+							}
+						}, 0);
+					}}
+					value={tagFilter}
 					onClick={() => suggestTagsSet(true)}
-					onChange={(e) => tagFilterSet(e.target.value.trim().replace(/\s\s+/g, ' '))}
+					onChange={(e) => {
+						tagIndexSet(0);
+						suggestTagsSet(true);
+						tagFilterSet(e.target.value);
+					}}
 					onKeyDown={(e) => {
-						e.key === 'Escape' && contentTextArea.current?.focus();
-						if (tagFilter && e.key === 'Enter') {
-							setTimeout(() => {
-								// setTimeout allows focusedOnThoughtWriter to be true. Else tagIpt would change refs and not be document.activeElement
-								tagIpt.current!.value = '';
-								tagsSet([...new Set([...tags, tagFilter])]);
-								tagFilterSet('');
-							}, 0);
+						if (e.key === 'Escape') {
+							suggestTags ? suggestTagsSet(false) : contentTextArea.current?.focus();
+						}
+						if (e.key === 'ArrowUp') {
+							e.preventDefault();
+							const index = Math.max(tagIndex - 1, 0);
+							tagSuggestionsRefs.current[index]?.focus();
+							tagIpt.current?.focus();
+							tagIndexSet(index);
 						}
 						if (e.key === 'ArrowDown') {
 							e.preventDefault();
-							tagSuggestionsRefs.current[0]?.focus();
+							const index = Math.min(tagIndex + 1, suggestedTags.length - 1);
+							tagSuggestionsRefs.current[index]?.focus();
+							tagIpt.current?.focus();
+							tagIndexSet(index);
+						}
+						if (e.key === 'Tab' && !e.shiftKey) {
+							e.preventDefault();
+							fileBtn.current?.focus();
+						}
+						if (e.key === 'Enter' && !(e.metaKey || e.altKey || e.ctrlKey)) {
+							if (suggestTags) {
+								tagsSet([...new Set([...tags, suggestedTags[tagIndex]])]);
+								tagFilterSet('');
+								suggestTagsSet(false);
+							} else {
+								suggestTagsSet(true);
+							}
 						}
 					}}
 				/>
@@ -213,27 +231,13 @@ export const ThoughtWriter = ({
 							return (
 								<button
 									key={i}
-									className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
-									onBlur={onAddingTagBlur}
-									onKeyDown={(e) => {
-										if (e.key === 'ArrowUp') {
-											e.preventDefault();
-											!i ? tagIpt.current?.focus() : tagSuggestionsRefs.current[i - 1]?.focus();
-										} else if (e.key === 'ArrowDown') {
-											e.preventDefault();
-											tagSuggestionsRefs.current[i + 1]?.focus();
-										} else if (
-											!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
-										) {
-											tagIpt.current?.focus();
-										}
-									}}
+									className={`fx px-3 text-xl -outline-offset-2 transition-[background] hover:bg-mg2 border-b border-t ${tagIndex === i ? 'border-fg2' : 'border-mg1'}`}
 									onClick={() => {
 										tagsSet([...new Set([...tags, tag])]);
-										tagIpt.current!.value = '';
 										tagIpt.current!.focus();
 										tagFilterSet('');
+										lastUsedTagsSet([...new Set([tag, ...lastUsedTags])].slice(0, 5));
 									}}
 								>
 									{tag}
@@ -244,7 +248,11 @@ export const ThoughtWriter = ({
 				)}
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
-				<button className="px-2 transition text-fg2 hover:text-fg1" onClick={() => writeThought()}>
+				<button
+					ref={fileBtn}
+					className="px-2 transition text-fg2 hover:text-fg1"
+					onClick={() => writeThought()}
+				>
 					<ArrowUpOnSquareIcon className="h-6 w-6" />
 				</button>
 				<button
