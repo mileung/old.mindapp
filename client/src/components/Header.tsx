@@ -46,22 +46,19 @@ export default function Header() {
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const [searchText, searchTextSet] = useState(searchedKeywords || '');
-	const [tagIndex, tagIndexSet] = useState<number>(-1);
+	const [tagIndex, tagIndexSet] = useState<number>(0);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
-	const tagFilter = useMemo(
-		() => searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim(),
-		[searchText],
-	);
+	const tagFilter = useMemo(() => {
+		const filter = searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim();
+		filter ? tagIndexSet(0) : tagIndexSet(-1);
+		return filter;
+	}, [searchText]);
 	const suggestedTags = useMemo(() => {
 		let arr = matchSorter(
 			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
 			tagFilter,
 		);
-		if (tagFilter) {
-			arr.push(tagFilter);
-		} else {
-			arr.unshift(...lastUsedTags);
-		}
+		arr.unshift(...lastUsedTags);
 		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
 		return arr;
 	}, [tagTree, tagFilter, lastUsedTags, tags]);
@@ -85,8 +82,9 @@ export default function Header() {
 	const searchInput = useCallback(
 		(newTab = false) => {
 			const { value } = searchIpt.current!;
-			if (value.trim()) {
-				const queryString = new URLSearchParams({ q: value.trim() }).toString();
+			const q = value.trimStart();
+			if (q) {
+				const queryString = new URLSearchParams({ q }).toString();
 				searchIpt.current!.blur();
 				setTimeout(() => {
 					if (newTab) {
@@ -103,8 +101,14 @@ export default function Header() {
 
 	const addTagToSearchInput = useCallback(
 		(tag: string) => {
-			tagIndexSet(-1);
-			searchTextSet(`${searchText.replace(tagFilter, '').trim()} [${tag}] `.trimStart());
+			tagIndexSet(0);
+			searchTextSet(
+				`${searchText
+					.replace(/\s\s+/g, ' ')
+					.trim()
+					.replace(new RegExp(tagFilter + '$'), '')
+					.trim()} [${tag}] `.trimStart(),
+			);
 			lastUsedTagsSet([...new Set([tag, ...lastUsedTags])].slice(0, 5));
 			setTimeout(() => searchIpt.current?.scrollTo({ left: Number.MAX_SAFE_INTEGER }), 0);
 		},
@@ -132,20 +136,21 @@ export default function Header() {
 							placeholder="Search"
 							onFocus={() => {
 								suggestTagsSet(true);
-								tagIndexSet(-1);
+								tagIndexSet(0);
 							}}
 							onBlur={() => {
 								document.activeElement !== searchBtn.current && suggestTagsSet(false);
 							}}
 							onChange={(e) => {
-								tagIndexSet(-1);
+								suggestTagsSet(true);
 								searchTextSet(e.target.value);
 							}}
 							onKeyDown={(e) => {
-								e.key === 'Escape' && searchIpt.current?.blur();
+								e.key === 'Escape' &&
+									(suggestTags ? suggestTagsSet(false) : searchIpt.current?.blur());
 								e.key === 'Tab' && !e.shiftKey && suggestTagsSet(false);
 								if (e.key === 'Enter') {
-									if (tagIndex === -1) {
+									if (!suggestTags || tagIndex === -1) {
 										searchInput(e.metaKey);
 									} else {
 										addTagToSearchInput(suggestedTags[tagIndex]);
