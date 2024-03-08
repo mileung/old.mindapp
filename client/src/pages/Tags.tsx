@@ -12,8 +12,8 @@ import { useKeyPress } from '../utils/keyboard';
 export default function Tags() {
 	const navigate = useNavigate();
 	const { tag } = useParams();
-	// const [tagTree, tagTreeSet] = useTagTree();
-	let [tagTree, tagTreeSet] = useTagTree();
+	const [tagTree, tagTreeSet] = useTagTree();
+	// let [tagTree, tagTreeSet] = useTagTree();
 	// tagTree = { branchNodes: {}, leafNodes: [] };
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState<null | number>(null);
@@ -39,8 +39,8 @@ export default function Tags() {
 			(tagFilter
 				? matchSorter(tags.branch.concat(tags.leaf), tagFilter).concat(tagFilter)
 				: matchSorter(tags.branch, tagFilter).concat(matchSorter(tags.leaf, tagFilter)));
-		if (tagIndex === null && tag && arr) {
-			tagIndexSet(arr.indexOf(tag));
+		if (tagIndex === null) {
+			tagIndexSet(tag && arr ? arr.indexOf(tag) : 0);
 		}
 		return arr;
 	}, [tags, tagFilter, tagIndex]);
@@ -57,10 +57,12 @@ export default function Tags() {
 			tagIndex === null ||
 			tagIndex === -1 ||
 			!suggestedTags ||
-			(showAddTag && tagIndex === suggestedTags.length - 1)
+			(showAddTag && tagIndex === suggestedTags.length - 1) ||
+			!suggestedTags[tagIndex]
 		) {
 			return null;
 		}
+
 		return makeRootTag(tagTree, suggestedTags[tagIndex]);
 	}, [tagFilter, allTags, tag, tagIndex, tagTree, suggestedTags, showAddTag]);
 
@@ -251,7 +253,11 @@ export default function Tags() {
 				{!suggestedTags ? null : !rootTag ? (
 					<div className="xy h-full">
 						<p className="text-xl">
-							{tagIndex === -1 ? `"${tag}" is not a tag` : `Add "${tagFilter}" with Enter`}
+							{tagIndex === -1
+								? `"${tag}" is not a tag`
+								: allTags?.size === 0
+									? 'No tags'
+									: `Add "${tagFilter}" with Enter`}
 						</p>
 					</div>
 				) : (
