@@ -6,19 +6,23 @@ import { useNavigate } from 'react-router-dom';
 import { useTagTree } from './GlobalState';
 
 const TagEditor = ({
+	parentRef,
 	subTaggingLineage,
 	recTag,
 	parentTag,
 	onRename,
 	onSubtag,
 	onRemove,
+	onKeyDown,
 }: {
+	parentRef?: React.MutableRefObject<HTMLInputElement | null>;
 	subTaggingLineage: string;
 	recTag: RecursiveTag;
 	parentTag?: string;
 	onRename: (oldTag: string, newTag: string, subTaggingLineage?: string) => Promise<any>;
 	onSubtag: (tag: string, parentTag: string, subTaggingLineage?: string) => Promise<any>;
 	onRemove: (currentTagLabel: string, parentTag?: string) => void;
+	onKeyDown?: React.DOMAttributes<HTMLInputElement>['onKeyDown'];
 }) => {
 	const navigate = useNavigate();
 	const [tagTree, tagTreeSet] = useTagTree();
@@ -54,14 +58,17 @@ const TagEditor = ({
 		<div>
 			<div className="fx">
 				<InputAutoWidth
-					size={1}
-					ref={editingIpt}
+					ref={(r: HTMLInputElement | null) => {
+						editingIpt.current = r;
+						parentRef && (parentRef.current = r);
+					}}
 					defaultValue={recTag.label}
 					placeholder="Edit tag with Enter"
 					className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-bg1 hover:border-mg2 focus:border-fg2"
 					onBlur={onEditingBlur}
 					onFocus={() => editingSet(true)}
 					onKeyDown={(e) => {
+						onKeyDown?.(e);
 						e.key === 'Escape' && editingIpt.current?.blur();
 						if (e.key === 'Enter') {
 							const newTag = editingIpt.current!.value.trim();
@@ -81,23 +88,28 @@ const TagEditor = ({
 								tagTreeSet(tagTree);
 								navigate(`/tags/${encodeURIComponent(newTag)}`, { replace: true });
 							}
-							onRename(
-								recTag.label,
-								newTag,
-								e.ctrlKey
-									? JSON.stringify(
-											recTag.lineage.slice(0, recTag.lineage.length - 1).concat(newTag),
-										)
-									: undefined,
-							).then(() => setTimeout(() => editingIpt.current?.blur(), 0));
+							if (recTag.label === newTag) {
+								addingSubtagSet(true);
+								editingSet(false);
+							} else {
+								onRename(
+									recTag.label,
+									newTag,
+									e.ctrlKey
+										? JSON.stringify(
+												recTag.lineage.slice(0, recTag.lineage.length - 1).concat(newTag),
+											)
+										: undefined,
+								).then(() => setTimeout(() => editingIpt.current?.blur(), 0));
+							}
 						}
 					}}
 				/>
 				{editing && (
 					<>
 						<button
-							className="xy h-8 w-8 group -outline-offset-2"
-							title="Make subtags"
+							className="xy h-8 w-8 group"
+							title="Add subtags"
 							ref={makeSubsetBtn}
 							onBlur={onEditingBlur}
 							onClick={() => {
@@ -108,7 +120,7 @@ const TagEditor = ({
 							<ArrowTopRightOnSquareIcon className="h-6 w-6 mt-1 rotate-90 transition text-fg2 group-hover:text-fg1" />
 						</button>
 						<button
-							className="xy h-8 w-8 group -outline-offset-2"
+							className="xy h-8 w-8 group"
 							ref={removeBtn}
 							onBlur={onEditingBlur}
 							onKeyDown={(e) => e.key === 'Tab' && !e.shiftKey && editingSet(false)}
@@ -133,7 +145,6 @@ const TagEditor = ({
 					<InputAutoWidth
 						ref={addingIpt}
 						autoFocus
-						size={1}
 						onFocus={() => addingSubtagSet(true)}
 						placeholder="Add tags with Enter"
 						className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"

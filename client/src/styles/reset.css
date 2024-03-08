@@ -6,6 +6,10 @@ body {
 	@apply bg-bg1 text-fg1;
 }
 
+* {
+	@apply -outline-offset-2;
+}
+
 input,
 textarea {
 	@apply bg-clear outline-none;

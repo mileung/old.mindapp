@@ -65,7 +65,6 @@ function InputSetter({
 			<InputAutoWidth
 				ref={autoWidthIpt}
 				defaultValue={defaultValue}
-				size={1}
 				placeholder={placeholder}
 				className="leading-3 min-w-[15rem] border-b-2 text-2xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
 				onKeyDown={(e) => {

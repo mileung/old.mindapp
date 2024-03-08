@@ -41,6 +41,7 @@ export default function Header() {
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchIpt = useRef<HTMLInputElement>(null);
 	const searchBtn = useRef<HTMLButtonElement>(null);
+	const gearLnk = useRef<HTMLAnchorElement>(null);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const [searchText, searchTextSet] = useState(searchedKeywords || '');
@@ -66,12 +67,16 @@ export default function Header() {
 		window.scrollTo(0, 0);
 	}, [searchedKeywords]);
 
-	useKeyPress('/', () => {
-		const activeElement = document.activeElement!;
-		if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
-			setTimeout(() => searchIpt.current?.focus(), 0); // setTimeout prevents inputting '/' on focus
-		}
-	});
+	useKeyPress(
+		'/',
+		() => {
+			const activeElement = document.activeElement!;
+			if (activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+				setTimeout(() => searchIpt.current?.focus(), 0); // setTimeout prevents inputting '/' on focus
+			}
+		},
+		[],
+	);
 
 	const searchInput = useCallback(
 		(newTab = false) => {
@@ -132,6 +137,7 @@ export default function Header() {
 							onKeyDown={(e) => {
 								e.key === 'Escape' && searchIpt.current?.blur();
 								e.key === 'Enter' && searchInput(e.metaKey);
+								e.key === 'Tab' && !e.shiftKey && suggestTagsSet(false);
 								if (e.key === 'ArrowDown') {
 									e.preventDefault();
 									tagSuggestionsRefs.current[0]?.focus();
@@ -140,7 +146,7 @@ export default function Header() {
 						/>
 						<button
 							ref={searchBtn}
-							className="xy -ml-12 px-2 transition text-fg2 hover:text-fg1"
+							className="xy -ml-12 w-12 px-2 rounded transition text-fg2 hover:text-fg1"
 							onClick={() => searchInput()}
 						>
 							<MagnifyingGlassIcon className="h-7 w-7" />
@@ -152,7 +158,7 @@ export default function Header() {
 								return (
 									<button
 										key={i}
-										className="fx px-3 text-xl -outline-offset-2 transition hover:bg-mg2"
+										className="fx px-3 text-xl transition hover:bg-mg2"
 										ref={(r) => (tagSuggestionsRefs.current[i] = r)}
 										onBlur={onSearchingBlur}
 										onMouseDown={(e) => e.preventDefault()}
@@ -188,10 +194,10 @@ export default function Header() {
 					)}
 				</div>
 				<div className="fx">
-					<Link to="/settings" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
+					<Link ref={gearLnk} to="/settings" className="xy w-10 text-fg2 transition hover:text-fg1">
 						<CogIcon className="h-7 w-7" />
 					</Link>
-					<Link to="/tags" className="xy w-10 rounded-full text-fg2 transition hover:text-fg1">
+					<Link to="/tags" className="xy w-10 text-fg2 transition hover:text-fg1">
 						<TagIcon className="h-7 w-7" />
 					</Link>
 				</div>

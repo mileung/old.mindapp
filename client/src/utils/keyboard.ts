@@ -5,13 +5,18 @@ export function useKeyPress(
 		| string
 		| {
 				key: string;
-				modifiers: string[];
+				modifiers?: string[];
+				allowRepeats?: boolean;
 		  },
 	callback: (e: KeyboardEvent) => void,
-	dependencies?: any[],
+	dependencies: any[],
 ) {
 	useEffect(() => {
-		const { key, modifiers = [] } = typeof input === 'string' ? { key: input } : input;
+		const {
+			key,
+			modifiers = [],
+			allowRepeats = false,
+		} = typeof input === 'string' ? { key: input } : input;
 		let isAboutToTrigger = !modifiers.length;
 		const resetTrigger = () => {
 			isAboutToTrigger = !modifiers.length;
@@ -19,7 +24,7 @@ export function useKeyPress(
 		const handleKeyMove = (event: KeyboardEvent) => {
 			if (modifiers.includes(event.key)) {
 				isAboutToTrigger = event.type === 'keydown';
-			} else if (event.key === key && isAboutToTrigger && !event.repeat) {
+			} else if (event.key === key && isAboutToTrigger && (allowRepeats || !event.repeat)) {
 				callback(event);
 			}
 		};

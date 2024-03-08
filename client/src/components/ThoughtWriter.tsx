@@ -232,7 +232,7 @@ export const ThoughtWriter = ({
 								<button
 									key={i}
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
-									className={`fx px-3 text-xl -outline-offset-2 transition-[background] hover:bg-mg2 border-b border-t ${tagIndex === i ? 'border-fg2' : 'border-mg1'}`}
+									className={`fx px-3 text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
 									onClick={() => {
 										tagsSet([...new Set([...tags, tag])]);
 										tagIpt.current!.focus();
@@ -250,7 +250,7 @@ export const ThoughtWriter = ({
 			<div className="mt-1 fx justify-end gap-1.5">
 				<button
 					ref={fileBtn}
-					className="px-2 transition text-fg2 hover:text-fg1"
+					className="px-2.5 py-0.5 transition text-fg2 hover:text-fg1"
 					onClick={() => writeThought()}
 				>
 					<ArrowUpOnSquareIcon className="h-6 w-6" />
