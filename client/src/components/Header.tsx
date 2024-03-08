@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
-import { useTagTree } from './GlobalState';
+import { useLastUsedTags, useTagTree } from './GlobalState';
 import { matchSorter } from 'match-sorter';
 import { bracketRegex, getTags } from '../pages/Search';
 import { useKeyPress } from '../utils/keyboard';
@@ -36,6 +36,7 @@ export default function Header() {
 	// useSpaceId
 	// usePersona
 	const navigate = useNavigate();
+	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('q') || '';
@@ -45,22 +46,25 @@ export default function Header() {
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const [searchText, searchTextSet] = useState(searchedKeywords || '');
-
+	const [tagIndex, tagIndexSet] = useState<number>(-1);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
 	const tagFilter = useMemo(
 		() => searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim(),
 		[searchText],
 	);
-	const suggestedTags = useMemo(
-		() =>
-			matchSorter(
-				Object.keys(tagTree?.branchNodes || [])
-					.filter((tag) => !tags.includes(tag))
-					.concat((tagTree?.leafNodes || []).filter((tag) => !tags.includes(tag))),
-				tagFilter,
-			),
-		[tagTree, tagFilter, tags],
-	);
+	const suggestedTags = useMemo(() => {
+		let arr = matchSorter(
+			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
+			tagFilter,
+		);
+		if (tagFilter) {
+			arr.push(tagFilter);
+		} else {
+			arr.unshift(...lastUsedTags);
+		}
+		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
+		return arr;
+	}, [tagTree, tagFilter, lastUsedTags, tags]);
 
 	useEffect(() => {
 		searchTextSet(searchedKeywords);
@@ -81,7 +85,6 @@ export default function Header() {
 	const searchInput = useCallback(
 		(newTab = false) => {
 			const { value } = searchIpt.current!;
-			// console.log('value:', value);
 			if (value.trim()) {
 				const queryString = new URLSearchParams({ q: value.trim() }).toString();
 				searchIpt.current!.blur();
@@ -98,19 +101,15 @@ export default function Header() {
 		[navigate],
 	);
 
-	const onSearchingBlur = useCallback(() => {
-		setTimeout(() => {
-			const focusedOnTagOptions =
-				document.activeElement === searchBtn.current ||
-				tagSuggestionsRefs.current.includes(
-					// @ts-ignore
-					document.activeElement,
-				);
-			if (!focusedOnTagOptions && searchIpt.current !== document.activeElement) {
-				suggestTagsSet(false);
-			}
-		}, 0);
-	}, []);
+	const addTagToSearchInput = useCallback(
+		(tag: string) => {
+			tagIndexSet(-1);
+			searchTextSet(`${searchText.replace(tagFilter, '').trim()} [${tag}] `.trimStart());
+			lastUsedTagsSet([...new Set([tag, ...lastUsedTags])].slice(0, 5));
+			setTimeout(() => searchIpt.current?.scrollTo({ left: Number.MAX_SAFE_INTEGER }), 0);
+		},
+		[searchText, tagFilter],
+	);
 
 	return (
 		<>
@@ -131,62 +130,59 @@ export default function Header() {
 							value={searchText}
 							className="w-full pr-12 h-full text-lg px-2 rounded border-2 transition border-mg1 hover:border-mg2 focus:border-mg2"
 							placeholder="Search"
-							onFocus={() => suggestTagsSet(true)}
-							onBlur={onSearchingBlur}
-							onChange={(e) => searchTextSet(e.target.value)}
+							onFocus={() => {
+								suggestTagsSet(true);
+								tagIndexSet(-1);
+							}}
+							onBlur={() => {
+								document.activeElement !== searchBtn.current && suggestTagsSet(false);
+							}}
+							onChange={(e) => {
+								tagIndexSet(-1);
+								searchTextSet(e.target.value);
+							}}
 							onKeyDown={(e) => {
 								e.key === 'Escape' && searchIpt.current?.blur();
-								e.key === 'Enter' && searchInput(e.metaKey);
 								e.key === 'Tab' && !e.shiftKey && suggestTagsSet(false);
-								if (e.key === 'ArrowDown') {
+								if (e.key === 'Enter') {
+									if (tagIndex === -1) {
+										searchInput(e.metaKey);
+									} else {
+										addTagToSearchInput(suggestedTags[tagIndex]);
+									}
+								}
+								if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
 									e.preventDefault();
-									tagSuggestionsRefs.current[0]?.focus();
+									const index = Math.min(
+										Math.max(tagIndex + (e.key === 'ArrowUp' ? -1 : 1), -1),
+										suggestedTags.length - 1,
+									);
+									tagSuggestionsRefs.current[index]?.focus();
+									searchIpt.current?.focus();
+									tagIndexSet(index);
 								}
 							}}
 						/>
 						<button
 							ref={searchBtn}
 							className="xy -ml-12 w-12 px-2 rounded transition text-fg2 hover:text-fg1"
-							onClick={() => searchInput()}
+							onClick={(e) => searchInput(e.metaKey)}
 						>
 							<MagnifyingGlassIcon className="h-7 w-7" />
 						</button>
 					</div>
 					{suggestTags && (
-						<div className="z-20 flex flex-col overflow-scroll rounded mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
+						<div className="z-20 flex flex-col overflow-scroll rounded mt-0.5 absolute w-full max-h-56 shadow">
 							{suggestedTags.map((tag, i) => {
 								return (
 									<button
 										key={i}
-										className="fx px-3 text-xl transition hover:bg-mg2"
+										className={`fx px-3 text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
 										ref={(r) => (tagSuggestionsRefs.current[i] = r)}
-										onBlur={onSearchingBlur}
 										onMouseDown={(e) => e.preventDefault()}
-										onKeyDown={(e) => {
-											if (e.key === 'ArrowUp') {
-												e.preventDefault();
-												!i
-													? searchIpt.current?.focus()
-													: tagSuggestionsRefs.current[i - 1]?.focus();
-											} else if (e.key === 'ArrowDown') {
-												e.preventDefault();
-												tagSuggestionsRefs.current[i + 1]?.focus();
-											} else if (
-												!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
-											) {
-												searchIpt.current?.focus();
-											}
-										}}
-										onClick={(e) => {
-											e.preventDefault();
-											searchTextSet(
-												`${searchText.replace(tagFilter, '').trim()} [${tag}] `.trimStart(),
-											);
-											searchIpt.current!.focus();
-											searchIpt.current?.scrollTo({ left: Number.MAX_SAFE_INTEGER });
-										}}
+										onClick={() => addTagToSearchInput(tag)}
 									>
-										{tag}
+										<p className="truncate">{tag}</p>
 									</button>
 								);
 							})}
