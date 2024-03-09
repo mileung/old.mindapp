@@ -1,8 +1,9 @@
-import { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import { Thought } from '../utils/thought';
 import MentionedThought from './MentionedThought';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/time';
+import { PlayIcon, XMarkIcon } from '@heroicons/react/16/solid';
 
 export default function ContentParser({
 	disableMentions,
@@ -70,15 +71,50 @@ function parseMd(text: string) {
 			);
 		} else if ('uri' in tag) {
 			return (
-				<a
-					key={i}
-					target="_blank"
-					href={tag.uri}
-					className="font-medium inline break-all transition text-sky-600 text hover:text-sky-500 dark:text-cyan-400 dark:hover:text-cyan-300"
-				>
-					{tag.text}
-				</a>
+				<React.Fragment key={i}>
+					<a
+						target="_blank"
+						href={tag.uri}
+						className="font-medium inline break-all transition text-sky-600 text hover:text-sky-500 dark:text-cyan-400 dark:hover:text-cyan-300"
+					>
+						{tag.text}
+					</a>
+					<IframePreview uri={tag.uri} />
+				</React.Fragment>
 			);
 		}
 	});
 }
+
+const ytRegex =
+	/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+const IframePreview = ({ uri }: { uri: string }) => {
+	const [open, openSet] = useState(false);
+	const iframe = useMemo(() => {
+		const videoId = uri.match(ytRegex)?.[1];
+		if (videoId) {
+			return (
+				<iframe
+					allowFullScreen
+					className="w-full max-h-[80vh] max-w-[calc(80vh*16/9)] aspect-video"
+					src={`https://www.youtube.com/embed/${videoId}`}
+				/>
+			);
+		}
+	}, [uri]);
+
+	return (
+		iframe && (
+			<>
+				<button className="h-5 w-5 rounded bg-mg2 xy inline-flex" onClick={() => openSet(!open)}>
+					{open ? (
+						<XMarkIcon className="absolute h-5 w-5" />
+					) : (
+						<PlayIcon className="absolute h-4 w-4" />
+					)}
+				</button>
+				{open && iframe}
+			</>
+		)
+	);
+};

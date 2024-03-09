@@ -1,5 +1,5 @@
 import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
-import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
+// import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
 import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
@@ -41,7 +41,6 @@ export const ThoughtWriter = ({
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
-	const fileBtn = useRef<null | HTMLButtonElement>(null);
 
 	const suggestedTags = useMemo(() => {
 		let arr = matchSorter(
@@ -93,10 +92,10 @@ export const ThoughtWriter = ({
 	useKeyPress(
 		{ key: 'Enter', modifiers: ['Meta', 'Alt', 'Control'] },
 		(e) => {
+			console.log('e:', e);
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
 				document.activeElement === tagIpt.current;
-
 			if (focusedOnThoughtWriter) {
 				writeThought(e.ctrlKey, e.altKey);
 			}
@@ -210,9 +209,8 @@ export const ThoughtWriter = ({
 							tagIpt.current?.focus();
 							tagIndexSet(index);
 						}
-						if (e.key === 'Tab' && !e.shiftKey) {
-							e.preventDefault();
-							fileBtn.current?.focus();
+						if (e.key === 'Tab') {
+							suggestTagsSet(false);
 						}
 						if (e.key === 'Enter' && !(e.metaKey || e.altKey || e.ctrlKey)) {
 							if (suggestTags) {
@@ -248,13 +246,12 @@ export const ThoughtWriter = ({
 				)}
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
-				<button
-					ref={fileBtn}
+				{/* <button TODO: upload files
 					className="px-2.5 py-0.5 transition text-fg2 hover:text-fg1"
 					onClick={() => writeThought()}
 				>
 					<ArrowUpOnSquareIcon className="h-6 w-6" />
-				</button>
+				</button> */}
 				<button
 					className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
 					onClick={() => writeThought()}

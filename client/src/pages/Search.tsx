@@ -13,8 +13,7 @@ function parseQuery(input: string, tagTree: TagTree) {
 	const tags = getTags(input);
 	const other = input
 		.replace(bracketRegex, ' ')
-		.split(/\s!/g)
-		.map((a) => a.trim())
+		.split(/\s+/g)
 		.filter((a) => !!a);
 
 	const processedTags: Set<string> = new Set();

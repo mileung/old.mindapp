@@ -45,7 +45,7 @@ export default function Header() {
 	const gearLnk = useRef<HTMLAnchorElement>(null);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
-	const [searchText, searchTextSet] = useState(searchedKeywords || '');
+	const [searchText, searchTextSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState<number>(0);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
 	const tagFilter = useMemo(() => {
@@ -64,7 +64,7 @@ export default function Header() {
 	}, [tagTree, tagFilter, lastUsedTags, tags]);
 
 	useEffect(() => {
-		searchTextSet(searchedKeywords);
+		searchTextSet((searchedKeywords + ' ').trimStart());
 		window.scrollTo(0, 0);
 	}, [searchedKeywords]);
 
@@ -150,7 +150,7 @@ export default function Header() {
 									(suggestTags ? suggestTagsSet(false) : searchIpt.current?.blur());
 								e.key === 'Tab' && !e.shiftKey && suggestTagsSet(false);
 								if (e.key === 'Enter') {
-									if (!suggestTags || tagIndex === -1) {
+									if (!suggestTags || !suggestedTags.length || tagIndex === -1) {
 										searchInput(e.metaKey);
 									} else {
 										addTagToSearchInput(suggestedTags[tagIndex]);

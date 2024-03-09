@@ -80,10 +80,22 @@ export default function ThoughtBlock({
 	const highlighted = useMemo(() => highlightedId === thoughtId, [highlightedId, thoughtId]);
 	const linkingThoughtId = useRef('');
 	const linkingDiv = useRef<HTMLDivElement>(null);
+	const linkingTimer = useRef<number>(0);
 
 	return (
 		<Highlight on={highlighted} shadow={!depth}>
 			<div
+				onMouseDown={(e) => {
+					e.stopPropagation();
+					linkingTimer.current = setTimeout(() => {
+						!['BUTTON', 'INPUT', 'TEXTAREA'].includes(document.activeElement!.tagName) &&
+							linkingSet(!linking);
+					}, 200);
+				}}
+				onMouseUp={(e) => {
+					e.stopPropagation();
+					linkingTimer.current && clearTimeout(linkingTimer.current);
+				}}
 				className={`flex rounded ${!depth && !highlighted ? 'shadow' : ''} ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}
 			>
 				<button
@@ -185,13 +197,7 @@ export default function ThoughtBlock({
 						<div className="mt-2 fx gap-2 text-fg2">
 							<button
 								className="mr-auto h-4 w-4 xy hover:text-fg1 transition"
-								onClick={() => {
-									linkingSet(!linking);
-									if (!linking) {
-										// TODO: not sure how I feel about this. Time will tell...
-										setTimeout(() => linkingDiv.current?.scrollIntoView({ block: 'center' }), 0);
-									}
-								}}
+								onClick={() => linkingSet(!linking)}
 							>
 								<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
 							</button>

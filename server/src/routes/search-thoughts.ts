@@ -1,6 +1,8 @@
+import fs from 'fs';
+import path from 'path';
 import { RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
-import { indicesPath, parseFile } from '../utils/files';
+import { indicesPath, parseFile, timelinePath } from '../utils/files';
 
 const rootsPerLoad = 8;
 const searchLocalThoughts: RequestHandler = (req, res) => {
@@ -21,8 +23,9 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 	};
 	const roots: Thought[] = [];
 	const moreMentions: Record<string, Thought> = {};
-	let thoughtIds: string[];
-	console.log('other:', other);
+	let thoughtIds: undefined | string[];
+	let jsonFiles: undefined | string[];
+	// console.log('other:', other);
 
 	if (thoughtId) {
 		try {
@@ -43,9 +46,28 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 		} catch (error) {
 			return res.send({ moreMentions: {}, moreRoots: [], moreMentionedByRoots: [] });
 		}
-	} else {
+	} else if (tags.length) {
 		const indices = parseFile<Record<string, string[]>>(indicesPath);
 		thoughtIds = [...new Set(tags.flatMap((tag) => indices[tag] || []))].sort((a, b) =>
+			oldToNew ? a.localeCompare(b) : b.localeCompare(a),
+		);
+	} else {
+		// OPTIMIZE: this is lazy cuz it gets all the files
+		// https://www.fusejs.io/api/options.html
+		// Maybe use this idk
+		function getAllJsonFiles(folderPath: string, fileList: string[] = []) {
+			const files = fs.readdirSync(folderPath);
+			files.forEach((file) => {
+				const filePath = path.join(folderPath, file);
+				if (fs.statSync(filePath).isDirectory()) {
+					getAllJsonFiles(filePath, fileList);
+				} else if (path.extname(file) === '.json') {
+					fileList.push(filePath);
+				}
+			});
+			return fileList;
+		}
+		jsonFiles = getAllJsonFiles(timelinePath).sort((a, b) =>
 			oldToNew ? a.localeCompare(b) : b.localeCompare(a),
 		);
 	}
@@ -53,9 +75,13 @@ const searchLocalThoughts: RequestHandler = (req, res) => {
 	const mentionedIds = new Set<string>();
 	let latestCreateDate = oldToNew ? Infinity : 0;
 
-	for (let i = 0; i < thoughtIds.length; i++) {
-		const id = thoughtIds[i];
-		let thought = Thought.parse(id).rootThought;
+	const arr = (thoughtIds || jsonFiles)!;
+	for (let i = 0; i < arr.length; i++) {
+		const idOrPath = arr[i];
+		let thought = thoughtIds ? Thought.parse(idOrPath) : Thought.read(idOrPath);
+		if (other.length && -1 === other.findIndex((term) => thought.content.includes(term))) continue;
+		thought = thought.rootThought;
+
 		if (
 			(oldToNew ? thoughtsBeyond < thought.createDate : thoughtsBeyond > thought.createDate) &&
 			!ignoreRootIds.find((id) => id === thought.id) &&
