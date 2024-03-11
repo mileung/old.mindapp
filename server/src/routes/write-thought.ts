@@ -1,6 +1,6 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
-import { addTagIndex, addTagsByLabel, removeTagIndex } from '../utils/tags';
+import { addTagIndex, addTagsByLabel, removeTagIndex, sortUniArr } from '../utils/tags';
 import { debouncedSnapshot } from '../utils/git';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
@@ -14,6 +14,7 @@ const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => 
 		thought = Thought.parse(oldThought.id);
 		thought.content = body.content;
 		thought.tags = body.tags;
+		thought = new Thought(thought);
 		thought.overwrite();
 
 		thought.tags

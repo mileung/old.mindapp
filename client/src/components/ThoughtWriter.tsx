@@ -4,10 +4,12 @@ import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { TagTree } from '../utils/tags';
+import { TagTree, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
 import { useKeyPress } from '../utils/keyboard';
+import { useSearchParams } from 'react-router-dom';
+import TextareaAutoHeight from './TextareaAutoHeight';
 
 export const ThoughtWriter = ({
 	parentRef,
@@ -32,10 +34,12 @@ export const ThoughtWriter = ({
 }) => {
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
+	const [searchParams] = useSearchParams();
+	const initialContentParam = searchParams.get('initialContent');
 	const [personaId] = usePersona();
 	const [tags, tagsSet] = useState<string[]>(initialTags);
 	const [tagFilter, tagFilterSet] = useState('');
-	const [tagIndex, tagIndexSet] = useState(0);
+	const [tagIndex, tagIndexSet] = useState(-1);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = parentRef || useRef<HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
@@ -60,6 +64,7 @@ export const ThoughtWriter = ({
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
 			if (!content) return;
+			const additionalTag = suggestedTags[tagIndex] || tagFilter.trim();
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
 				post({
@@ -68,7 +73,7 @@ export const ThoughtWriter = ({
 					authorId: personaId,
 					spaceId: null,
 					content: separateMentions(content.trim()),
-					tags,
+					tags: sortUniArr([...tags, additionalTag].filter((a) => !!a)),
 				}),
 			)
 				.then((res) => {
@@ -86,7 +91,7 @@ export const ThoughtWriter = ({
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[editId, parentId, personaId, onWrite, tags],
+		[suggestedTags, tagIndex, tagFilter, editId, parentId, personaId, onWrite, tags],
 	);
 
 	useKeyPress(
@@ -104,13 +109,15 @@ export const ThoughtWriter = ({
 	);
 
 	const defaultValue = useMemo(
-		() => (Array.isArray(initialContent) ? initialContent.join('') : initialContent),
+		() =>
+			initialContentParam ||
+			(Array.isArray(initialContent) ? initialContent.join('') : initialContent),
 		[],
 	);
 
 	return (
 		<div className="w-full flex flex-col">
-			<textarea
+			<TextareaAutoHeight
 				autoFocus
 				defaultValue={defaultValue}
 				ref={contentTextArea}
@@ -179,7 +186,7 @@ export const ThoughtWriter = ({
 								(e) => e === document.activeElement,
 							);
 							if (document.activeElement !== tagIpt.current && focusedSuggestionIndex === -1) {
-								tagIndexSet(0);
+								tagIndexSet(-1);
 								suggestTagsSet(false);
 							}
 						}, 0);
@@ -197,7 +204,7 @@ export const ThoughtWriter = ({
 						}
 						if (e.key === 'ArrowUp') {
 							e.preventDefault();
-							const index = Math.max(tagIndex - 1, 0);
+							const index = Math.max(tagIndex - 1, -1);
 							tagSuggestionsRefs.current[index]?.focus();
 							tagIpt.current?.focus();
 							tagIndexSet(index);
@@ -213,8 +220,9 @@ export const ThoughtWriter = ({
 							suggestTagsSet(false);
 						}
 						if (e.key === 'Enter' && !(e.metaKey || e.altKey || e.ctrlKey)) {
-							if (suggestTags) {
-								tagsSet([...new Set([...tags, suggestedTags[tagIndex]])]);
+							const tagToAdd = suggestedTags[tagIndex] || tagFilter.trim();
+							if (tagToAdd && suggestTags) {
+								tagsSet([...new Set([...tags, tagToAdd])]);
 								tagFilterSet('');
 								suggestTagsSet(false);
 							} else {

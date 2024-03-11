@@ -1,34 +1,37 @@
-import { useEffect, useRef, TextareaHTMLAttributes } from 'react';
+import { useRef, TextareaHTMLAttributes, forwardRef } from 'react';
 
-interface TextareaAutoHeightProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
-
-const useTextareaAutoHeight = (ref: React.RefObject<HTMLTextAreaElement>) => {
-	useEffect(() => {
-		const listener = () => {
-			if (ref.current) {
-				ref.current.style.height = 'auto'; // Set height to auto to get the scrollHeight accurately
-				ref.current.style.height = ref.current.scrollHeight + 'px';
-				ref.current.style.removeProperty('padding');
-			}
-		};
-
-		if (ref.current) {
-			ref.current.addEventListener('input', listener);
-		}
-
-		return () => {
-			if (ref.current) {
-				ref.current.removeEventListener('input', listener);
-			}
-		};
-	}, [ref]);
+const resize = (node: HTMLTextAreaElement) => {
+	setTimeout(() => {
+		node.style.height = 'auto';
+		node.style.height = node.scrollHeight + 'px';
+	}, 0);
 };
 
-const TextareaAutoHeight = (props: TextareaAutoHeightProps) => {
-	const ref = useRef<HTMLTextAreaElement>(null);
-	useTextareaAutoHeight(ref);
+const TextareaAutoHeight = forwardRef(
+	(props: TextareaHTMLAttributes<HTMLTextAreaElement>, parentRef) => {
+		const internalRef = useRef<null | HTMLTextAreaElement>(null);
 
-	return <textarea ref={ref} {...props} />;
-};
+		return (
+			<textarea
+				{...props}
+				ref={(ref) => {
+					ref && resize(ref);
+					internalRef.current = ref;
+					if (typeof parentRef === 'function') {
+						parentRef(ref);
+					} else {
+						parentRef && (parentRef.current = ref);
+					}
+				}}
+				// I'm cool with auto height just on mount
+				// onChange={() => {
+				// 	if (internalRef.current) {
+				// 		resize(internalRef.current);
+				// 	}
+				// }}
+			/>
+		);
+	},
+);
 
 export default TextareaAutoHeight;

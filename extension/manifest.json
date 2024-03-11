@@ -3,5 +3,11 @@
 	"name": "Mindapp",
 	"version": "1.0.0",
 	"action": { "default_popup": "index.html" },
-	"icons": { "1024": "src/mindapp-logo.png" }
+	"icons": { "1024": "src/mindapp-logo.png" },
+	"content_scripts": [
+		{
+			"js": ["src/contentScript.ts"],
+			"matches": ["<all_urls>"]
+		}
+	]
 }

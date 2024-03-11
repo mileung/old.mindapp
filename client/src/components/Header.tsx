@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
-import { useLastUsedTags, useTagTree } from './GlobalState';
+import { useTagTree } from './GlobalState';
 import { matchSorter } from 'match-sorter';
 import { bracketRegex, getTags } from '../pages/Search';
 import { useKeyPress } from '../utils/keyboard';
@@ -36,7 +36,6 @@ export default function Header() {
 	// useSpaceId
 	// usePersona
 	const navigate = useNavigate();
-	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const searchedKeywords = searchParams.get('q') || '';
@@ -58,10 +57,9 @@ export default function Header() {
 			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
 			tagFilter,
 		);
-		arr.unshift(...lastUsedTags);
 		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
 		return arr;
-	}, [tagTree, tagFilter, lastUsedTags, tags]);
+	}, [tagTree, tagFilter, tags]);
 
 	useEffect(() => {
 		searchTextSet((searchedKeywords + ' ').trimStart());
@@ -109,7 +107,6 @@ export default function Header() {
 					.replace(new RegExp(tagFilter + '$'), '')
 					.trim()} [${tag}] `.trimStart(),
 			);
-			lastUsedTagsSet([...new Set([tag, ...lastUsedTags])].slice(0, 5));
 			setTimeout(() => searchIpt.current?.scrollTo({ left: Number.MAX_SAFE_INTEGER }), 0);
 		},
 		[searchText, tagFilter],

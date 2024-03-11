@@ -3,11 +3,7 @@ export function buildUrl(basePath: string, params?: Record<string, any>) {
 	if (!params) {
 		url = `http://localhost:2000/${basePath}`;
 	} else {
-		const queryString = Object.keys(params)
-			.map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-			.join('&');
-
-		url = `http://localhost:2000/${basePath}?${queryString}`;
+		url = `http://localhost:2000/${basePath}?${new URLSearchParams(params).toString()}`;
 	}
 	// console.log('url:', url);
 	return url;

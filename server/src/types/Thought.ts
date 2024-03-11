@@ -53,7 +53,6 @@ export class Thought {
 			tags?: string[];
 			// reactions: Record<string, number>; // emoji, personaId
 			parentId?: string;
-			// isDeletedParent?: boolean;
 			childrenIds?: string[];
 			mentionedByIds?: string[];
 		},

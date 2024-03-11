@@ -17,7 +17,7 @@ export default function Tags() {
 	// tagTree = { branchNodes: {}, leafNodes: [] };
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState<null | number>(null);
-	const tagIpt = useRef<null | HTMLInputElement>(null);
+	const searchIpt = useRef<null | HTMLInputElement>(null);
 	const rootTagIpt = useRef<null | HTMLInputElement>(null);
 	const tagSuggestionsRefs = useRef<(null | HTMLAnchorElement)[]>([]);
 	const subTaggingLineageRef = useRef('');
@@ -70,7 +70,7 @@ export default function Tags() {
 		(e: KeyboardEvent) => {
 			if (
 				(document.activeElement!.tagName === 'INPUT' &&
-					document.activeElement !== tagIpt.current) ||
+					document.activeElement !== searchIpt.current) ||
 				tagIndex === null ||
 				!suggestedTags
 			)
@@ -81,7 +81,7 @@ export default function Tags() {
 				suggestedTags.length - 1,
 			);
 			tagSuggestionsRefs.current[index]?.focus();
-			tagIpt.current?.focus();
+			searchIpt.current?.focus();
 			tagIndexSet(index);
 		},
 		[tagIndex, suggestedTags],
@@ -161,6 +161,7 @@ export default function Tags() {
 			!parentTag && navigate('/tags', { replace: true });
 			ping(buildUrl('remove-tag'), post({ tag, parentTag }))
 				.then(refreshTags)
+				.then(() => searchIpt.current?.focus())
 				.catch((err) => alert(JSON.stringify(err)));
 		},
 		[refreshTags],
@@ -171,7 +172,7 @@ export default function Tags() {
 			<div className="flex-1 relative min-w-80 max-w-[30rem]">
 				<div className="sticky top-12 h-full flex flex-col max-h-[calc(100vh-3rem)]">
 					<input
-						ref={tagIpt}
+						ref={searchIpt}
 						autoFocus
 						placeholder="Search tags"
 						className="w-full px-3 h-8  border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
@@ -181,7 +182,7 @@ export default function Tags() {
 							tagFilterSet(e.target.value);
 						}}
 						onKeyDown={(e) => {
-							e.key === 'Escape' && tagIpt.current?.blur();
+							e.key === 'Escape' && searchIpt.current?.blur();
 							if (e.key === 'Tab' && !e.shiftKey) {
 								tagSuggestionsRefs.current[
 									tagSuggestionsRefs.current.filter((a) => !!a).length - 1
@@ -226,7 +227,7 @@ export default function Tags() {
 											onClick={(e) => {
 												tagIndexSet(i);
 												i === suggestedTags.length - 1 && showAddTag && addRootTag(e.ctrlKey);
-												tagIndex === i ? rootTagIpt.current?.focus() : tagIpt.current?.focus();
+												tagIndex === i ? rootTagIpt.current?.focus() : searchIpt.current?.focus();
 											}}
 										>
 											<div className="flex-1 text-left text-xl font-medium transition text-fg1 truncate">
