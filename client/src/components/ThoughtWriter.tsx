@@ -64,7 +64,7 @@ export const ThoughtWriter = ({
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
 			if (!content) return;
-			const additionalTag = suggestedTags[tagIndex] || tagFilter.trim();
+			const additionalTag = (suggestTags && suggestedTags[tagIndex]) || tagFilter.trim();
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
 				post({

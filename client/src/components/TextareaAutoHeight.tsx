@@ -10,11 +10,14 @@ const resize = (node: HTMLTextAreaElement) => {
 const TextareaAutoHeight = forwardRef(
 	(props: TextareaHTMLAttributes<HTMLTextAreaElement>, parentRef) => {
 		const internalRef = useRef<null | HTMLTextAreaElement>(null);
+		const mounted = useRef(false);
 
 		return (
 			<textarea
 				{...props}
 				ref={(ref) => {
+					if (mounted.current) return;
+					mounted.current = true;
 					ref && resize(ref);
 					internalRef.current = ref;
 					if (typeof parentRef === 'function') {

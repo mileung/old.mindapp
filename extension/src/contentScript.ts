@@ -34,6 +34,13 @@ const urlSelectors: Record<string, undefined | (() => string)> = {
 		const tweetText = document.querySelector('[data-testid="tweetText"]').innerText;
 		return tweetText;
 	},
+	// 'www.perplexity.ai/search': () => {
+	// 	const copyButton = document.querySelector(
+	// 		'div.mt-sm.flex.items-center.justify-between > div.flex.items-center.gap-x-xs > button:nth-child(1)',
+	// 	); // @ts-ignore
+	// 	copyButton!.click(); // I tried. Doesn't work atm
+	// 	return '';
+	// },
 };
 
 function findLargestText() {
