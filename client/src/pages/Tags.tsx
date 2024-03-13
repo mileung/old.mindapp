@@ -152,6 +152,7 @@ export default function Tags() {
 			ping(buildUrl('rename-tag'), post({ oldTag, newTag }))
 				.then(refreshTags)
 				.then(() => subTaggingLineage && (subTaggingLineageRef.current = subTaggingLineage))
+				.then(() => searchIpt.current?.focus())
 				.catch((err) => alert(JSON.stringify(err))),
 		[refreshTags],
 	);

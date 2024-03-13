@@ -8,7 +8,6 @@ export const mindappRootPath = path.join(homeDir, '.mindapp');
 export const timelinePath = path.join(mindappRootPath, 'timeline');
 export const settingsPath = path.join(mindappRootPath, 'settings.json');
 export const tagTreePath = path.join(mindappRootPath, 'tagTree.json');
-export const indicesPath = path.join(mindappRootPath, 'indices.json');
 
 export const writeFile = (filePath: string, json: string) => {
 	fs.writeFileSync(filePath, json);
@@ -66,11 +65,12 @@ export function calcFilePath(
 	fileNameSuffix: string = 'json',
 ) {
 	const daysSince1970 = +createDate / day;
-	const period = Math.floor(daysSince1970 / 100) * 100 + '';
-
 	return path.join(
 		timelinePath,
-		period,
+		Math.floor(daysSince1970 / 10000) * 10000 + '', // 27.38 years
+		Math.floor(daysSince1970 / 1000) * 1000 + '',
+		Math.floor(daysSince1970 / 100) * 100 + '',
+		Math.floor(daysSince1970 / 10) * 10 + '',
 		Math.floor(daysSince1970) + '',
 		`${createDate}.${authorId}.${spaceId}.${fileNameSuffix}`,
 	);

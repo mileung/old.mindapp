@@ -8,16 +8,16 @@ import getSettings from './routes/get-settings';
 import getTagTree from './routes/get-tag-tree';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
-import searchLocalThoughts from './routes/search-thoughts';
 import updateSettings from './routes/update-settings';
 import whoami from './routes/whoami';
 import writeThought from './routes/write-thought';
 import { Settings } from './types/Settings';
 import { Thought } from './types/Thought';
-import { indicesPath, mkdirIfDne, settingsPath, timelinePath, touchIfDne } from './utils/files';
+import { mkdirIfDne, settingsPath, timelinePath, touchIfDne } from './utils/files';
 import { setUpGit } from './utils/git';
 import { day } from './utils/time';
 import deleteThought from './routes/delete-thought';
+import { setUpIndex } from './utils';
 
 const app = express();
 const port = 2000;
@@ -43,7 +43,6 @@ app.post('/remove-tag', removeTag);
 app.post('/rename-tag', renameTag);
 app.post('/delete-thought', deleteThought);
 app.post('/get-roots', getLocalThoughts);
-app.post('/search-thoughts', searchLocalThoughts);
 app.get('/file/:fileName', getFile);
 
 app.use(((err, req, res, next) => {
@@ -55,10 +54,10 @@ app.use(((err, req, res, next) => {
 app.listen(port, () => {
 	mkdirIfDne(timelinePath);
 	touchIfDne(settingsPath, JSON.stringify(new Settings({})));
-	touchIfDne(indicesPath, JSON.stringify({}));
 	// global.startDate = parseFile<Settings>(settingsPath).startDate;
 	console.log(`Server is running on http://localhost:${port}`);
 	setUpGit();
+	setUpIndex();
 
 	// test data
 	const makeTestData = false;

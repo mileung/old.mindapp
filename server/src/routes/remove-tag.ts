@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
-import { indicesPath, parseFile, tagTreePath, writeObjectFile } from '../utils/files';
+import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
 import { sortUniArr } from '../utils/tags';
 
@@ -33,9 +33,9 @@ const removeTag: RequestHandler = (req, res) => {
 				tagTree.leafNodes = sortUniArr(tagTree.leafNodes.concat(otherParentTag));
 			}
 		});
-		const indices = parseFile<Record<string, string[]>>(indicesPath);
-		delete indices[tag];
-		writeObjectFile(indicesPath, indices);
+		// When you remove a root tag from the tags page, it does and should not remove the tag from
+		// every thought that has that tag.
+		// delete index.thoughtPathsByTag[tag];
 	}
 
 	writeObjectFile(tagTreePath, tagTree);

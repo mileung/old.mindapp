@@ -5,14 +5,18 @@ addEventListener('keydown', (e) => {
 	) {
 		const popupWidth = 700;
 		const popupHeight = 500;
+		const selector =
+			urlSelectors[location.host + location.pathname]?.() || urlSelectors[location.host]?.();
 		const thoughtHeadline = (
+			selector?.headline ||
 			window.getSelection()!.toString() ||
-			urlSelectors[location.host + location.pathname]?.() ||
-			urlSelectors[location.host]?.() ||
 			findLargestText()
 		).trim();
 		const searchParams = new URLSearchParams({
-			initialContent: `${thoughtHeadline}\n${location.href}`,
+			json: JSON.stringify({
+				initialContent: `${thoughtHeadline}\n${location.href}\n\n`,
+				initialTags: selector?.tags,
+			}),
 		}).toString();
 
 		window.open(
@@ -23,16 +27,34 @@ addEventListener('keydown', (e) => {
 	}
 });
 
-const urlSelectors: Record<string, undefined | (() => string)> = {
+const urlSelectors: Record<string, undefined | (() => { headline: string; tags?: string[] })> = {
 	'www.youtube.com/watch': () => {
 		// @ts-ignore
-		const title = document.querySelector('h1.style-scope.ytd-watch-metadata')?.innerText;
-		return title;
+		const title: string = document.querySelector('h1.style-scope.ytd-watch-metadata')?.innerText;
+		const author: string = document
+			.querySelector('#owner > ytd-video-owner-renderer > a')!
+			.getAttribute('href')
+			?.slice(1)!;
+
+		return { headline: title, tags: [`YouTube${author}`] };
+	},
+	'www.youtube.com/playlist': () => {
+		const author: string = document
+			.querySelector('#owner-text > a')!
+			.getAttribute('href')
+			?.slice(1)!;
+
+		return { headline: findLargestText(), tags: [`YouTube${author}`] };
 	},
 	'twitter.com': () => {
 		// @ts-ignore
 		const tweetText = document.querySelector('[data-testid="tweetText"]').innerText;
-		return tweetText;
+		let author = location.pathname.slice(1);
+		const i = author.indexOf('/');
+		if (i !== -1) {
+			author = author.slice(0, i);
+		}
+		return { headline: tweetText, tags: [`Twitter@${author}`] };
 	},
 	// 'www.perplexity.ai/search': () => {
 	// 	const copyButton = document.querySelector(

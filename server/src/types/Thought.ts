@@ -2,6 +2,7 @@ import path from 'path';
 import Ajv from 'ajv';
 import { calcFilePath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
 import { addTagIndex, sortUniArr } from '../utils/tags';
+import { addToAllPaths, addPathsByTag, index } from '../utils';
 
 const ajv = new Ajv();
 
@@ -20,6 +21,8 @@ const schema = {
 	required: ['createDate', 'authorId', 'spaceId', 'content', 'tags'],
 	additionalProperties: false,
 };
+
+const thoughtIdRegex = /^\d{13}\.(null|\d{13})\.(null|\d{13})$/;
 
 export class Thought {
 	public id: string;
@@ -62,12 +65,25 @@ export class Thought {
 		this.createDate = createDate;
 		this.authorId = authorId;
 		this.spaceId = spaceId;
+		if (Array.isArray(content)) {
+			content = content.map((segment, i) => {
+				if (i % 2) {
+					// TODO: validate other segments like file paths and update `get mentionedIds`
+					if (!thoughtIdRegex.test(segment)) throw new Error('Invalid mentioned Id');
+					return segment;
+				} else {
+					if (!i) return segment.trimStart();
+					if (i === content.length - 1) return segment.trimEnd();
+					return segment;
+				}
+			});
+		} else content = content.trim();
 		this.content = content;
-		this.tags = sortUniArr(tags || []);
+		this.tags = sortUniArr((tags || []).map((t) => t.trim()));
 		this.parentId = parentId;
 		this.childrenIds = childrenIds;
 		this.mentionedByIds = mentionedByIds;
-		// Mentioning thoughts by id in the content allows instead of having multiple parentIds prevents cyclic graph connections which would make finding root thoughts impossible.
+		// Mentioning thoughts by id in the content instead of having multiple parentIds for said mentioned props prevents cyclic graph connections which would make finding root thoughts impossible.
 
 		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Thought: ' + JSON.stringify(this));
@@ -82,17 +98,10 @@ export class Thought {
 				parent.addChild(this.id);
 				this.parentId = parentId;
 			}
-
-			this.tags.forEach((tag) => addTagIndex(tag, this.id));
-			Array.isArray(this.content) &&
-				this.content.forEach((id, i) => {
-					if (i % 2) {
-						// TODO: ensure id is of a thought, not a file
-						Thought.parse(id).addMention(this.id);
-					}
-				});
-
+			addToAllPaths(this);
+			this.mentionedIds.forEach((id) => Thought.parse(id).addMention(this.id));
 			this.write();
+			this.tags.forEach((tag) => addPathsByTag(tag, this));
 		}
 	}
 

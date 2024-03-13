@@ -22,7 +22,7 @@ export default function Results({
 	const [oldToNew, oldToNewSet] = useState(false);
 	const queriedThoughtId = query?.thoughtId;
 	const queriedThoughtMentionedRoots = !queriedThoughtId ? null : roots.slice(1);
-	const thoughtsBeyond = useRef(oldToNew ? 0 : Date.now());
+	const thoughtsBeyond = useRef(oldToNew ? 0 : Number.MAX_SAFE_INTEGER);
 	const pinging = useRef(false);
 	const rootTextArea = useRef<HTMLTextAreaElement>(null);
 	const linkingThoughtId = useRef('');
@@ -40,7 +40,7 @@ export default function Results({
 			latestCreateDate: number;
 			moreRoots: RecThought[];
 		}>(
-			buildUrl(query ? 'search-thoughts' : 'get-roots'),
+			buildUrl('get-roots'),
 			post({
 				...query,
 				ignoreRootIds,
@@ -52,7 +52,7 @@ export default function Results({
 				mentionedThoughtsSet({ ...mentionedThoughts, ...moreMentions });
 				const rootsPerLoad = 8;
 				const newRoots = roots.concat(moreRoots);
-				moreRoots.length < rootsPerLoad && newRoots.push(null);
+				(query?.thoughtId || moreRoots.length < rootsPerLoad) && newRoots.push(null);
 				thoughtsBeyond.current = latestCreateDate;
 				rootsSet(newRoots);
 			})
@@ -80,7 +80,7 @@ export default function Results({
 
 	useEffect(() => {
 		if (!roots.length && !pinging.current) {
-			thoughtsBeyond.current = oldToNew ? 0 : Date.now();
+			thoughtsBeyond.current = oldToNew ? 0 : Number.MAX_SAFE_INTEGER;
 			loadMoreThoughts();
 		}
 	}, [oldToNew, roots, loadMoreThoughts]);

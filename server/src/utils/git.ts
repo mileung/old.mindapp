@@ -28,9 +28,7 @@ export const snapshot = () => {
 	if (!gitSnapshotsEnabled) return;
 
 	console.log('snapshot');
-	git
-		.add(['timeline', 'indices.json', 'settings.json', 'tagTree.json'])
-		.commit(`Snapshot at ${Date.now()}`);
+	git.add(['timeline', 'settings.json', 'tagTree.json']).commit(`Snapshot at ${Date.now()}`);
 
 	if (!gitRemoteUrl) throw new Error('No gitRemoteUrl');
 

@@ -1,46 +1,45 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
-import { addTagIndex, addTagsByLabel, removeTagIndex, sortUniArr } from '../utils/tags';
+import { addPathsByTag, index, removePathsByTag } from '../utils';
 import { debouncedSnapshot } from '../utils/git';
+import { addTagsByLabel } from '../utils/tags';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
 	// return res.send({});
 	let body = req.body as Thought;
 	const editing = !!body.createDate;
 	const createDate = body.createDate || Date.now(); // can be used for editing
-	let thought: Thought;
+	let newThought: Thought;
 	if (editing) {
 		const oldThought = Thought.parse(`${createDate}.${body.authorId}.${body.spaceId}`);
-		thought = Thought.parse(oldThought.id);
-		thought.content = body.content;
-		thought.tags = body.tags;
-		thought = new Thought(thought);
-		thought.overwrite();
+		newThought = new Thought({
+			...oldThought,
+			content: body.content,
+			tags: body.tags,
+		});
+		newThought.overwrite();
 
-		thought.tags
+		oldThought.mentionedIds
+			.filter((x) => !newThought.mentionedIds.includes(x))
+			.forEach((id) => Thought.parse(id).removeMention(newThought.id));
+		newThought.mentionedIds
+			.filter((x) => !oldThought.mentionedIds.includes(x))
+			.forEach((id) => Thought.parse(id).addMention(newThought.id));
+
+		newThought.tags
 			.filter((x) => !oldThought.tags.includes(x))
-			.forEach((tag) => addTagIndex(tag, thought.id));
-
+			.forEach((tag) => addPathsByTag(tag, newThought));
 		oldThought.tags
-			.filter((x) => !thought.tags.includes(x))
-			.forEach((tag) => removeTagIndex(tag, thought.id));
-
-		const oldMentionedIds = oldThought.mentionedIds;
-		const newMentionedIds = thought.mentionedIds;
-		oldMentionedIds
-			.filter((x) => !newMentionedIds.includes(x))
-			.forEach((id) => Thought.parse(id).removeMention(thought.id));
-		newMentionedIds
-			.filter((x) => !oldMentionedIds.includes(x))
-			.forEach((id) => Thought.parse(id).addMention(thought.id));
+			.filter((x) => !newThought.tags.includes(x))
+			.forEach((tag) => removePathsByTag(tag, oldThought));
 	} else {
-		thought = new Thought({ ...body, createDate }, true);
+		newThought = new Thought({ ...body, createDate }, true);
 	}
 
-	addTagsByLabel(thought.tags);
+	addTagsByLabel(newThought.tags);
 	const mentionedThoughts: Record<string, Thought> = {};
-	thought.mentionedIds.forEach((id) => (mentionedThoughts[id] = Thought.parse(id)));
-	res.send({ mentionedThoughts, thought });
+	newThought.mentionedIds.forEach((id) => (mentionedThoughts[id] = Thought.parse(id)));
+	res.send({ mentionedThoughts, thought: newThought });
 	debouncedSnapshot();
 };
 

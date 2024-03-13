@@ -1,6 +1,6 @@
 import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
 // import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
-import { RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
 import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
@@ -20,7 +20,7 @@ export const ThoughtWriter = ({
 	onWrite,
 	onContentBlur,
 }: {
-	parentRef?: RefObject<HTMLTextAreaElement>;
+	parentRef?: MutableRefObject<null | HTMLTextAreaElement>;
 	initialContent?: string | string[];
 	initialTags?: string[];
 	editId?: string;
@@ -32,16 +32,23 @@ export const ThoughtWriter = ({
 	) => void;
 	onContentBlur?: () => void;
 }) => {
+	const [searchParams] = useSearchParams();
+	const jsonString = searchParams.get('json');
+	const jsonParam = useMemo(
+		() =>
+			jsonString
+				? (JSON.parse(jsonString) as { initialContent: string; initialTags?: string[] })
+				: null,
+		[],
+	);
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
-	const [searchParams] = useSearchParams();
-	const initialContentParam = searchParams.get('initialContent');
 	const [personaId] = usePersona();
-	const [tags, tagsSet] = useState<string[]>(initialTags);
+	const [tags, tagsSet] = useState<string[]>([...initialTags, ...(jsonParam?.initialTags || [])]);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState(-1);
 	const [suggestTags, suggestTagsSet] = useState(false);
-	const contentTextArea = parentRef || useRef<HTMLTextAreaElement>(null);
+	const contentTextArea = parentRef || useRef<null | HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -64,7 +71,7 @@ export const ThoughtWriter = ({
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
 			if (!content) return;
-			const additionalTag = (suggestTags && suggestedTags[tagIndex]) || tagFilter.trim();
+			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
 				post({
@@ -110,7 +117,7 @@ export const ThoughtWriter = ({
 
 	const defaultValue = useMemo(
 		() =>
-			initialContentParam ||
+			jsonParam?.initialContent ||
 			(Array.isArray(initialContent) ? initialContent.join('') : initialContent),
 		[],
 	);
@@ -130,6 +137,10 @@ export const ThoughtWriter = ({
 						contentTextArea.current?.blur();
 						onContentBlur && onContentBlur();
 					}
+					// if (e.key === 'Tab' && !e.shiftKey) {
+					// 	e.preventDefault();
+					// 	tagIpt.current?.focus();
+					// }
 				}}
 			/>
 			<div className="mt-1 relative">
