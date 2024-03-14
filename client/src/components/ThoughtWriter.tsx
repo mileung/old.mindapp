@@ -52,7 +52,6 @@ export const ThoughtWriter = ({
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
-
 	const suggestedTags = useMemo(() => {
 		let arr = matchSorter(
 			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),

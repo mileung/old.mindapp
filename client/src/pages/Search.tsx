@@ -5,16 +5,24 @@ import { useTagTree } from '../components/GlobalState';
 import { useMemo } from 'react';
 
 export const bracketRegex = /\[([^\[\]]+)]/g;
+const quoteRegex = /"([^"]+)"/g;
 export function getTags(input: string) {
 	return (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
+}
+export function getQuotes(input: string) {
+	return (input.match(quoteRegex) || []).map((match) => match.slice(1, -1));
 }
 
 function parseQuery(input: string, tagTree: TagTree) {
 	const tags = getTags(input);
-	const other = input
-		.replace(bracketRegex, ' ')
-		.split(/\s+/g)
-		.filter((a) => !!a);
+	const quotes = getQuotes(input);
+	const other = quotes.concat(
+		input
+			.replace(bracketRegex, ' ')
+			.replace(quoteRegex, ' ')
+			.split(/\s+/g)
+			.filter((a) => !!a),
+	);
 
 	const processedTags: Set<string> = new Set();
 	const subTags: string[] = [];

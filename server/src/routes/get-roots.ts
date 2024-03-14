@@ -64,7 +64,7 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 			!ignoreRootIds.find((id) => id === thought.id) &&
 			!roots.find((root) => root.id === thought.id) &&
 			(!tags.length || !!thought.tags.find((t) => tagsSet.has(t))) &&
-			(!other?.length || -1 === other.findIndex((term) => thought.content.includes(term)))
+			(!other?.length || -1 !== other.findIndex((term) => thought.content.includes(term)))
 			// https://www.fusejs.io/api/options.html
 			// Maybe use this idk
 		) {
