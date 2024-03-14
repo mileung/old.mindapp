@@ -56,20 +56,27 @@ const getLocalThoughts: RequestHandler = (req, res) => {
 
 	const tagsSet = new Set(tags);
 	while (true) {
-		let thought = thoughtIds
-			? Thought.parse(thoughtIds[i]).rootThought
-			: Thought.read(index.allThoughtPaths[i]).rootThought;
+		const thought = thoughtIds
+			? Thought.parse(thoughtIds[i])
+			: Thought.read(index.allThoughtPaths[i]);
+		const { rootThought } = thought;
 
 		if (
-			!ignoreRootIds.find((id) => id === thought.id) &&
-			!roots.find((root) => root.id === thought.id) &&
+			!ignoreRootIds.find((id) => id === rootThought.id) &&
+			!roots.find((root) => root.id === rootThought.id) &&
 			(!tags.length || !!thought.tags.find((t) => tagsSet.has(t))) &&
-			(!other?.length || -1 !== other.findIndex((term) => thought.content.includes(term)))
+			(!other?.length ||
+				-1 !==
+					other.findIndex((term) =>
+						(Array.isArray(thought.content) ? thought.content.join('') : thought.content)
+							.toLowerCase()
+							.includes(term),
+					))
 			// https://www.fusejs.io/api/options.html
 			// Maybe use this idk
 		) {
-			thought.expand().forEach((id) => mentionedIds.add(id));
-			roots.push(thought);
+			rootThought.expand().forEach((id) => mentionedIds.add(id));
+			roots.push(rootThought);
 			latestCreateDate = oldToNew
 				? Math.min(latestCreateDate, thought.createDate)
 				: Math.max(latestCreateDate, thought.createDate);

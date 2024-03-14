@@ -16,13 +16,15 @@ export function getQuotes(input: string) {
 function parseQuery(input: string, tagTree: TagTree) {
 	const tags = getTags(input);
 	const quotes = getQuotes(input);
-	const other = quotes.concat(
-		input
-			.replace(bracketRegex, ' ')
-			.replace(quoteRegex, ' ')
-			.split(/\s+/g)
-			.filter((a) => !!a),
-	);
+	const other = quotes
+		.concat(
+			input
+				.replace(bracketRegex, ' ')
+				.replace(quoteRegex, ' ')
+				.split(/\s+/g)
+				.filter((a) => !!a),
+		)
+		.map((s) => s.toLowerCase());
 
 	const processedTags: Set<string> = new Set();
 	const subTags: string[] = [];

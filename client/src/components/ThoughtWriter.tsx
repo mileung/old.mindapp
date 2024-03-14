@@ -8,7 +8,7 @@ import { TagTree, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/thought';
 import { onFocus } from '../utils/input';
 import { useKeyPress } from '../utils/keyboard';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
 
 export const ThoughtWriter = ({
@@ -41,6 +41,8 @@ export const ThoughtWriter = ({
 				: null,
 		[],
 	);
+	const navigate = useNavigate();
+	const { pathname } = useLocation();
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
 	const [personaId] = usePersona();
@@ -70,6 +72,8 @@ export const ThoughtWriter = ({
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
 			if (!content) return;
+			jsonString && navigate(pathname, { replace: true });
+			contentTextArea.current!.style.height = 'auto';
 			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
 			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
 				buildUrl('write-thought'),
@@ -97,7 +101,7 @@ export const ThoughtWriter = ({
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[suggestedTags, tagIndex, tagFilter, editId, parentId, personaId, onWrite, tags],
+		[jsonString, suggestedTags, tagIndex, tagFilter, editId, parentId, personaId, onWrite, tags],
 	);
 
 	useKeyPress(

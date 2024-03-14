@@ -45,11 +45,11 @@ export default function Header() {
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const [searchText, searchTextSet] = useState('');
-	const [tagIndex, tagIndexSet] = useState<number>(0);
+	const [tagIndex, tagIndexSet] = useState<number>(-1);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
 	const tagFilter = useMemo(() => {
 		const filter = searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim();
-		filter ? tagIndexSet(0) : tagIndexSet(-1);
+		tagIndexSet(-1);
 		return filter;
 	}, [searchText]);
 	const suggestedTags = useMemo(() => {
@@ -99,7 +99,7 @@ export default function Header() {
 
 	const addTagToSearchInput = useCallback(
 		(tag: string) => {
-			tagIndexSet(0);
+			tagIndexSet(-1);
 			searchTextSet(
 				`${searchText
 					.replace(/\s\s+/g, ' ')
@@ -133,7 +133,7 @@ export default function Header() {
 							placeholder="Search"
 							onFocus={() => {
 								suggestTagsSet(true);
-								tagIndexSet(0);
+								tagIndexSet(-1);
 							}}
 							onBlur={() => {
 								document.activeElement !== searchBtn.current && suggestTagsSet(false);
