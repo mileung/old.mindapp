@@ -27,11 +27,10 @@ const TextareaAutoHeight = forwardRef(
 					}
 				}}
 				// I'm cool with auto height just on mount
-				// onChange={() => {
-				// 	if (internalRef.current) {
-				// 		resize(internalRef.current);
-				// 	}
-				// }}
+				onChange={(e) => {
+					props.onChange?.(e);
+					internalRef.current && resize(internalRef.current);
+				}}
 			/>
 		);
 	},

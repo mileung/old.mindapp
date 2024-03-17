@@ -4,9 +4,8 @@ import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react'
 import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
-import { TagTree, sortUniArr } from '../utils/tags';
+import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/thought';
-import { onFocus } from '../utils/input';
 import { useKeyPress } from '../utils/keyboard';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
@@ -48,26 +47,33 @@ export const ThoughtWriter = ({
 	const [personaId] = usePersona();
 	const [tags, tagsSet] = useState<string[]>([...initialTags, ...(jsonParam?.initialTags || [])]);
 	const [tagFilter, tagFilterSet] = useState('');
-	const [tagIndex, tagIndexSet] = useState(-1);
+	const [tagIndex, tagIndexSet] = useState(0);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = parentRef || useRef<null | HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
+	const nodesArr = useMemo(() => tagTree && getNodesArr(getNodes(tagTree)), [tagTree]);
+	const trimmedFilter = useMemo(() => tagFilter.trim(), [tagFilter]);
 	const suggestedTags = useMemo(() => {
-		let arr = matchSorter(
-			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
-			tagFilter,
-		);
-		if (tagFilter) {
-			arr.push(tagFilter);
-		} else {
-			arr.unshift(...lastUsedTags);
-		}
+		if (!nodesArr || !suggestTags) return [];
+		let arr = matchSorter(nodesArr, tagFilter);
+		trimmedFilter ? arr.push(trimmedFilter) : arr.unshift(...lastUsedTags);
 		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
 		return arr;
-	}, [tagTree, tagFilter, lastUsedTags, tags]);
+	}, [nodesArr, suggestTags, tagFilter, trimmedFilter, lastUsedTags, tags]);
 
+	const addTag = useCallback(
+		(tagToAdd?: string) => {
+			tagToAdd = tagToAdd || suggestedTags[tagIndex] || trimmedFilter;
+			if (!tagToAdd) return;
+			tagsSet([...new Set([...tags, tagToAdd])]);
+			tagIpt.current!.focus();
+			lastUsedTagsSet([...new Set([tagToAdd, ...lastUsedTags])].slice(0, 5));
+			tagFilterSet('');
+		},
+		[suggestedTags, tagIndex, trimmedFilter, tags, lastUsedTags],
+	);
 	const writeThought = useCallback(
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
@@ -131,7 +137,12 @@ export const ThoughtWriter = ({
 				autoFocus
 				defaultValue={defaultValue}
 				ref={contentTextArea}
-				onFocus={onFocus}
+				onFocus={(e) => {
+					// focuses on the end of the input value when editing
+					const tempValue = e.target.value;
+					e.target.value = '';
+					e.target.value = tempValue;
+				}}
 				name="content"
 				placeholder="New thought"
 				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
@@ -193,29 +204,21 @@ export const ThoughtWriter = ({
 					className={`px-3 py-1 text-xl bg-mg1 w-full overflow-hidden transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100 ${tags.length ? '' : 'rounded-t'} ${suggestTags ? '' : 'rounded-b'}`}
 					placeholder="Search tags"
 					ref={tagIpt}
-					onFocus={() => suggestTagsSet(true)}
-					onBlur={() => {
-						setTimeout(() => {
-							const focusedSuggestionIndex = tagSuggestionsRefs.current.findIndex(
-								(e) => e === document.activeElement,
-							);
-							if (document.activeElement !== tagIpt.current && focusedSuggestionIndex === -1) {
-								tagIndexSet(-1);
-								suggestTagsSet(false);
-							}
-						}, 0);
-					}}
-					value={tagFilter}
 					onClick={() => suggestTagsSet(true)}
+					onFocus={() => suggestTagsSet(true)}
+					value={tagFilter}
 					onChange={(e) => {
+						tagSuggestionsRefs.current[0]?.focus();
+						tagIpt.current?.focus();
 						tagIndexSet(0);
 						suggestTagsSet(true);
 						tagFilterSet(e.target.value);
 					}}
 					onKeyDown={(e) => {
-						if (e.key === 'Escape') {
-							suggestTags ? suggestTagsSet(false) : contentTextArea.current?.focus();
-						}
+						e.key === 'Enter' && !(e.metaKey || e.altKey || e.ctrlKey) && addTag();
+						e.key === 'Tab' && suggestTagsSet(false);
+						e.key === 'Escape' &&
+							(suggestTags ? suggestTagsSet(false) : contentTextArea.current?.focus());
 						if (e.key === 'ArrowUp') {
 							e.preventDefault();
 							const index = Math.max(tagIndex - 1, -1);
@@ -225,24 +228,22 @@ export const ThoughtWriter = ({
 						}
 						if (e.key === 'ArrowDown') {
 							e.preventDefault();
-							const index = Math.min(tagIndex + 1, suggestedTags.length - 1);
+							const index = Math.min(tagIndex + 1, suggestedTags!.length - 1);
 							tagSuggestionsRefs.current[index]?.focus();
 							tagIpt.current?.focus();
 							tagIndexSet(index);
 						}
-						if (e.key === 'Tab') {
-							suggestTagsSet(false);
-						}
-						if (e.key === 'Enter' && !(e.metaKey || e.altKey || e.ctrlKey)) {
-							const tagToAdd = suggestedTags[tagIndex] || tagFilter.trim();
-							if (tagToAdd && suggestTags) {
-								tagsSet([...new Set([...tags, tagToAdd])]);
-								tagFilterSet('');
+					}}
+					onBlur={() => {
+						setTimeout(() => {
+							if (
+								document.activeElement !== tagIpt.current &&
+								!tagSuggestionsRefs.current.find((e) => e === document.activeElement)
+							) {
+								tagIndexSet(0);
 								suggestTagsSet(false);
-							} else {
-								suggestTagsSet(true);
 							}
-						}
+						}, 0);
 					}}
 				/>
 				{suggestTags && (
@@ -252,13 +253,8 @@ export const ThoughtWriter = ({
 								<button
 									key={i}
 									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
-									className={`fx px-3 text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
-									onClick={() => {
-										tagsSet([...new Set([...tags, tag])]);
-										tagIpt.current!.focus();
-										tagFilterSet('');
-										lastUsedTagsSet([...new Set([tag, ...lastUsedTags])].slice(0, 5));
-									}}
+									className={`fx px-3 text-nowrap text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
+									onClick={() => addTag(tag)}
 								>
 									{tag}
 								</button>

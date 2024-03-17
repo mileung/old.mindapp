@@ -5,31 +5,25 @@ const ajv = new Ajv();
 const schema = {
 	type: 'object',
 	properties: {
-		branchNodes: {
+		parents: {
 			type: 'object',
 			patternProperties: {
 				'.+': { type: 'array', items: { type: 'string' } },
 			},
 		},
-		leafNodes: { type: 'array', items: { type: 'string' } },
+		loners: { type: 'array', items: { type: 'string' } },
 	},
-	required: ['leafNodes'],
+	required: ['loners'],
 	additionalProperties: false,
 };
 
 export default class TagTree {
-	public branchNodes: Record<string, string[]>;
-	public leafNodes: string[];
+	public parents: Record<string, string[]>;
+	public loners: string[];
 
-	constructor({
-		branchNodes,
-		leafNodes,
-	}: {
-		branchNodes: Record<string, string[]>;
-		leafNodes: string[];
-	}) {
-		this.branchNodes = branchNodes;
-		this.leafNodes = leafNodes;
+	constructor({ parents, loners }: { parents: Record<string, string[]>; loners: string[] }) {
+		this.parents = parents;
+		this.loners = loners;
 
 		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid TagTree: ' + JSON.stringify(this));

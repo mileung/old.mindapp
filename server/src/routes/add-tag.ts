@@ -2,27 +2,26 @@ import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
 import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
 import { debouncedSnapshot } from '../utils/git';
-import { sortObjectProps, sortUniArr } from '../utils/tags';
+import { shouldBeLoner, sortObjectProps, sortUniArr } from '../utils/tags';
 
 const addTag: RequestHandler = (req, res) => {
 	const tagTree = parseFile<TagTree>(tagTreePath);
-	const parentTag = (req.body.parentTag || '').trim();
 	const tag = (req.body.tag || '').trim();
-
-	if (parentTag) {
-		if (tagTree.branchNodes[parentTag]) {
-			tagTree.branchNodes[parentTag] = sortUniArr(tagTree.branchNodes[parentTag].concat(tag));
-		} else {
-			const parentTagIndex = tagTree.leafNodes.findIndex((tag) => tag === parentTag);
-			if (parentTagIndex === -1) throw new Error(`Parent tag "${parentTag}" dne`);
-			tagTree.leafNodes.splice(parentTagIndex, 1);
-			tagTree.branchNodes[parentTag] = [tag];
+	const parentTag = (req.body.parentTag || '').trim();
+	if (tag) {
+		if (parentTag) {
+			tagTree.parents[parentTag] = !tagTree.parents[parentTag]
+				? [tag]
+				: sortUniArr(tagTree.parents[parentTag].concat(tag));
+			const parentTagIndex = tagTree.loners.indexOf(parentTag);
+			parentTagIndex !== -1 && tagTree.loners.splice(parentTagIndex, 1);
+			const tagIndex = tagTree.loners.indexOf(tag);
+			tagIndex !== -1 && tagTree.loners.splice(tagIndex, 1);
+		} else if (shouldBeLoner(tagTree, tag)) {
+			tagTree.loners = sortUniArr(tagTree.loners.concat(tag));
 		}
 	}
-	if (!tagTree.branchNodes[tag]) {
-		tagTree.leafNodes = sortUniArr(tagTree.leafNodes.concat(tag));
-	}
-	sortObjectProps(tagTree.branchNodes);
+	sortObjectProps(tagTree.parents);
 	writeObjectFile(tagTreePath, tagTree);
 	res.send({});
 	debouncedSnapshot();

@@ -31,7 +31,7 @@ export default function Results({
 	}, [roots]);
 
 	const loadMoreThoughts = useCallback(() => {
-		const lastRoot = roots[roots.length - 1];
+		const lastRoot = roots.slice(-1)[0];
 		if (lastRoot === null) return;
 		const ignoreRootIds = roots.map((root) => root && getThoughtId(root));
 		pinging.current = true;
@@ -66,7 +66,7 @@ export default function Results({
 			const scrollPosition = window.innerHeight + window.scrollY;
 			const documentHeight = document.body.offsetHeight;
 
-			if (roots[roots.length - 1] !== null && scrollPosition >= documentHeight - 100) {
+			if (roots.slice(-1)[0] !== null && scrollPosition >= documentHeight - 100) {
 				if (roots.length !== rootsLengthLastLoad) {
 					rootsLengthLastLoad = roots.length;
 					loadMoreThoughts();
@@ -166,7 +166,7 @@ export default function Results({
 			{!queriedThoughtId && roots[0] === null && (
 				<p className="text-2xl text-center">No thoughts found</p>
 			)}
-			{!queriedThoughtId && roots.length > 1 && roots[roots.length - 1] === null && (
+			{!queriedThoughtId && roots.length > 1 && roots.slice(-1)[0] === null && (
 				<p className="text-xl text-fg2 text-center">End of results </p>
 			)}
 		</div>

@@ -144,7 +144,7 @@ export default function ThoughtBlock({
 										for (let i = 0; i < rootsIndices.length - 1; i++) {
 											pointer = pointer[rootsIndices[i]].children!;
 										}
-										const editedThought = pointer[rootsIndices[rootsIndices.length - 1]];
+										const editedThought = pointer[rootsIndices.slice(-1)[0]];
 										editedThought.content = thought.content;
 										editedThought.tags = thought.tags;
 										onRootsChange(newRoots);
@@ -212,7 +212,7 @@ export default function ThoughtBlock({
 											for (let i = 0; i < rootsIndices.length - 1; i++) {
 												pointer = pointer[rootsIndices[i]].children!;
 											}
-											const deletedThought = pointer[rootsIndices[rootsIndices.length - 1]];
+											const deletedThought = pointer[rootsIndices.slice(-1)[0]];
 
 											ping<{ softDelete: true }>(buildUrl('delete-thought'), post({ thoughtId }))
 												.then(({ softDelete }) => {
@@ -220,7 +220,7 @@ export default function ThoughtBlock({
 														deletedThought.content = '';
 														deletedThought.tags = [];
 													} else {
-														pointer.splice(rootsIndices[rootsIndices.length - 1], 1);
+														pointer.splice(rootsIndices.slice(-1)[0], 1);
 													}
 													onRootsChange(newRoots);
 												})

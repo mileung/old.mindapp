@@ -3,10 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
-import { useTagTree } from './GlobalState';
+import { useLastUsedTags, useTagTree } from './GlobalState';
 import { matchSorter } from 'match-sorter';
 import { bracketRegex, getTags } from '../pages/Search';
 import { useKeyPress } from '../utils/keyboard';
+import { getNodes, getNodesArr } from '../utils/tags';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -38,6 +39,7 @@ export default function Header() {
 	const navigate = useNavigate();
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
+	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchIpt = useRef<HTMLInputElement>(null);
 	const searchBtn = useRef<HTMLButtonElement>(null);
@@ -45,21 +47,21 @@ export default function Header() {
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const [searchText, searchTextSet] = useState('');
-	const [tagIndex, tagIndexSet] = useState<number>(-1);
+	const [tagIndex, tagIndexSet] = useState<number>(0);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
-	const tagFilter = useMemo(() => {
-		const filter = searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim();
-		tagIndexSet(-1);
-		return filter;
-	}, [searchText]);
+	const tagFilter = useMemo(
+		() => searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim(),
+		[searchText],
+	);
+	const nodesArr = useMemo(() => tagTree && getNodesArr(getNodes(tagTree)), [tagTree]);
+	const tagToAdd = useMemo(() => tagFilter.trim(), [tagFilter]);
 	const suggestedTags = useMemo(() => {
-		let arr = matchSorter(
-			Object.keys(tagTree?.branchNodes || {}).concat(tagTree?.leafNodes || []),
-			tagFilter,
-		);
+		if (!nodesArr || !suggestTags) return [];
+		let arr = matchSorter(nodesArr, tagFilter);
+		tagToAdd ? arr.push(tagToAdd) : arr.unshift(...lastUsedTags);
 		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
 		return arr;
-	}, [tagTree, tagFilter, tags]);
+	}, [nodesArr, suggestTags, tagFilter, tagToAdd, lastUsedTags, tags]);
 
 	useEffect(() => {
 		searchTextSet((searchedKeywords + ' ').trimStart());
@@ -79,8 +81,7 @@ export default function Header() {
 
 	const searchInput = useCallback(
 		(newTab = false) => {
-			const { value } = searchIpt.current!;
-			const q = value.trimStart();
+			const q = searchText.trim();
 			if (q) {
 				const queryString = new URLSearchParams({ q }).toString();
 				searchIpt.current!.blur();
@@ -94,12 +95,13 @@ export default function Header() {
 				// setTimeout prevents search from adding new line to contentTextarea on enter
 			}
 		},
-		[navigate],
+		[searchText, navigate],
 	);
 
 	const addTagToSearchInput = useCallback(
 		(tag: string) => {
-			tagIndexSet(-1);
+			tagIndexSet(0);
+			lastUsedTagsSet([tag, ...lastUsedTags]);
 			searchTextSet(
 				`${searchText
 					.replace(/\s\s+/g, ' ')
@@ -133,13 +135,14 @@ export default function Header() {
 							placeholder="Search"
 							onFocus={() => {
 								suggestTagsSet(true);
-								tagIndexSet(-1);
+								tagIndexSet(0);
 							}}
 							onBlur={() => {
 								document.activeElement !== searchBtn.current && suggestTagsSet(false);
 							}}
 							onChange={(e) => {
 								suggestTagsSet(true);
+								tagIndexSet(0);
 								searchTextSet(e.target.value);
 							}}
 							onKeyDown={(e) => {
@@ -147,13 +150,13 @@ export default function Header() {
 									(suggestTags ? suggestTagsSet(false) : searchIpt.current?.blur());
 								e.key === 'Tab' && !e.shiftKey && suggestTagsSet(false);
 								if (e.key === 'Enter') {
-									if (!suggestTags || !suggestedTags.length || tagIndex === -1) {
-										searchInput(e.metaKey);
-									} else {
+									if (suggestedTags[tagIndex]) {
 										addTagToSearchInput(suggestedTags[tagIndex]);
+									} else {
+										searchInput(e.metaKey);
 									}
 								}
-								if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+								if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && suggestedTags) {
 									e.preventDefault();
 									const index = Math.min(
 										Math.max(tagIndex + (e.key === 'ArrowUp' ? -1 : 1), -1),

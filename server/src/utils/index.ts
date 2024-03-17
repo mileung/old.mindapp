@@ -5,7 +5,7 @@ import { isDirectory, isFile, timelinePath } from './files';
 
 type Index = {
 	allThoughtPaths: string[];
-	thoughtPathsByTag: Record<string, string[]>;
+	thoughtPathsByTag: Record<string, undefined | string[]>;
 };
 
 export const index: Index = {
@@ -14,8 +14,7 @@ export const index: Index = {
 };
 
 export function addPathsByTag(tag: string, thought: Thought) {
-	index.thoughtPathsByTag[tag] = index.thoughtPathsByTag[tag] || [];
-	addToSortedIndex(index.thoughtPathsByTag[tag], thought);
+	index.thoughtPathsByTag[tag] = addToSortedIndex(index.thoughtPathsByTag[tag] || [], thought);
 }
 
 export function addToAllPaths(thought: Thought) {
@@ -30,6 +29,7 @@ function addToSortedIndex(arr: string[], thought: Thought) {
 		const i = findClosestIndex(arr, thought.createDate);
 		if (arr[i] !== thought.filePath) arr.splice(i, 0, thought.filePath);
 	}
+	return arr;
 }
 
 // export function closestIndexInPathsByTag(tag: string, targetCreateDate: number) {
@@ -45,7 +45,8 @@ export function removeFromAllPaths(thought: Thought) {
 }
 
 export function removePathsByTag(tag: string, thought: Thought) {
-	removeFromArr(index.thoughtPathsByTag[tag], thought);
+	const arr = index.thoughtPathsByTag[tag];
+	arr && removeFromArr(arr, thought);
 }
 
 function removeFromArr(arr: string[], thought: Thought) {
@@ -118,11 +119,12 @@ export function setUpIndex() {
 							if (isNaN(createDate)) continue;
 							const filePath = path.join(l5DirPath, fileName);
 							if (isFile(filePath) && fileName.endsWith('.json')) {
-								let thought = Thought.read(filePath).rootThought;
+								const thought = Thought.read(filePath);
 								index.allThoughtPaths.push(filePath);
 								thought.tags.forEach((tag) => {
-									if (!index.thoughtPathsByTag[tag]) index.thoughtPathsByTag[tag] = [];
-									index.thoughtPathsByTag[tag].push(filePath);
+									index.thoughtPathsByTag[tag] = (index.thoughtPathsByTag[tag] || []).concat(
+										filePath,
+									);
 								});
 							}
 						}
@@ -131,6 +133,7 @@ export function setUpIndex() {
 			}
 		}
 	}
+	// console.log('index:', index.thoughtPathsByTag.Snapchat);
 }
 
 /*

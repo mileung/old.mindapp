@@ -1,6 +1,6 @@
 export type TagTree = {
-	branchNodes: Record<string, string[]>;
-	leafNodes: string[];
+	parents: Record<string, string[]>;
+	loners: string[];
 };
 
 export type Tag = {
@@ -19,22 +19,59 @@ export const sortUniArr = (a: string[]) => {
 	return [...new Set(a)].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 };
 
+export function shouldBeLoner(tagTree: TagTree, tag: string) {
+	return (
+		!tagTree.parents[tag] &&
+		-1 ===
+			Object.values(tagTree.parents).findIndex((subtags) => {
+				return subtags.includes(tag);
+			})
+	);
+}
+
 export function makeRootTag(tagTree: TagTree, label: string) {
-	if (!tagTree.branchNodes[label]) return { label, lineage: [label], subRecTags: null };
-	const leafNodes = new Set(tagTree.leafNodes);
+	if (!tagTree.loners.includes(label) && shouldBeLoner(tagTree, label)) return null;
 
 	const expand = (label: string, lineage: string[] = []): RecursiveTag => {
-		const tagSubLabels = tagTree.branchNodes[label];
-		if (!tagSubLabels && !leafNodes.has(label)) throw new Error(`Tag "${label}" not found`);
+		const subTags = tagTree.parents[label];
 		return {
 			label,
 			lineage: [...lineage, label],
 			subRecTags:
-				!tagSubLabels || lineage.includes(label)
+				!subTags || lineage.includes(label)
 					? null
-					: tagSubLabels.map((subsetLabel) => expand(subsetLabel, [...lineage, label])),
+					: subTags.map((subsetLabel) => expand(subsetLabel, [...lineage, label])),
 		};
 	};
 
 	return expand(label);
 }
+
+export const getParentsMap = (tagTree: TagTree) => {
+	const obj: Record<string, undefined | string[]> = {};
+	Object.entries(tagTree.parents).forEach(([parentTag, subTags]) => {
+		subTags.forEach((tag) => {
+			obj[tag] = (obj[tag] || []).concat(parentTag);
+		});
+	});
+	return obj;
+};
+
+export const getNodes = (tagTree: TagTree) => {
+	const { loners } = tagTree;
+	const parents: string[] = [];
+	const childrenSet = new Set<string>();
+	Object.entries(tagTree.parents).forEach(([tag, subtags]) => {
+		parents.push(tag);
+		subtags.forEach((tag) => {
+			!tagTree.parents[tag] && childrenSet.add(tag);
+		});
+	});
+	const children = [...childrenSet].sort();
+
+	return { loners, parents, children };
+};
+
+export const getNodesArr = (nodes: ReturnType<typeof getNodes>) => {
+	return [...nodes.loners, ...nodes.parents, ...nodes.children];
+};

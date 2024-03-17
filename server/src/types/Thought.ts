@@ -1,8 +1,8 @@
 import path from 'path';
 import Ajv from 'ajv';
 import { calcFilePath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
-import { addTagIndex, sortUniArr } from '../utils/tags';
-import { addToAllPaths, addPathsByTag, index } from '../utils';
+import { sortUniArr } from '../utils/tags';
+import { addToAllPaths, addPathsByTag } from '../utils';
 
 const ajv = new Ajv();
 
@@ -152,8 +152,7 @@ export class Thought {
 	}
 
 	addChild(thoughtId: string) {
-		this.childrenIds = this.childrenIds || [];
-		this.childrenIds = sortUniArr(this.childrenIds.concat(thoughtId));
+		this.childrenIds = sortUniArr((this.childrenIds || []).concat(thoughtId));
 		this.overwrite();
 	}
 

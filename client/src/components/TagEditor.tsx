@@ -1,12 +1,12 @@
 import { ArrowTopRightOnSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/react/16/solid';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InputAutoWidth from '../components/InputAutoWidth';
-import { RecursiveTag, sortUniArr } from '../utils/tags';
-import { useNavigate } from 'react-router-dom';
-import { useTagTree } from './GlobalState';
+import { RecursiveTag, getNodes, getNodesArr } from '../utils/tags';
+import { useLastUsedTags, useTagTree } from './GlobalState';
+import { matchSorter } from 'match-sorter';
 
 const TagEditor = ({
-	parentRef,
+	_ref,
 	subTaggingLineage,
 	recTag,
 	parentTag,
@@ -15,26 +15,45 @@ const TagEditor = ({
 	onRemove,
 	onKeyDown,
 }: {
-	parentRef?: React.MutableRefObject<HTMLInputElement | null>;
-	subTaggingLineage: string;
+	_ref?: (r: HTMLInputElement | null) => void | React.MutableRefObject<HTMLInputElement | null>;
+	subTaggingLineage: string[];
 	recTag: RecursiveTag;
 	parentTag?: string;
-	onRename: (oldTag: string, newTag: string, subTaggingLineage?: string) => Promise<any>;
-	onSubtag: (tag: string, parentTag: string, subTaggingLineage?: string) => Promise<any>;
+	onRename: (oldTag: string, newTag: string, newSubTaggingLineage: string[]) => Promise<any>;
+	onSubtag: (tag: string, parentTag: string, newSubTaggingLineage: string[]) => Promise<any>;
 	onRemove: (currentTagLabel: string, parentTag?: string) => void;
 	onKeyDown?: React.DOMAttributes<HTMLInputElement>['onKeyDown'];
 }) => {
-	const navigate = useNavigate();
-	const [tagTree, tagTreeSet] = useTagTree();
-	const [addingSubtag, addingSubtagSet] = useState(false);
+	const [tagTree] = useTagTree();
+	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
+	const [addingSubtag, addingSubtagSet] = useState(
+		JSON.stringify(recTag.lineage) === JSON.stringify(subTaggingLineage),
+	);
+	useEffect(() => {
+		addingSubtagSet(JSON.stringify(recTag.lineage) === JSON.stringify(subTaggingLineage));
+	}, [recTag.lineage, subTaggingLineage]);
 	const [editing, editingSet] = useState(false);
+	const [tagFilter, tagFilterSet] = useState('');
+	const [tagIndex, tagIndexSet] = useState<number>(0);
+	const [suggestTags, suggestTagsSet] = useState(false);
+	const defaultLabel = useRef(recTag.label);
 	const editingIpt = useRef<null | HTMLInputElement>(null);
 	const makeSubsetBtn = useRef<HTMLButtonElement>(null);
 	const removeBtn = useRef<HTMLButtonElement>(null);
 	const addingIpt = useRef<HTMLInputElement>(null);
+	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 
+	const nodesArr = useMemo(() => tagTree && getNodesArr(getNodes(tagTree)), [tagTree]);
+	const trimmedFilter = useMemo(() => tagFilter.trim(), [tagFilter]);
+	const suggestedTags = useMemo(() => {
+		if (!nodesArr || !suggestTags) return [];
+		let arr = matchSorter(nodesArr, tagFilter);
+		trimmedFilter ? arr.push(trimmedFilter) : arr.unshift(...lastUsedTags);
+		arr = [...new Set(arr)];
+		return arr;
+	}, [nodesArr, suggestTags, tagFilter, trimmedFilter, lastUsedTags]);
 	const onEditingBlur = useCallback(() => {
-		editingIpt.current!.value = recTag.label;
+		editingIpt.current!.value = defaultLabel.current;
 		setTimeout(() => {
 			if (
 				document.activeElement !== editingIpt.current &&
@@ -45,14 +64,33 @@ const TagEditor = ({
 			}
 		}, 0);
 	}, [recTag.label]);
+	const addSubTag = useCallback(
+		(
+			e: React.KeyboardEvent<HTMLInputElement> | React.MouseEvent<HTMLButtonElement, MouseEvent>,
+			tagToAdd?: string,
+		) => {
+			tagToAdd = tagToAdd || suggestedTags?.[tagIndex] || trimmedFilter;
+			if (!tagToAdd) return;
+			addingIpt.current!.focus();
+			lastUsedTagsSet([...new Set([tagToAdd, ...lastUsedTags])].slice(0, 5));
+			onSubtag(
+				tagToAdd,
+				recTag.label,
+				e.ctrlKey ? recTag.lineage.concat(tagToAdd) : e.altKey ? recTag.lineage : [],
+			).then(() => {
+				setTimeout(() => {
+					addingIpt.current && (addingIpt.current.value = '');
+					tagFilterSet('');
+				}, 0);
+			});
+		},
+		[suggestedTags, tagIndex, trimmedFilter, lastUsedTags, recTag],
+	);
 
 	useEffect(() => {
-		editingIpt.current && (editingIpt.current.value = recTag.label);
+		editingIpt.current!.value = recTag.label;
+		defaultLabel.current = recTag.label;
 	}, [recTag.label]);
-
-	useEffect(() => {
-		addingSubtagSet(JSON.stringify(recTag.lineage) === subTaggingLineage);
-	}, [recTag.lineage, subTaggingLineage]);
 
 	return (
 		<div>
@@ -60,7 +98,10 @@ const TagEditor = ({
 				<InputAutoWidth
 					ref={(r: HTMLInputElement | null) => {
 						editingIpt.current = r;
-						parentRef && (parentRef.current = r);
+						if (_ref) {
+							// @ts-ignore
+							typeof _ref === 'function' ? _ref(r) : (_ref.current = r);
+						}
 					}}
 					defaultValue={recTag.label}
 					placeholder="Edit tag with Enter"
@@ -70,37 +111,23 @@ const TagEditor = ({
 					onKeyDown={(e) => {
 						onKeyDown?.(e);
 						e.key === 'Escape' && editingIpt.current?.blur();
-						if (e.key === 'Enter') {
-							const newTag = editingIpt.current!.value.trim();
-							if (!newTag) return;
-							editingIpt.current!.value = newTag;
-							if (!parentTag) {
-								if (tagTree?.branchNodes[recTag.label]) {
-									tagTree!.branchNodes[newTag] = tagTree!.branchNodes[recTag.label];
-									delete tagTree!.branchNodes[recTag.label];
-								} else {
-									tagTree!.leafNodes.splice(
-										tagTree!.leafNodes.findIndex((tag) => tag === recTag.label),
-										1,
-									);
-									tagTree!.leafNodes = sortUniArr(tagTree!.leafNodes.concat(newTag));
-								}
-								tagTreeSet(tagTree);
-								navigate(`/tags/${encodeURIComponent(newTag)}`, { replace: true });
-							}
-							if (recTag.label === newTag) {
+						const newLabel = editingIpt.current?.value.trim();
+						if (e.key === 'Enter' && newLabel) {
+							if (newLabel === recTag.label && !e.altKey) {
 								addingSubtagSet(true);
-								editingSet(false);
 							} else {
+								editingSet(false);
+								defaultLabel.current = newLabel;
+								// editingIpt.current?.blur();
 								onRename(
 									recTag.label,
-									newTag,
+									newLabel,
 									e.ctrlKey
-										? JSON.stringify(
-												recTag.lineage.slice(0, recTag.lineage.length - 1).concat(newTag),
-											)
-										: undefined,
-								).then(() => setTimeout(() => editingIpt.current?.blur(), 0));
+										? recTag.lineage.slice(0, -1).concat(newLabel)
+										: e.altKey
+											? recTag.lineage.slice(0, -1)
+											: [],
+								);
 							}
 						}
 					}}
@@ -127,8 +154,7 @@ const TagEditor = ({
 							onClick={() => {
 								const ok =
 									!!parentTag || confirm(`You are about to delete the "${recTag.label}" tag`);
-								editingIpt.current?.focus();
-								ok && onRemove(recTag.label, parentTag);
+								ok ? onRemove(recTag.label, parentTag) : editingIpt.current?.focus();
 							}}
 						>
 							{parentTag ? (
@@ -140,31 +166,7 @@ const TagEditor = ({
 					</>
 				)}
 			</div>
-			<div className="pl-3 border-l-2 border-fg2">
-				{addingSubtag && (
-					<InputAutoWidth
-						ref={addingIpt}
-						autoFocus
-						onFocus={() => addingSubtagSet(true)}
-						placeholder="Add tags with Enter"
-						className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
-						onKeyDown={(e) => {
-							e.key === 'Escape' && addingIpt.current?.blur();
-							if (e.key === 'Enter') {
-								const newTag = addingIpt.current!.value.trim();
-								if (!newTag) return;
-								onSubtag(
-									newTag,
-									recTag.label,
-									e.ctrlKey
-										? JSON.stringify(recTag.lineage.concat(newTag))
-										: JSON.stringify(recTag.lineage),
-								).then(() => (addingIpt.current!.value = ''));
-							}
-						}}
-						onBlur={() => addingSubtagSet(false)}
-					/>
-				)}
+			<div className="pl-3 border-l-2 border-fg2 w-fit relative">
 				{recTag.subRecTags?.map((subRecTag) => (
 					<TagEditor
 						key={subRecTag.label}
@@ -176,6 +178,73 @@ const TagEditor = ({
 						onRemove={onRemove}
 					/>
 				))}
+				{addingSubtag && (
+					<>
+						<InputAutoWidth
+							ref={addingIpt}
+							autoFocus
+							placeholder="Add tags with Enter"
+							className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
+							onClick={() => suggestTagsSet(true)}
+							onFocus={() => suggestTagsSet(true)}
+							value={tagFilter}
+							onChange={(e) => {
+								tagSuggestionsRefs.current[0]?.focus();
+								addingIpt.current?.focus();
+								tagIndexSet(0);
+								suggestTagsSet(true);
+								tagFilterSet(e.target.value);
+							}}
+							onKeyDown={(e) => {
+								e.key === 'Enter' && addSubTag(e);
+								e.key === 'Tab' && suggestTagsSet(false);
+								e.key === 'Escape' &&
+									(suggestTags ? suggestTagsSet(false) : addingIpt.current?.blur());
+								if (e.key === 'ArrowUp') {
+									e.preventDefault();
+									const index = Math.max(tagIndex - 1, -1);
+									tagSuggestionsRefs.current[index]?.focus();
+									addingIpt.current?.focus();
+									tagIndexSet(index);
+								}
+								if (e.key === 'ArrowDown') {
+									e.preventDefault();
+									const index = Math.min(tagIndex + 1, suggestedTags!.length - 1);
+									tagSuggestionsRefs.current[index]?.focus();
+									addingIpt.current?.focus();
+									tagIndexSet(index);
+								}
+							}}
+							onBlur={() => {
+								setTimeout(() => {
+									if (
+										document.activeElement !== addingIpt.current &&
+										!tagSuggestionsRefs.current.find((e) => e === document.activeElement)
+									) {
+										tagIndexSet(0);
+										addingSubtagSet(false);
+									}
+								}, 0);
+							}}
+						/>
+						{suggestTags && (
+							<div className="z-20 flex flex-col overflow-scroll rounded mt-0.5 bg-mg1 absolute min-w-[calc(100%-12px)] max-h-56 shadow">
+								{suggestedTags.map((tag, i) => {
+									return (
+										<button
+											key={i}
+											ref={(r) => (tagSuggestionsRefs.current[i] = r)}
+											className={`fx px-2 text-nowrap text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
+											onClick={(e) => addSubTag(e, tag)}
+										>
+											{tag}
+										</button>
+									);
+								})}
+							</div>
+						)}
+					</>
+				)}
 			</div>
 		</div>
 	);

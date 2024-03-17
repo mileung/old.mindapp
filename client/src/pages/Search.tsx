@@ -33,7 +33,7 @@ function parseQuery(input: string, tagTree: TagTree) {
 		if (tag && !processedTags.has(tag)) {
 			processedTags.add(tag);
 			subTags.push(tag);
-			(tagTree.branchNodes[tag] || []).forEach(getSubTags);
+			(tagTree.parents[tag] || []).forEach(getSubTags);
 		}
 	};
 	tags.forEach(getSubTags);
@@ -48,10 +48,7 @@ export default function Search() {
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
-	const query = useMemo(
-		() => parseQuery(q, tagTree || { branchNodes: {}, leafNodes: [] }),
-		[q, tagTree],
-	);
+	const query = useMemo(() => parseQuery(q, tagTree || { parents: {}, loners: [] }), [q, tagTree]);
 
 	return <div className="p-3">{tagTree && <Results query={query} />}</div>;
 }

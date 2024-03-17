@@ -1,10 +1,8 @@
 import { useRef, InputHTMLAttributes, forwardRef } from 'react';
 
 const resize = (node: HTMLInputElement) => {
-	setTimeout(() => {
-		node.style.width = 'auto';
-		node.style.width = node.scrollWidth + 'px';
-	}, 0);
+	node.style.width = 'auto';
+	node.style.width = node.scrollWidth + 'px';
 };
 
 const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>, parentRef) => {
@@ -12,6 +10,7 @@ const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>,
 
 	return (
 		<input
+			{...{ style: { width: '100%' } }} // so wide inputs aren't cut off on mount
 			{...props}
 			ref={(ref) => {
 				ref && resize(ref);
@@ -22,10 +21,9 @@ const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>,
 					parentRef && (parentRef.current = ref);
 				}
 			}}
-			onChange={() => {
-				if (internalRef.current) {
-					resize(internalRef.current);
-				}
+			onChange={(e) => {
+				props.onChange?.(e);
+				internalRef.current && resize(internalRef.current);
 			}}
 		/>
 	);

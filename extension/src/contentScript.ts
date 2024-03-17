@@ -14,7 +14,7 @@ addEventListener('keydown', (e) => {
 		).trim();
 		const searchParams = new URLSearchParams({
 			json: JSON.stringify({
-				initialContent: `${thoughtHeadline}\n${location.href}\n\n`,
+				initialContent: `${thoughtHeadline}\n${selector?.url || location.href}\n\n`,
 				initialTags: selector?.tags,
 			}),
 		}).toString();
@@ -27,16 +27,29 @@ addEventListener('keydown', (e) => {
 	}
 });
 
-const urlSelectors: Record<string, undefined | (() => { headline: string; tags?: string[] })> = {
+const urlSelectors: Record<
+	string,
+	undefined | (() => { headline: string; url?: string; tags?: string[] })
+> = {
 	'www.youtube.com/watch': () => {
 		// @ts-ignore
 		const title: string = document.querySelector('h1.style-scope.ytd-watch-metadata')?.innerText;
-		const author: string = document
-			.querySelector('#owner > ytd-video-owner-renderer > a')!
-			.getAttribute('href')
-			?.slice(1)!;
+		const aTag = document.querySelector(
+			'#upload-info .yt-simple-endpoint.style-scope.yt-formatted-string',
+		)!;
+		const href = aTag.getAttribute('href');
+		const author: string = href?.startsWith('/channel/')
+			? // @ts-ignore
+				aTag.innerText
+			: `YouTube${href?.slice(1)!}`;
 
-		return { headline: title, tags: [`YouTube${author}`] };
+		const unwantedI = location.href.indexOf('&list=WL');
+
+		return {
+			headline: title,
+			tags: [author],
+			url: unwantedI === -1 ? location.href : location.href.substring(0, unwantedI),
+		};
 	},
 	'www.youtube.com/playlist': () => {
 		const author: string = document
