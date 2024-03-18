@@ -14,6 +14,10 @@ addEventListener('keydown', (e) => {
 		).trim();
 		const searchParams = new URLSearchParams({
 			json: JSON.stringify({
+				// https://news.ycombinator.com/item?id=31871577
+				// 431 Request Header Fields Too Large
+				// https://vitejs.dev/guide/troubleshooting.html#_431-request-header-fields-too-large
+				// TODO: thoughtHeadline.slice(0, 99999) or something to avoid 431
 				initialContent: `${thoughtHeadline}\n${selector?.url || location.href}\n\n`,
 				initialTags: selector?.tags,
 			}),
@@ -96,3 +100,5 @@ function findLargestText() {
 	// @ts-ignore
 	return elementWithLargestFontSize?.innerText;
 }
+
+export {};

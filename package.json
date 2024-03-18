@@ -3,8 +3,10 @@
 	"scripts": {
 		"client": "cd client && npm run dev",
 		"server": "cd server && npm start",
-		"extension": "cd extension && npm run dev",
-		"start": "concurrently \"npm run server\" \"npm run client\" \"npm run extension\"",
+		"dev-extension": "cd extension && npm run dev",
+		"build-extension": "cd extension && npm run build",
+		"start": "concurrently \"npm run server\" \"npm run client\" \"npm run build-extension\"",
+		"dev": "concurrently \"npm run server\" \"npm run client\" \"npm run dev-extension\"",
 		"format": "prettier . --write"
 	},
 	"prettier": {

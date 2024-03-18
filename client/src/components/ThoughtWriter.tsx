@@ -71,6 +71,7 @@ export const ThoughtWriter = ({
 			tagIpt.current!.focus();
 			lastUsedTagsSet([...new Set([tagToAdd, ...lastUsedTags])].slice(0, 5));
 			tagFilterSet('');
+			tagIndexSet(-1);
 		},
 		[suggestedTags, tagIndex, trimmedFilter, tags, lastUsedTags],
 	);
@@ -210,7 +211,7 @@ export const ThoughtWriter = ({
 					onChange={(e) => {
 						tagSuggestionsRefs.current[0]?.focus();
 						tagIpt.current?.focus();
-						tagIndexSet(0);
+						tagIndexSet(!e.target.value.length && tags.length ? -1 : 0);
 						suggestTagsSet(true);
 						tagFilterSet(e.target.value);
 					}}

@@ -2,12 +2,11 @@
 	"name": "mindapp-server",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "nodemon --exec ts-node src/server.ts"
+		"start": "tsnd --respawn src/server.ts"
 	},
 	"devDependencies": {
 		"@types/cors": "2.8.17",
-		"nodemon": "3.0.3",
-		"ts-node": "10.9.2",
+		"ts-node-dev": "2.0.0",
 		"typescript": "5.3.3"
 	},
 	"dependencies": {

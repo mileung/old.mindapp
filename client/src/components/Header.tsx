@@ -100,7 +100,7 @@ export default function Header() {
 
 	const addTagToSearchInput = useCallback(
 		(tag: string) => {
-			tagIndexSet(0);
+			tagIndexSet(-1);
 			lastUsedTagsSet([tag, ...lastUsedTags]);
 			searchTextSet(
 				`${searchText
