@@ -1,7 +1,7 @@
 import { useRef, InputHTMLAttributes, forwardRef } from 'react';
 
 const resize = (node: HTMLInputElement) => {
-	node.style.width = 'auto';
+	node.style.width = '0px';
 	node.style.width = node.scrollWidth + 'px';
 };
 
@@ -10,7 +10,8 @@ const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>,
 
 	return (
 		<input
-			{...{ style: { width: '100%' } }} // so wide inputs aren't cut off on mount
+			// TODO: this doesn't work. Find another way to avoid flash of cut-off element
+			// {...{ style: { width: '100%' } }} // so wide inputs aren't cut off on mount
 			{...props}
 			ref={(ref) => {
 				ref && resize(ref);

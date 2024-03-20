@@ -1,13 +1,14 @@
 import { ChevronRightIcon, PlusIcon } from '@heroicons/react/16/solid';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useTagTree } from '../components/GlobalState';
+import { useLastUsedTags, useTagTree } from '../components/GlobalState';
 import { buildUrl, ping, post } from '../utils/api';
 import { TagTree, getNodes, getNodesArr, getParentsMap, makeRootTag } from '../utils/tags';
 import TagEditor from '../components/TagEditor';
 import { debounce } from '../utils/performance';
 import { useKeyPress } from '../utils/keyboard';
 import { matchSorter } from 'match-sorter';
+import InputAutoWidth from '../components/InputAutoWidth';
 
 export default function Tags() {
 	const navigate = useNavigate();
@@ -15,15 +16,21 @@ export default function Tags() {
 	const [tagTree, tagTreeSet] = useTagTree();
 	// let [tagTree, tagTreeSet] = useTagTree();
 	// tagTree = { parents: {}, loners: [] };
+	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
+	const [parentTagFilter, parentTagFilterSet] = useState('');
 	const [tagFilter, tagFilterSet] = useState('');
+	const [parentTagIndex, parentTagIndexSet] = useState<number>(0);
 	const [tagIndex, tagIndexSet] = useState<null | number>(tag ? null : 0);
-	const focusedElementAfterSearch = useRef<null | HTMLInputElement | HTMLLinkElement>(null);
+	const addParentBtn = useRef<HTMLButtonElement>(null);
 	const searchIpt = useRef<null | HTMLInputElement>(null);
+	const parentTagIpt = useRef<null | HTMLInputElement>(null);
 	const rootTagIpt = useRef<null | HTMLInputElement>(null);
 	const tagSuggestionsRefs = useRef<(null | HTMLAnchorElement)[]>([]);
+	const parentTagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
 	const [subTaggingLineage, subTaggingLineageSet] = useState<string[]>([]);
-	const lastTag = useRef('');
-
+	const [suggestParentTags, suggestParentTagsSet] = useState(false);
+	const [addingParent, addingParentSet] = useState(false);
+	const lastTagParam = useRef('');
 	const parentsMap = useMemo(() => tagTree && getParentsMap(tagTree), [JSON.stringify(tagTree)]);
 	const nodes = useMemo(() => tagTree && getNodes(tagTree), [tagTree]);
 	const nodesArr = useMemo(() => nodes && getNodesArr(nodes), [nodes]);
@@ -46,6 +53,22 @@ export default function Tags() {
 		() => (rootTag && parentsMap?.[rootTag.label]) || null,
 		[parentsMap, rootTag],
 	);
+
+	const trimmedParentFilter = useMemo(() => parentTagFilter.trim(), [parentTagFilter]);
+	const suggestedParentTags = useMemo(() => {
+		if (!nodesArr || !suggestParentTags) return [];
+		let arr = matchSorter(nodesArr, parentTagFilter);
+		trimmedParentFilter ? arr.push(trimmedParentFilter) : arr.unshift(...lastUsedTags);
+		arr = [...new Set(arr)].filter((tag) => !(rootParents || []).includes(tag));
+		return arr;
+	}, [
+		nodesArr,
+		suggestParentTags,
+		parentTagFilter,
+		trimmedParentFilter,
+		lastUsedTags,
+		rootParents,
+	]);
 
 	const replaceTag = useCallback((tag?: string) => {
 		navigate(!tag ? '/tags' : `/tags/${encodeURIComponent(tag)}`, { replace: true });
@@ -85,6 +108,22 @@ export default function Tags() {
 		[refreshTagTree],
 	);
 
+	const addParentTag = useCallback(
+		(
+			e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent<HTMLInputElement>,
+			parentTag: string,
+		) => {
+			if (!rootTag?.label || !parentTag) return;
+			!e.altKey && addingParentSet(false);
+			parentTagFilterSet('');
+			parentTagIndexSet(0);
+			return ping(buildUrl('add-tag'), post({ tag: rootTag.label, parentTag }))
+				.then(() => refreshTagTree(rootTag!.label))
+				.catch((err) => alert(JSON.stringify(err)));
+		},
+		[rootTag?.label, refreshTagTree],
+	);
+
 	const addSubtag = useCallback(
 		(tag: string, parentTag: string, newSubTaggingLineage: string[]) => {
 			subTaggingLineageSet(newSubTaggingLineage);
@@ -118,6 +157,23 @@ export default function Tags() {
 		[rootTag?.label, refreshTagTree],
 	);
 
+	const showTagInLeftPanel = useCallback(
+		(tag: string, e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+			if (e.metaKey || e.shiftKey || !suggestedTags || !nodesArr) return;
+			let i = suggestedTags.indexOf(tag);
+			if (i === -1) {
+				tagFilterSet('');
+				i = nodesArr.indexOf(tag);
+			}
+			setTimeout(() => {
+				tagSuggestionsRefs.current[i]?.focus();
+				searchIpt.current?.focus();
+			}, 0);
+			tagIndexSet(i);
+		},
+		[nodesArr, suggestedTags],
+	);
+
 	const onArrowUpOrDown = useCallback(
 		(e: KeyboardEvent) => {
 			if (
@@ -139,9 +195,9 @@ export default function Tags() {
 			tagIndexSet(index);
 			const nextTag = suggestedTags[index];
 			if (e.repeat) {
-				if (lastTag.current === nextTag) return;
+				if (lastTagParam.current === nextTag) return;
 				debouncedReplaceTag(nextTag);
-				lastTag.current = nextTag;
+				lastTagParam.current = nextTag;
 			} else {
 				replaceTag(suggestedTags[index]);
 			}
@@ -164,7 +220,7 @@ export default function Tags() {
 	return (
 		<div className="flex">
 			<div className="flex-1 relative min-w-80 max-w-[30rem]">
-				<div className="sticky top-12 h-full flex flex-col max-h-[calc(100vh-3rem)]">
+				<div className="sticky top-12 h-full pt-0.5 flex flex-col max-h-[calc(100vh-3rem)]">
 					<input
 						ref={searchIpt}
 						autoFocus
@@ -179,7 +235,7 @@ export default function Tags() {
 							e.key === 'Escape' && searchIpt.current?.blur();
 							if (e.key === 'Tab' && !e.shiftKey) {
 								e.preventDefault();
-								focusedElementAfterSearch.current!.focus();
+								addParentBtn.current!.focus();
 							}
 							if (e.key === 'Enter' && suggestedTags && tagIndex !== null) {
 								if (suggestedTags[tagIndex] === tagToAdd) {
@@ -261,55 +317,116 @@ export default function Tags() {
 					</div>
 				) : (
 					<>
-						{rootParents && (
-							<div className="mb-1 fx gap-2">
-								{rootParents.map((tag, i) => (
-									<Link
-										key={tag}
-										ref={(r) => {
-											// @ts-ignore
-											!i && (focusedElementAfterSearch.current = r);
+						<div className="mb-1 fx gap-2 pt-0.5">
+							{!addingParent ? (
+								<button
+									ref={addParentBtn}
+									className="text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 text-fg2 border-fg2"
+									onClick={() => addingParentSet(true)}
+									onKeyDown={(e) => {
+										if (e.key === 'Tab' && e.shiftKey) {
+											e.preventDefault();
+											searchIpt.current?.focus();
+										}
+									}}
+								>
+									<PlusIcon className="h-7 w-7" />
+								</button>
+							) : (
+								<div className="">
+									<InputAutoWidth
+										autoFocus
+										ref={parentTagIpt}
+										placeholder="Parent tag"
+										size={1}
+										className="h-8 min-w-52 border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
+										onFocus={() => suggestParentTagsSet(true)}
+										onClick={() => suggestParentTagsSet(true)}
+										value={parentTagFilter}
+										onChange={(e) => {
+											parentTagSuggestionsRefs.current[0]?.focus();
+											parentTagIpt.current?.focus();
+											parentTagIndexSet(0);
+											suggestParentTagsSet(true);
+											parentTagFilterSet(e.target.value);
 										}}
-										to={`/tags/${encodeURIComponent(tag)}`}
-										className="text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 text-fg2 border-fg2"
+										onBlur={() => {
+											setTimeout(() => {
+												if (
+													document.activeElement !== parentTagIpt.current &&
+													!parentTagSuggestionsRefs.current.find(
+														(e) => e === document.activeElement,
+													)
+												) {
+													parentTagIndexSet(0);
+													addingParentSet(false);
+												}
+											}, 0);
+										}}
 										onKeyDown={(e) => {
-											if (!i && e.key === 'Tab' && e.shiftKey) {
+											if (e.key === 'Escape' || (e.key === 'Tab' && e.shiftKey)) {
 												e.preventDefault();
 												searchIpt.current?.focus();
 											}
-										}}
-										onClick={(e) => {
-											if (e.metaKey || e.shiftKey || !suggestedTags || !nodesArr) return;
-											let i = suggestedTags.indexOf(tag);
-											if (i === -1) {
-												tagFilterSet('');
-												i = nodesArr.indexOf(tag);
-												setTimeout(() => tagSuggestionsRefs.current[i]?.focus(), 0);
+											const newParentTag =
+												suggestedParentTags[parentTagIndex] || parentTagIpt.current?.value.trim();
+											if (e.key === 'Enter' && newParentTag) {
+												addParentTag(e, newParentTag);
 											}
-											tagIndexSet(i);
+											if (e.key === 'ArrowUp') {
+												e.preventDefault();
+												const index = Math.max(parentTagIndex - 1, -1);
+												parentTagSuggestionsRefs.current[index]?.focus();
+												parentTagIpt.current?.focus();
+												parentTagIndexSet(index);
+											}
+											if (e.key === 'ArrowDown') {
+												e.preventDefault();
+												const index = Math.min(parentTagIndex + 1, suggestedTags!.length - 1);
+												parentTagSuggestionsRefs.current[index]?.focus();
+												parentTagIpt.current?.focus();
+												parentTagIndexSet(index);
+											}
 										}}
+									/>
+									{suggestParentTags && (
+										<div className="z-20 flex flex-col overflow-scroll rounded mt-9 bg-mg1 absolute max-h-56 shadow">
+											{suggestedParentTags.map((tag, i) => {
+												return (
+													<button
+														key={i}
+														ref={(r) => (parentTagSuggestionsRefs.current[i] = r)}
+														className={`fx min-w-52 px-2 text-nowrap text-xl hover:bg-mg2 ${parentTagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
+														onClick={(e) => addParentTag(e, tag)}
+													>
+														{tag}
+													</button>
+												);
+											})}
+										</div>
+									)}
+								</div>
+							)}
+							{rootParents &&
+								rootParents.map((tag) => (
+									<Link
+										key={tag}
+										to={`/tags/${encodeURIComponent(tag)}`}
+										className="text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 text-fg2 border-fg2"
+										onClick={(e) => showTagInLeftPanel(tag, e)}
 									>
 										{tag}
 									</Link>
 								))}
-							</div>
-						)}
+						</div>
 						<TagEditor
 							subTaggingLineage={subTaggingLineage}
-							_ref={(r) => {
-								!rootParents && (focusedElementAfterSearch.current = r);
-								rootTagIpt.current = r;
-							}}
+							_ref={rootTagIpt}
 							recTag={rootTag}
 							onSubtag={addSubtag}
 							onRename={renameTag}
 							onRemove={removeTag}
-							onKeyDown={(e) => {
-								if (!rootParents?.length && e.key === 'Tab' && e.shiftKey) {
-									e.preventDefault();
-									searchIpt.current?.focus();
-								}
-							}}
+							onLinkClick={showTagInLeftPanel}
 						/>
 					</>
 				)}

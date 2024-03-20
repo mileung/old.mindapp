@@ -1,9 +1,15 @@
-import { ArrowTopRightOnSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/react/16/solid';
+import {
+	ArrowTopRightOnSquareIcon,
+	LinkIcon,
+	TrashIcon,
+	XMarkIcon,
+} from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecursiveTag, getNodes, getNodesArr } from '../utils/tags';
 import { useLastUsedTags, useTagTree } from './GlobalState';
 import { matchSorter } from 'match-sorter';
+import { Link } from 'react-router-dom';
 
 const TagEditor = ({
 	_ref,
@@ -11,15 +17,17 @@ const TagEditor = ({
 	recTag,
 	parentTag,
 	onRename,
+	onLinkClick,
 	onSubtag,
 	onRemove,
 	onKeyDown,
 }: {
-	_ref?: (r: HTMLInputElement | null) => void | React.MutableRefObject<HTMLInputElement | null>;
+	_ref?: ((r: HTMLInputElement | null) => void) | React.MutableRefObject<HTMLInputElement | null>;
 	subTaggingLineage: string[];
 	recTag: RecursiveTag;
 	parentTag?: string;
 	onRename: (oldTag: string, newTag: string, newSubTaggingLineage: string[]) => Promise<any>;
+	onLinkClick: (tag: string, e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 	onSubtag: (tag: string, parentTag: string, newSubTaggingLineage: string[]) => Promise<any>;
 	onRemove: (currentTagLabel: string, parentTag?: string) => void;
 	onKeyDown?: React.DOMAttributes<HTMLInputElement>['onKeyDown'];
@@ -38,6 +46,7 @@ const TagEditor = ({
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const defaultLabel = useRef(recTag.label);
 	const editingIpt = useRef<null | HTMLInputElement>(null);
+	const tagLnk = useRef<HTMLAnchorElement>(null);
 	const makeSubsetBtn = useRef<HTMLButtonElement>(null);
 	const removeBtn = useRef<HTMLButtonElement>(null);
 	const addingIpt = useRef<HTMLInputElement>(null);
@@ -57,6 +66,7 @@ const TagEditor = ({
 		setTimeout(() => {
 			if (
 				document.activeElement !== editingIpt.current &&
+				document.activeElement !== tagLnk.current &&
 				document.activeElement !== makeSubsetBtn.current &&
 				document.activeElement !== removeBtn.current
 			) {
@@ -104,8 +114,9 @@ const TagEditor = ({
 						}
 					}}
 					defaultValue={recTag.label}
-					placeholder="Edit tag with Enter"
-					className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-bg1 hover:border-mg2 focus:border-fg2"
+					placeholder="Edit tag"
+					size={1}
+					className="h-8 min-w-52 border-b-2 text-xl font-medium transition border-bg1 hover:border-mg2 focus:border-fg2"
 					onBlur={onEditingBlur}
 					onFocus={() => editingSet(true)}
 					onKeyDown={(e) => {
@@ -134,6 +145,15 @@ const TagEditor = ({
 				/>
 				{editing && (
 					<>
+						<Link
+							className="xy h-8 w-8 group"
+							ref={tagLnk}
+							onBlur={onEditingBlur}
+							to={`/tags/${recTag.label}`}
+							onClick={(e) => onLinkClick(recTag.label, e)}
+						>
+							<LinkIcon className="h-6 w-6 mt-1 rotate-90 transition text-fg2 group-hover:text-fg1" />
+						</Link>
 						<button
 							className="xy h-8 w-8 group"
 							title="Add subtags"
@@ -174,6 +194,7 @@ const TagEditor = ({
 						parentTag={recTag.label}
 						recTag={subRecTag}
 						onRename={onRename}
+						onLinkClick={onLinkClick}
 						onSubtag={onSubtag}
 						onRemove={onRemove}
 					/>
@@ -183,8 +204,9 @@ const TagEditor = ({
 						<InputAutoWidth
 							ref={addingIpt}
 							autoFocus
-							placeholder="Add tags with Enter"
-							className="h-8 min-w-[15rem] border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
+							placeholder="Subtag"
+							size={1}
+							className="h-8 min-w-52 border-b-2 text-xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
 							onClick={() => suggestTagsSet(true)}
 							onFocus={() => suggestTagsSet(true)}
 							value={tagFilter}
