@@ -2,12 +2,13 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { day } from './time';
+import { Workspace } from '../types/Workspace';
 
 const homeDir = os.homedir();
 export const mindappRootPath = path.join(homeDir, '.mindapp');
-export const timelinePath = path.join(mindappRootPath, 'timeline');
-export const settingsPath = path.join(mindappRootPath, 'settings.json');
-export const tagTreePath = path.join(mindappRootPath, 'tagTree.json');
+export const rootSettingsPath = path.join(mindappRootPath, 'root-settings.json');
+export const defaultWorkspacePath = path.join(mindappRootPath, 'workspace');
+export const testWorkspacePath = path.join(mindappRootPath, 'test-workspace');
 
 export const writeFile = (filePath: string, json: string) => {
 	fs.writeFileSync(filePath, json);
@@ -47,35 +48,6 @@ export function isDirectory(path: string) {
 	return fs.statSync(path).isDirectory();
 }
 
-export function getFilePath(fileName: string) {
-	const [createDate, authorId, spaceId] = fileName.split('.');
-	const thirdDotIndex = fileName.indexOf(
-		'.',
-		createDate.length + authorId.length + spaceId.length + 2,
-	);
-	const fileNameAfterThirdDot =
-		thirdDotIndex === -1 ? undefined : fileName.substring(1 + thirdDotIndex);
-	return calcFilePath(+createDate, +authorId || null, +spaceId || null, fileNameAfterThirdDot);
-}
-
-export function calcFilePath(
-	createDate: number,
-	authorId: null | number,
-	spaceId: null | number,
-	fileNameSuffix: string = 'json',
-) {
-	const daysSince1970 = +createDate / day;
-	return path.join(
-		timelinePath,
-		Math.floor(daysSince1970 / 10000) * 10000 + '', // 27.38 years
-		Math.floor(daysSince1970 / 1000) * 1000 + '',
-		Math.floor(daysSince1970 / 100) * 100 + '',
-		Math.floor(daysSince1970 / 10) * 10 + '',
-		Math.floor(daysSince1970) + '',
-		`${createDate}.${authorId}.${spaceId}.${fileNameSuffix}`,
-	);
-}
-
 export const deletePath = (path: string) => {
 	try {
 		if (fs.existsSync(path)) {
@@ -92,3 +64,32 @@ export const deletePath = (path: string) => {
 		console.error(`Error deleting path: ${path}`, error);
 	}
 };
+
+export function calcThoughtPath(
+	createDate: number,
+	authorId: null | number,
+	spaceId: null | number,
+	fileNameSuffix: string = 'json',
+) {
+	const daysSince1970 = +createDate / day;
+	return path.join(
+		Workspace.current.timelinePath,
+		Math.floor(daysSince1970 / 10000) * 10000 + '', // 27.38 years
+		Math.floor(daysSince1970 / 1000) * 1000 + '',
+		Math.floor(daysSince1970 / 100) * 100 + '',
+		Math.floor(daysSince1970 / 10) * 10 + '',
+		Math.floor(daysSince1970) + '',
+		`${createDate}.${authorId}.${spaceId}.${fileNameSuffix}`,
+	);
+}
+
+export function getFilePath(fileName: string) {
+	const [createDate, authorId, spaceId] = fileName.split('.');
+	const thirdDotIndex = fileName.indexOf(
+		'.',
+		createDate.length + authorId.length + spaceId.length + 2,
+	);
+	const fileNameAfterThirdDot =
+		thirdDotIndex === -1 ? undefined : fileName.substring(1 + thirdDotIndex);
+	return calcThoughtPath(+createDate, +authorId || null, +spaceId || null, fileNameAfterThirdDot);
+}

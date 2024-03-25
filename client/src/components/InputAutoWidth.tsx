@@ -1,4 +1,4 @@
-import { useRef, InputHTMLAttributes, forwardRef } from 'react';
+import { useRef, InputHTMLAttributes, forwardRef, useEffect } from 'react';
 
 const resize = (node: HTMLInputElement) => {
 	node.style.width = '0px';
@@ -7,6 +7,10 @@ const resize = (node: HTMLInputElement) => {
 
 const InputAutoWidth = forwardRef((props: InputHTMLAttributes<HTMLInputElement>, parentRef) => {
 	const internalRef = useRef<null | HTMLInputElement>(null);
+
+	useEffect(() => {
+		setTimeout(() => internalRef.current && resize(internalRef.current), 0);
+	}, [props.value, props.defaultValue]);
 
 	return (
 		<input

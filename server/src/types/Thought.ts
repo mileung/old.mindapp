@@ -1,6 +1,6 @@
 import path from 'path';
 import Ajv from 'ajv';
-import { calcFilePath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
+import { calcThoughtPath, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
 import { sortUniArr } from '../utils/tags';
 import { addToAllPaths, addPathsByTag } from '../utils';
 
@@ -85,12 +85,11 @@ export class Thought {
 		this.mentionedByIds = mentionedByIds;
 		// Mentioning thoughts by id in the content instead of having multiple parentIds for said mentioned props prevents cyclic graph connections which would make finding root thoughts impossible.
 
-		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Thought: ' + JSON.stringify(this));
 
 		// Saving these props is not necessary
 		this.id = createDate + '.' + authorId + '.' + spaceId;
-		this.filePath = calcFilePath(createDate, authorId, spaceId);
+		this.filePath = calcThoughtPath(createDate, authorId, spaceId);
 
 		if (write) {
 			if (parentId) {
@@ -182,7 +181,7 @@ export class Thought {
 
 	static parse(thoughtId: string) {
 		const [createDate, authorId, spaceId] = thoughtId.split('.');
-		return Thought.read(calcFilePath(+createDate, +authorId || null, +spaceId || null));
+		return Thought.read(calcThoughtPath(+createDate, +authorId || null, +spaceId || null));
 	}
 
 	static read(filePath: string) {

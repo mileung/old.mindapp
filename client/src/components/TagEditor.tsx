@@ -7,7 +7,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { RecursiveTag, getNodes, getNodesArr } from '../utils/tags';
-import { useLastUsedTags, useTagTree } from './GlobalState';
+import { useLastUsedTags, useTagTree } from '../utils/state';
 import { matchSorter } from 'match-sorter';
 import { Link } from 'react-router-dom';
 

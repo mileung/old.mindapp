@@ -1,15 +1,11 @@
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Results from '../components/Results';
-import { TagTree, sortUniArr } from '../utils/tags';
-import { useTagTree } from '../components/GlobalState';
-import { useMemo } from 'react';
+import { useTagTree } from '../utils/state';
+import { TagTree, bracketRegex, getTags, sortUniArr } from '../utils/tags';
 
-export const bracketRegex = /\[([^\[\]]+)]/g;
 const quoteRegex = /"([^"]+)"/g;
-export function getTags(input: string) {
-	return (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
-}
-export function getQuotes(input: string) {
+function getQuotes(input: string) {
 	return (input.match(quoteRegex) || []).map((match) => match.slice(1, -1));
 }
 

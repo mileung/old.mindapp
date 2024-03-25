@@ -1,7 +1,12 @@
-import { PlusIcon, XCircleIcon } from '@heroicons/react/16/solid';
-// import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
+import {
+	// ArrowUpOnSquareIcon,
+	// ChatBubbleBottomCenterTextIcon,
+	// ListBulletIcon,
+	PlusIcon,
+	XCircleIcon,
+} from '@heroicons/react/16/solid';
 import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { useTagTree, usePersona, useLastUsedTags } from './GlobalState';
+import { useTagTree, usePersona, useLastUsedTags } from '../utils/state';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
@@ -49,6 +54,7 @@ export const ThoughtWriter = ({
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState(0);
 	const [suggestTags, suggestTagsSet] = useState(false);
+	// const [freeForm, freeFormSet] = useState(true);
 	const contentTextArea = parentRef || useRef<null | HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -128,7 +134,8 @@ export const ThoughtWriter = ({
 	const defaultValue = useMemo(
 		() =>
 			jsonParam?.initialContent ||
-			(Array.isArray(initialContent) ? initialContent.join('') : initialContent),
+			(Array.isArray(initialContent) ? initialContent.join('') : initialContent) ||
+			'',
 		[],
 	);
 
@@ -149,8 +156,13 @@ export const ThoughtWriter = ({
 				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
-						contentTextArea.current?.blur();
-						onContentBlur && onContentBlur();
+						const ok =
+							contentTextArea.current?.value === defaultValue ||
+							confirm(`You are about to discard this draft`);
+						if (ok) {
+							contentTextArea.current?.blur();
+							onContentBlur && onContentBlur();
+						}
 					}
 					// if (e.key === 'Tab' && !e.shiftKey) {
 					// 	e.preventDefault();
@@ -265,8 +277,19 @@ export const ThoughtWriter = ({
 				)}
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
-				{/* <button TODO: upload files
-					className="px-2.5 py-0.5 transition text-fg2 hover:text-fg1"
+				{/* <button
+					className="px-2.5 p-0.5 transition text-fg2 hover:text-fg1"
+					onClick={() => freeFormSet(!freeForm)}
+				>
+					{freeForm ? (
+						<ListBulletIcon className="h-6 w-6" />
+					) : (
+						<ChatBubbleBottomCenterTextIcon className="h-6 w-6" />
+					)}
+				</button> */}
+				{/* <button
+					//  TODO: upload files
+					className="px-2.5 p-0.5 transition text-fg2 hover:text-fg1"
 					onClick={() => writeThought()}
 				>
 					<ArrowUpOnSquareIcon className="h-6 w-6" />

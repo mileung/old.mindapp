@@ -75,3 +75,8 @@ export const getNodes = (tagTree: TagTree) => {
 export const getNodesArr = (nodes: ReturnType<typeof getNodes>) => {
 	return [...nodes.loners, ...nodes.parents, ...nodes.children];
 };
+
+export const bracketRegex = /\[([^\[\]]+)]/g;
+export function getTags(input: string) {
+	return (input.match(bracketRegex) || []).map((match) => match.slice(1, -1));
+}

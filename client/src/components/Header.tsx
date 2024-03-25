@@ -3,11 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon, TagIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
-import { useLastUsedTags, useTagTree } from './GlobalState';
+import { useLastUsedTags, useRootSettings, useTagTree } from '../utils/state';
 import { matchSorter } from 'match-sorter';
-import { bracketRegex, getTags } from '../pages/Search';
 import { useKeyPress } from '../utils/keyboard';
-import { getNodes, getNodesArr } from '../utils/tags';
+import { bracketRegex, getNodes, getNodesArr, getTags } from '../utils/tags';
+// import { TableCellsIcon } from '@heroicons/react/24/outline';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -36,6 +36,7 @@ window.addEventListener('scroll', () => {
 export default function Header() {
 	// useSpaceId
 	// usePersona
+	const [rootSettings] = useRootSettings();
 	const navigate = useNavigate();
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
@@ -123,7 +124,11 @@ export default function Header() {
 				onMouseDown={() => setGlobalCssVariable('header-opacity', '1')}
 			>
 				<Link to="/" className="fx shrink-0">
-					<img src={logo} alt="logo" className="h-7" />
+					<img
+						src={logo}
+						alt="logo"
+						className={`h-7 ${!rootSettings?.usingDefaultWorkspacePath && 'grayscale'}`}
+					/>
 					<p className="ml-2 text-2xl font-black">Mindapp</p>
 				</Link>
 				<div className="relative mx-2 w-full max-w-3xl">
@@ -195,11 +200,14 @@ export default function Header() {
 					)}
 				</div>
 				<div className="fx">
-					<Link ref={gearLnk} to="/settings" className="xy w-10 text-fg2 transition hover:text-fg1">
-						<CogIcon className="h-7 w-7" />
-					</Link>
+					{/* <Link ref={gearLnk} to="/tables" className="xy w-10 text-fg2 transition hover:text-fg1">
+						<TableCellsIcon className="h-7 w-7" />
+					</Link> */}
 					<Link to="/tags" className="xy w-10 text-fg2 transition hover:text-fg1">
 						<TagIcon className="h-7 w-7" />
+					</Link>
+					<Link ref={gearLnk} to="/settings" className="xy w-10 text-fg2 transition hover:text-fg1">
+						<CogIcon className="h-7 w-7" />
 					</Link>
 				</div>
 			</header>

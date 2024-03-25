@@ -1,10 +1,10 @@
 import { RequestHandler } from 'express';
-import { parseFile, tagTreePath, touchIfDne } from '../utils/files';
+import { parseFile } from '../utils/files';
 import TagTree from '../types/TagTree';
+import { Workspace } from '../types/Workspace';
 
 const getTagTree: RequestHandler = (req, res) => {
-	touchIfDne(tagTreePath, JSON.stringify(new TagTree({ parents: {}, loners: [] })));
-	const tagTree = parseFile<TagTree>(tagTreePath);
+	const tagTree = parseFile<TagTree>(Workspace.current.tagTreePath);
 	res.send(tagTree);
 };
 

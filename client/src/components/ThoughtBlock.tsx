@@ -98,7 +98,7 @@ export default function ThoughtBlock({
 					<div className="mr-1 fx gap-2 text-fg2">
 						<Link
 							target="_blank"
-							to={`/${thoughtId}`}
+							to={`/thought/${thoughtId}`}
 							className="text-sm font-bold transition text-fg2 hover:text-fg1"
 						>
 							{formatTimestamp(thought.createDate)}
@@ -206,7 +206,6 @@ export default function ThoughtBlock({
 													'This thought has already been archived in the Git snapshot history; delete it anyways?',
 												);
 											if (!ok) return;
-
 											const newRoots = [...roots] as RecThought[];
 											let pointer = newRoots;
 											for (let i = 0; i < rootsIndices.length - 1; i++) {

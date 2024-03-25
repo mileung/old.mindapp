@@ -1,11 +1,13 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
-import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
-import { debouncedSnapshot } from '../utils/git';
+import { parseFile, writeObjectFile } from '../utils/files';
 import { shouldBeLoner, sortObjectProps, sortUniArr } from '../utils/tags';
+import { Workspace } from '../types/Workspace';
+import { debouncedSnapshot } from '../utils/git';
 
 const addTag: RequestHandler = (req, res) => {
-	const tagTree = parseFile<TagTree>(tagTreePath);
+	const cw = Workspace.current;
+	const tagTree = parseFile<TagTree>(cw.tagTreePath);
 	const tag = (req.body.tag || '').trim();
 	const parentTag = (req.body.parentTag || '').trim();
 	if (tag) {
@@ -22,7 +24,7 @@ const addTag: RequestHandler = (req, res) => {
 		}
 	}
 	sortObjectProps(tagTree.parents);
-	writeObjectFile(tagTreePath, tagTree);
+	writeObjectFile(cw.tagTreePath, tagTree);
 	res.send({});
 	debouncedSnapshot();
 };

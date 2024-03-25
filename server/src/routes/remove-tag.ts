@@ -1,11 +1,13 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
-import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
-import { debouncedSnapshot } from '../utils/git';
+import { parseFile, writeObjectFile } from '../utils/files';
 import { shouldBeLoner, sortUniArr } from '../utils/tags';
+import { Workspace } from '../types/Workspace';
+import { debouncedSnapshot } from '../utils/git';
 
 const removeTag: RequestHandler = (req, res) => {
-	const tagTree = parseFile<TagTree>(tagTreePath);
+	const cw = Workspace.current;
+	const tagTree = parseFile<TagTree>(cw.tagTreePath);
 	const { tag, parentTag } = req.body as { tag: string; parentTag: string };
 
 	if (tag) {
@@ -50,8 +52,7 @@ const removeTag: RequestHandler = (req, res) => {
 			// Don not do `delete index.thoughtPathsByTag[tag];` here!
 		}
 	}
-
-	writeObjectFile(tagTreePath, tagTree);
+	writeObjectFile(cw.tagTreePath, tagTree);
 	res.send({});
 	debouncedSnapshot();
 };

@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { Thought } from '../types/Thought';
-import { isDirectory, isFile, timelinePath } from './files';
+import { isDirectory, isFile } from './files';
+import { Workspace } from '../types/Workspace';
 
 type Index = {
 	allThoughtPaths: string[];
@@ -82,7 +83,9 @@ function findClosestIndex(arr: string[], targetCreateDate: number) {
 }
 
 export function setUpIndex() {
-	const l0DirPath = timelinePath;
+	index.allThoughtPaths = [];
+	index.thoughtPathsByTag = {};
+	const l0DirPath = Workspace.current.timelinePath;
 	const l1Dirs = fs.readdirSync(l0DirPath).sort((a, b) => +a - +b);
 	for (let i = 0; i < l1Dirs.length; i++) {
 		const l1Dir = l1Dirs[i];
@@ -133,7 +136,7 @@ export function setUpIndex() {
 			}
 		}
 	}
-	// console.log('index:', index.thoughtPathsByTag.Snapchat);
+	// console.log('index:', index);
 }
 
 /*

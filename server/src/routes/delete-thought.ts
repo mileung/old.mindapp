@@ -1,14 +1,12 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
-import { debouncedSnapshot } from '../utils/git';
 import { deletePath } from '../utils/files';
 import { removeFromAllPaths, removePathsByTag } from '../utils';
+import { debouncedSnapshot } from '../utils/git';
 
 const deleteThought: RequestHandler = (req: Request & { body: Thought }, res) => {
 	let thoughtId = req.body.thoughtId as string;
-
 	const thought = Thought.parse(thoughtId);
-
 	const softDelete = !!thought.childrenIds?.length || thought.mentionedByIds?.length;
 
 	thought.tags.forEach((tag) => removePathsByTag(tag, thought));

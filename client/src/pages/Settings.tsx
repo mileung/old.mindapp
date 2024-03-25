@@ -1,15 +1,43 @@
-import { useCallback, useRef } from 'react';
-import { useSettings } from '../components/GlobalState';
+import { useCallback, useEffect, useRef } from 'react';
+import { useRootSettings, useWorkspace } from '../utils/state';
 import InputAutoWidth from '../components/InputAutoWidth';
 import { buildUrl, ping, post } from '../utils/api';
+import { ArrowTopRightOnSquareIcon } from '@heroicons/react/16/solid';
 
-export type Settings = {
+export type RootSettings = {
+	defaultWorkspacePath: string;
+	testWorkspacePath: string;
 	theme: 'System' | 'Light' | 'Dark';
-	gitSnapshotsEnabled: boolean;
-	gitRemoteUrl: null | string;
-	preferredName: string;
-	developerMode: boolean;
+	usingDefaultWorkspacePath: boolean;
 };
+
+export type Workspace = {
+	gitSnapshotsEnabled: boolean;
+	gitRemoteUrl?: string;
+};
+
+export type Persona = {
+	preferredName: string;
+};
+
+function Button({
+	on,
+	onClick,
+	label,
+}: {
+	on: boolean;
+	onClick: React.MouseEventHandler<HTMLButtonElement>;
+	label: string;
+}) {
+	return (
+		<button
+			className={`text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 ${on ? 'text-fg1 border-fg1' : 'text-fg2 border-fg2'}`}
+			onClick={onClick}
+		>
+			{label}
+		</button>
+	);
+}
 
 function InputPicker({
 	title,
@@ -27,13 +55,12 @@ function InputPicker({
 			<p className="leading-4 font-semibold">{title}</p>
 			<div className="mt-1.5 fx gap-2">
 				{options.map((option) => (
-					<button
+					<Button
 						key={option}
-						className={`text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 ${value === option ? 'text-fg1 border-fg1' : 'text-fg2 border-fg2'}`}
+						on={value === option}
 						onClick={() => onSubmit(option)}
-					>
-						{option}
-					</button>
+						label={option}
+					/>
 				))}
 			</div>
 		</div>
@@ -42,15 +69,14 @@ function InputPicker({
 
 function InputSetter({
 	title,
-	placeholder,
 	defaultValue,
 	onSubmit,
 }: {
-	title: string;
-	placeholder: string;
+	title?: string;
 	defaultValue: string;
 	onSubmit: (value: string) => void;
 }) {
+	const draft = useRef(defaultValue);
 	const autoWidthIpt = useRef<HTMLInputElement>(null);
 	const keyDown = useRef(false);
 
@@ -59,81 +85,118 @@ function InputSetter({
 		onSubmit(value);
 	}, [onSubmit]);
 
+	useEffect(() => {
+		autoWidthIpt.current!.value = defaultValue;
+		draft.current = defaultValue;
+	}, [defaultValue]);
+
 	return (
 		<div>
-			<p className="leading-4 text font-semibold">{title}</p>
+			{title && <p className="leading-4 text font-semibold">{title}</p>}
 			<InputAutoWidth
 				ref={autoWidthIpt}
 				defaultValue={defaultValue}
-				placeholder={placeholder}
-				className="leading-3 min-w-[15rem] border-b-2 text-2xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
+				onChange={(e) => (draft.current = e.target.value)}
+				placeholder="Enter to submit"
+				className="leading-3 min-w-52 border-b-2 text-2xl font-medium transition border-mg2 hover:border-fg2 focus:border-fg2"
 				onKeyDown={(e) => {
 					keyDown.current = true;
-					e.key === 'Enter' && (updateSetting(), autoWidthIpt.current?.blur());
-					e.key === 'Escape' && autoWidthIpt.current?.blur();
+					if (e.key === 'Escape') {
+						draft.current = defaultValue;
+						autoWidthIpt.current?.blur();
+					}
+					if (e.key === 'Enter') {
+						updateSetting();
+						autoWidthIpt.current?.blur();
+					}
 				}}
 				onKeyUp={() => (keyDown.current = true)}
-				onBlur={() => !keyDown.current && updateSetting()}
+				onBlur={() => (autoWidthIpt.current!.value = draft.current)}
 			/>
 		</div>
 	);
 }
 
 export default function Settings() {
-	const [settings, settingsSet] = useSettings();
+	const [rootSettings, rootSettingsSet] = useRootSettings();
+	const [workspace, workspaceSet] = useWorkspace();
 
-	const updateSettings = useCallback(
-		(update: Partial<Settings>) => {
-			ping<Settings>(buildUrl('update-settings'), post(update)).catch((err) =>
-				alert(JSON.stringify(err)),
-			);
+	const updateRootSettings = useCallback((update: Partial<RootSettings>) => {
+		ping<RootSettings>(buildUrl('update-root-settings'), post(update))
+			.then((u) => rootSettingsSet(u))
+			.catch((err) => alert(JSON.stringify(err)));
+	}, []);
+
+	const updateWorkspace = useCallback(
+		(update: Partial<Workspace>) => {
+			ping<Workspace>(buildUrl('update-workspace'), post(update))
+				.then((u) => workspaceSet(u))
+				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[settings],
+		[rootSettings?.usingDefaultWorkspacePath],
 	);
 
+	// console.log('rootSettings:', rootSettings);
 	return (
-		settings && (
+		rootSettings !== undefined &&
+		workspace !== undefined && (
 			<div className="p-3 space-y-3">
-				<InputPicker
-					title="Theme"
-					options={['System', 'Light', 'Dark']}
-					value={settings.theme}
-					// @ts-ignore // QUESTION how do I change the type of onSubmit for Settings['theme']
-					onSubmit={(theme: Settings['theme']) => {
-						updateSettings({ theme });
-						settingsSet({ ...settings, theme });
-					}}
-				/>
-				<InputPicker
-					title="Git snapshots"
-					options={['Off', 'On']}
-					value={settings.gitSnapshotsEnabled ? 'On' : 'Off'}
-					onSubmit={(v) => {
-						updateSettings({ gitSnapshotsEnabled: v === 'On' });
-						settingsSet({ ...settings, gitSnapshotsEnabled: v === 'On' });
-					}}
-				/>
-				<InputSetter
-					title="Keybase git url"
-					placeholder="Keybase git url"
-					defaultValue={settings.gitRemoteUrl || ''}
-					onSubmit={(v) => updateSettings({ gitRemoteUrl: v })}
-				/>
-				{/* <InputPicker
-					title="Developer mode"
-					options={['Off', 'On']}
-					value={settings.developerMode ? 'On' : 'Off'}
-					onSubmit={(v) => {
-						updateSettings({ developerMode: v === 'On' });
-						settingsSet({ ...settings, developerMode: v === 'On' });
-					}}
-				/> */}
-				{/* <p className="mt-3 leading-4 text font-semibold">{'Preferred name'}</p>
-			<InputSetter
-				placeholder="No name"
-				defaultValue={settings.preferredName}
-				onSubmit={(v) => updateSettings({ preferredName: v })}
-			/> */}
+				<p className="text-2xl font-semibold">Root settings</p>
+				{rootSettings && (
+					<>
+						<InputPicker
+							title="Theme"
+							options={['System', 'Light', 'Dark']}
+							value={rootSettings.theme}
+							// @ts-ignore // QUESTION how do I change the type of onSubmit for Settings['theme']
+							onSubmit={(theme: Settings['theme']) => updateRootSettings({ theme })}
+						/>
+						<div className="">
+							<InputPicker
+								title="Workspace Path"
+								options={['Default', 'Test']}
+								value={rootSettings.usingDefaultWorkspacePath ? 'Default' : 'Test'}
+								// @ts-ignore
+								onSubmit={(mode: 'Default' | 'Test') => {
+									const usingDefault = mode === 'Default';
+									updateRootSettings({ usingDefaultWorkspacePath: usingDefault });
+								}}
+							/>
+							<button
+								// disabled={rootSettings.usingDefaultWorkspacePath}
+								className="mt-1 fx gap-1 transition text-fg2 hover:text-fg1"
+								onClick={() => {
+									ping(buildUrl('show-current-workspace'));
+								}}
+							>
+								<p className="leading-7 text-2xl font-medium">
+									{rootSettings.usingDefaultWorkspacePath
+										? rootSettings.defaultWorkspacePath
+										: rootSettings.testWorkspacePath}
+								</p>
+								<ArrowTopRightOnSquareIcon className="h-6 w-6" />
+							</button>
+						</div>
+					</>
+				)}
+				<p className="text-2xl font-semibold">Workspace settings</p>
+				{!workspace ? (
+					<p className="text-2xl font-semibold text-fg2">No workspace found</p>
+				) : (
+					<>
+						<InputPicker
+							title="Git snapshots"
+							options={['On', 'Off']}
+							value={workspace.gitSnapshotsEnabled ? 'On' : 'Off'}
+							onSubmit={(v) => updateWorkspace({ gitSnapshotsEnabled: v === 'On' })}
+						/>
+						<InputSetter
+							title="Keybase git url"
+							defaultValue={workspace.gitRemoteUrl || ''}
+							onSubmit={(v) => updateWorkspace({ gitRemoteUrl: v })}
+						/>
+					</>
+				)}
 			</div>
 		)
 	);

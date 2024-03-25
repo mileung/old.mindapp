@@ -1,8 +1,8 @@
 import { Request, RequestHandler } from 'express';
 import { Thought } from '../types/Thought';
 import { addPathsByTag, index, removePathsByTag } from '../utils';
-import { debouncedSnapshot } from '../utils/git';
 import { addTagsByLabel } from '../utils/tags';
+import { debouncedSnapshot } from '../utils/git';
 
 const writeThought: RequestHandler = (req: Request & { body: Thought }, res) => {
 	// return res.send({});

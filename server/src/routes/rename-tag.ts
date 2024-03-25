@@ -1,16 +1,18 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
-import { parseFile, tagTreePath, writeObjectFile } from '../utils/files';
+import { parseFile, writeObjectFile } from '../utils/files';
 import { sortObjectProps, sortUniArr } from '../utils/tags';
-import { debouncedSnapshot } from '../utils/git';
 import { Thought } from '../types/Thought';
 import { index } from '../utils';
+import { Workspace } from '../types/Workspace';
+import { debouncedSnapshot } from '../utils/git';
 
 const renameTag: RequestHandler = (req, res) => {
 	const oldTag: string = req.body.oldTag;
 	const newTag: string = req.body.newTag.trim();
+	const cw = Workspace.current;
 	if (oldTag === newTag) return res.send({});
-	const tagTree = parseFile<TagTree>(tagTreePath);
+	const tagTree = parseFile<TagTree>(cw.tagTreePath);
 	if (tagTree.parents[oldTag]) {
 		tagTree.parents[newTag] = tagTree.parents[oldTag];
 		delete tagTree.parents[oldTag];
@@ -36,7 +38,7 @@ const renameTag: RequestHandler = (req, res) => {
 	});
 
 	sortObjectProps(tagTree.parents);
-	writeObjectFile(tagTreePath, tagTree);
+	writeObjectFile(cw.tagTreePath, tagTree);
 
 	(index.thoughtPathsByTag[oldTag] || []).forEach((id) => {
 		const thought = Thought.read(id);

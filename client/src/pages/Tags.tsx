@@ -1,7 +1,7 @@
 import { ChevronRightIcon, PlusIcon } from '@heroicons/react/16/solid';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useLastUsedTags, useTagTree } from '../components/GlobalState';
+import { useLastUsedTags, useTagTree } from '../utils/state';
 import { buildUrl, ping, post } from '../utils/api';
 import { TagTree, getNodes, getNodesArr, getParentsMap, makeRootTag } from '../utils/tags';
 import TagEditor from '../components/TagEditor';
