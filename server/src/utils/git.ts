@@ -1,15 +1,15 @@
 import simpleGit from 'simple-git';
 import { debounce } from './performance';
 import { minute } from './time';
-import { Workspace } from '../types/Workspace';
+import { WorkingDirectory } from '../types/WorkingDirectory';
 
 const snapshot = () => {
-	const cw = Workspace.current;
+	const cw = WorkingDirectory.current;
 	if (!cw.gitSnapshotsEnabled) return;
 	const git = simpleGit(cw.dirPath);
 	console.log('snapshot');
 	git //
-		.add(['timeline', 'workspace-settings.json', 'tag-tree.json'])
+		.add(['timeline', 'tag-tree.json'])
 		.commit(`Snapshot at ${Date.now()}`);
 	if (cw.gitRemoteUrl) {
 		const remoteName = 'origin';

@@ -1,13 +1,10 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
-import { parseFile, writeObjectFile } from '../utils/files';
 import { shouldBeLoner, sortUniArr } from '../utils/tags';
-import { Workspace } from '../types/Workspace';
 import { debouncedSnapshot } from '../utils/git';
 
 const removeTag: RequestHandler = (req, res) => {
-	const cw = Workspace.current;
-	const tagTree = parseFile<TagTree>(cw.tagTreePath);
+	const tagTree = TagTree.get();
 	const { tag, parentTag } = req.body as { tag: string; parentTag: string };
 
 	if (tag) {
@@ -49,10 +46,10 @@ const removeTag: RequestHandler = (req, res) => {
 			});
 			// When you remove a root tag from the tags page, it does and should not remove the tag from
 			// every thought that has that tag.
-			// Don not do `delete index.thoughtPathsByTag[tag];` here!
+			// Don not do `delete index.thoughtIdsByTag[tag];` here!
 		}
 	}
-	writeObjectFile(cw.tagTreePath, tagTree);
+	tagTree.overwrite();
 	res.send({});
 	debouncedSnapshot();
 };

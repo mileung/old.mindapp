@@ -1,12 +1,11 @@
 import { useParams } from 'react-router-dom';
 import { useMemo } from 'react';
 import Results from '../components/Results';
-
-const thoughtIdRegex = /^\d{13}\.(null|\d{13})\.(null|\d{13})$/;
+import { isThoughtId } from '../utils/thought';
 
 export default function ThoughtId() {
 	const { thoughtId } = useParams();
-	const validThoughtId = useMemo(() => thoughtId && thoughtIdRegex.test(thoughtId), [thoughtId]);
+	const validThoughtId = useMemo(() => thoughtId && isThoughtId(thoughtId), [thoughtId]);
 
 	return (
 		<div className="p-3">

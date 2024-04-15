@@ -6,14 +6,24 @@ import {
 	XCircleIcon,
 } from '@heroicons/react/16/solid';
 import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
-import { useTagTree, usePersona, useLastUsedTags } from '../utils/state';
+import {
+	useTagTree,
+	usePersonas,
+	useLastUsedTags,
+	useActivePersona,
+	useActiveSpace,
+	useMentionedThoughts,
+	useDefaultNames,
+} from '../utils/state';
 import { buildUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
-import { Thought } from '../utils/thought';
+import { Thought, separateMentions } from '../utils/thought';
 import { useKeyPress } from '../utils/keyboard';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
+import FieldsEditor from './FieldsEditor';
+import { isJsonRecord, isStringRecord } from '../utils/js';
 
 export const ThoughtWriter = ({
 	parentRef,
@@ -25,17 +35,23 @@ export const ThoughtWriter = ({
 	onContentBlur,
 }: {
 	parentRef?: MutableRefObject<null | HTMLTextAreaElement>;
-	initialContent?: string | string[];
+	initialContent?: Thought['content'];
 	initialTags?: string[];
 	editId?: string;
 	parentId?: string;
 	onWrite?: (
-		res: { mentionedThoughts: Record<string, Thought>; thought: Thought },
+		res: {
+			defaultNames: Record<string, string>;
+			mentionedThoughts: Record<string, Thought>;
+			thought: Thought;
+		},
 		ctrlKey: boolean,
 		altKey: boolean,
 	) => void;
 	onContentBlur?: () => void;
 }) => {
+	const activePersona = useActivePersona();
+	const activeSpace = useActiveSpace();
 	const [searchParams] = useSearchParams();
 	const jsonString = searchParams.get('json');
 	const jsonParam = useMemo(
@@ -47,14 +63,16 @@ export const ThoughtWriter = ({
 	);
 	const navigate = useNavigate();
 	const { pathname } = useLocation();
+	const [defaultNames, defaultNamesSet] = useDefaultNames();
+	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
-	const [personaId] = usePersona();
+	const [personas] = usePersonas();
 	const [tags, tagsSet] = useState<string[]>([...initialTags, ...(jsonParam?.initialTags || [])]);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState(0);
 	const [suggestTags, suggestTagsSet] = useState(false);
-	// const [freeForm, freeFormSet] = useState(true);
+	const [freeForm, freeFormSet] = useState(true);
 	const contentTextArea = parentRef || useRef<null | HTMLTextAreaElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -84,43 +102,70 @@ export const ThoughtWriter = ({
 	const writeThought = useCallback(
 		(ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
-			if (!content) return;
+			if (!content || !personas) return;
 			jsonString && navigate(pathname, { replace: true });
 			contentTextArea.current!.style.height = 'auto';
 			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
-			ping<{ mentionedThoughts: Record<string, Thought>; thought: Thought }>(
+			const trimmedContent = content.trim();
+			ping<{
+				defaultNames: Record<string, string>;
+				mentionedThoughts: Record<string, Thought>;
+				thought: Thought;
+			}>(
 				buildUrl('write-thought'),
 				post({
 					parentId,
-					createDate: +editId?.split('.', 1)[0]! || undefined,
-					authorId: personaId,
-					spaceId: null,
-					content: separateMentions(content.trim()),
+					...(editId
+						? { editId }
+						: { authorId: activePersona?.id || '', spaceId: activeSpace?.id || '' }),
+					content: isJsonRecord(trimmedContent)
+						? (() => {
+								const obj = JSON.parse(trimmedContent);
+								Object.entries(obj).forEach(([key, val]) => {
+									if (typeof val !== 'string')
+										obj[key] = typeof val === 'object' ? JSON.stringify(val) : String(val);
+								});
+								return obj;
+							})()
+						: separateMentions(trimmedContent),
 					tags: sortUniArr([...tags, additionalTag].filter((a) => !!a)),
 				}),
 			)
 				.then((res) => {
-					// caching is premature optimization atm. Just ping local sever to update ui
+					console.log('res:', res);
+					defaultNamesSet({ ...defaultNames, ...res.defaultNames });
+					mentionedThoughtsSet({ ...mentionedThoughts, ...res.mentionedThoughts });
 					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagsSet([]);
 					tagFilterSet('');
 					suggestTagsSet(false);
 					contentTextArea.current!.focus();
-
 					ping<TagTree>(buildUrl('get-tag-tree'))
 						.then((data) => tagTreeSet(data))
 						.catch((err) => alert(JSON.stringify(err)));
 				})
 				.catch((err) => alert(JSON.stringify(err)));
 		},
-		[jsonString, suggestedTags, tagIndex, tagFilter, editId, parentId, personaId, onWrite, tags],
-	);
+		[
+			activePersona,
+			activeSpace,
+			jsonString,
+			suggestedTags,
+			tagIndex,
+			tagFilter,
+			editId,
+			parentId,
+			personas,
+			onWrite,
+			tags,
+		],
+	); //
 
 	useKeyPress(
 		{ key: 'Enter', modifiers: ['Meta', 'Alt', 'Control'] },
 		(e) => {
-			console.log('e:', e);
+			// console.log('e:', e);
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
 				document.activeElement === tagIpt.current;
@@ -131,45 +176,51 @@ export const ThoughtWriter = ({
 		[suggestedTags, writeThought],
 	);
 
-	const defaultValue = useMemo(
-		() =>
-			jsonParam?.initialContent ||
-			(Array.isArray(initialContent) ? initialContent.join('') : initialContent) ||
-			'',
-		[],
-	);
+	const defaultValue = useMemo(() => {
+		const initialStuff = initialContent || jsonParam?.initialContent;
+		return Array.isArray(initialStuff)
+			? initialStuff.join('')
+			: isStringRecord(initialStuff)
+				? JSON.stringify(initialStuff, null, 2)
+				: (initialStuff as string) || '';
+	}, []);
 
 	return (
 		<div className="w-full flex flex-col">
-			<TextareaAutoHeight
-				autoFocus
-				defaultValue={defaultValue}
-				ref={contentTextArea}
-				onFocus={(e) => {
-					// focuses on the end of the input value when editing
-					const tempValue = e.target.value;
-					e.target.value = '';
-					e.target.value = tempValue;
-				}}
-				name="content"
-				placeholder="New thought"
-				className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
-				onKeyDown={(e) => {
-					if (e.key === 'Escape') {
-						const ok =
-							contentTextArea.current?.value === defaultValue ||
-							confirm(`You are about to discard this draft`);
-						if (ok) {
-							contentTextArea.current?.blur();
-							onContentBlur && onContentBlur();
+			{freeForm ? (
+				<TextareaAutoHeight
+					autoFocus
+					defaultValue={defaultValue}
+					ref={contentTextArea}
+					onFocus={(e) => {
+						// focuses on the end of the input value when editing
+						const tempValue = e.target.value;
+						e.target.value = '';
+						e.target.value = tempValue;
+					}}
+					name="content"
+					placeholder="New thought"
+					className="rounded text-xl font-thin font-mono px-3 py-2 w-full max-w-full resize-y min-h-36 bg-mg1 transition brightness-[0.97] dark:brightness-75 focus:brightness-100 focus:dark:brightness-100"
+					onKeyDown={(e) => {
+						if (e.key === 'Escape') {
+							const ok =
+								onContentBlur &&
+								(contentTextArea.current?.value === defaultValue ||
+									confirm(`You are about to discard this draft`));
+							if (ok) {
+								contentTextArea.current?.blur();
+								onContentBlur && onContentBlur();
+							}
 						}
-					}
-					// if (e.key === 'Tab' && !e.shiftKey) {
-					// 	e.preventDefault();
-					// 	tagIpt.current?.focus();
-					// }
-				}}
-			/>
+						// if (e.key === 'Tab' && !e.shiftKey) {
+						// 	e.preventDefault();
+						// 	tagIpt.current?.focus();
+						// }
+					}}
+				/>
+			) : (
+				<FieldsEditor />
+			)}
 			<div className="mt-1 relative">
 				{!!tags.length && (
 					<div
@@ -282,9 +333,9 @@ export const ThoughtWriter = ({
 					onClick={() => freeFormSet(!freeForm)}
 				>
 					{freeForm ? (
-						<ListBulletIcon className="h-6 w-6" />
-					) : (
 						<ChatBubbleBottomCenterTextIcon className="h-6 w-6" />
+					) : (
+						<ListBulletIcon className="h-6 w-6" />
 					)}
 				</button> */}
 				{/* <button
@@ -304,18 +355,3 @@ export const ThoughtWriter = ({
 		</div>
 	);
 };
-
-const thoughtIdRegex = /\d{13}\.(null|\d{13})\.(null|\d{13})/g;
-function separateMentions(text: string) {
-	const matches = text.matchAll(thoughtIdRegex);
-	const result: string[] = [];
-	let start = 0;
-	for (const match of matches) {
-		result.push(text.substring(start, match.index), match[0]);
-		start = match.index! + match[0].length;
-	}
-	if (start < text.length) {
-		result.push(text.substring(start));
-	}
-	return result.length > 1 ? result : text;
-}

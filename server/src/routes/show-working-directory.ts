@@ -1,16 +1,14 @@
 import child_process from 'child_process';
 import { RequestHandler } from 'express';
-import { RootSettings } from '../types/RootSettings';
-import { defaultWorkspacePath, testWorkspacePath } from '../utils/files';
+import { WorkingDirectory } from '../types/WorkingDirectory';
 
-const showCurrentWorkspace: RequestHandler = (req, res) => {
-	const rootSettings = RootSettings.get();
-	const dirPath = rootSettings.usingDefaultWorkspacePath ? defaultWorkspacePath : testWorkspacePath;
+const showWorkingDirectory: RequestHandler = (req, res) => {
+	const { dirPath } = WorkingDirectory.current;
 	dirPath && dirOpen(dirPath);
 	res.send({});
 };
 
-export default showCurrentWorkspace;
+export default showWorkingDirectory;
 
 function dirOpen(dirPath: string) {
 	let command = '';

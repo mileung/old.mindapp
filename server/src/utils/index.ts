@@ -2,63 +2,62 @@ import fs from 'fs';
 import path from 'path';
 import { Thought } from '../types/Thought';
 import { isDirectory, isFile } from './files';
-import { Workspace } from '../types/Workspace';
+import { WorkingDirectory } from '../types/WorkingDirectory';
 
 type Index = {
-	allThoughtPaths: string[];
-	thoughtPathsByTag: Record<string, undefined | string[]>;
+	allThoughtIds: string[];
+	thoughtIdsByTag: Record<string, undefined | string[]>;
 };
 
 export const index: Index = {
-	allThoughtPaths: [],
-	thoughtPathsByTag: {},
+	allThoughtIds: [],
+	thoughtIdsByTag: {},
 };
 
 export function addPathsByTag(tag: string, thought: Thought) {
-	index.thoughtPathsByTag[tag] = addToSortedIndex(index.thoughtPathsByTag[tag] || [], thought);
+	index.thoughtIdsByTag[tag] = addToSortedIndex(index.thoughtIdsByTag[tag] || [], thought);
 }
 
 export function addToAllPaths(thought: Thought) {
-	addToSortedIndex(index.allThoughtPaths, thought);
+	addToSortedIndex(index.allThoughtIds, thought);
 }
 
 function addToSortedIndex(arr: string[], thought: Thought) {
-	const latestCreateDate = !arr.length ? 0 : Thought.read(arr[arr.length - 1]).createDate;
+	const latestCreateDate = !arr.length ? 0 : Thought.parse(arr[arr.length - 1]).createDate;
 	if (thought.createDate > latestCreateDate) {
-		arr.push(thought.filePath);
+		arr.push(thought.id);
 	} else {
 		const i = findClosestIndex(arr, thought.createDate);
-		if (arr[i] !== thought.filePath) arr.splice(i, 0, thought.filePath);
+		if (arr[i] !== thought.id) arr.splice(i, 0, thought.id);
 	}
 	return arr;
 }
 
 // export function closestIndexInPathsByTag(tag: string, targetCreateDate: number) {
-// 	return findClosestIndex(index.thoughtPathsByTag[tag], targetCreateDate);
+// 	return findClosestIndex(index.thoughtIdsByTag[tag], targetCreateDate);
 // }
 
 export function closestIndexInAllPaths(targetCreateDate: number) {
-	return findClosestIndex(index.allThoughtPaths, targetCreateDate);
+	return findClosestIndex(index.allThoughtIds, targetCreateDate);
 }
 
 export function removeFromAllPaths(thought: Thought) {
-	removeFromArr(index.allThoughtPaths, thought);
+	removeFromArr(index.allThoughtIds, thought);
 }
 
 export function removePathsByTag(tag: string, thought: Thought) {
-	const arr = index.thoughtPathsByTag[tag];
+	const arr = index.thoughtIdsByTag[tag];
 	arr && removeFromArr(arr, thought);
 }
 
 function removeFromArr(arr: string[], thought: Thought) {
 	const i = findIndex(arr, thought.createDate);
-	if (i === -1) throw new Error('Thought not in index');
-	arr.splice(i, 1);
+	if (i !== -1) arr.splice(i, 1);
 }
 
 function findIndex(arr: string[], targetCreateDate: number) {
 	const i = findClosestIndex(arr, targetCreateDate);
-	return Thought.read(arr[i]).createDate === targetCreateDate ? i : -1;
+	return Thought.parse(arr[i]).createDate === targetCreateDate ? i : -1;
 }
 
 function findClosestIndex(arr: string[], targetCreateDate: number) {
@@ -68,7 +67,10 @@ function findClosestIndex(arr: string[], targetCreateDate: number) {
 	let currentCreateDate = 0;
 	while (low <= high) {
 		closestIndex = Math.floor((low + high) / 2);
-		currentCreateDate = Thought.read(arr[closestIndex]).createDate;
+		if (!arr[closestIndex]) {
+			console.log('targetCreateDate:', targetCreateDate);
+		}
+		currentCreateDate = Thought.parse(arr[closestIndex]).createDate;
 		if (currentCreateDate === targetCreateDate) return closestIndex;
 		if (currentCreateDate < targetCreateDate) {
 			low = closestIndex + 1;
@@ -83,9 +85,9 @@ function findClosestIndex(arr: string[], targetCreateDate: number) {
 }
 
 export function setUpIndex() {
-	index.allThoughtPaths = [];
-	index.thoughtPathsByTag = {};
-	const l0DirPath = Workspace.current.timelinePath;
+	index.allThoughtIds = [];
+	index.thoughtIdsByTag = {};
+	const l0DirPath = WorkingDirectory.current.timelinePath;
 	const l1Dirs = fs.readdirSync(l0DirPath).sort((a, b) => +a - +b);
 	for (let i = 0; i < l1Dirs.length; i++) {
 		const l1Dir = l1Dirs[i];
@@ -112,21 +114,21 @@ export function setUpIndex() {
 						const l5DirPath = path.join(l4DirPath, l5Dir);
 						if (!isDirectory(l5DirPath)) continue;
 						const jsonFiles = fs.readdirSync(l5DirPath).sort((a, b) => {
-							a = a.split('.', 1)[0];
-							b = b.split('.', 1)[0];
+							a = a.split('_', 1)[0];
+							b = b.split('_', 1)[0];
 							return +a - +b;
 						});
 						for (let i = 0; i < jsonFiles.length; i++) {
 							const fileName = jsonFiles[i];
-							const createDate = Number(fileName.split('.', 1)[0]);
+							const createDate = Number(fileName.split('_', 1)[0]);
 							if (isNaN(createDate)) continue;
 							const filePath = path.join(l5DirPath, fileName);
 							if (isFile(filePath) && fileName.endsWith('.json')) {
 								const thought = Thought.read(filePath);
-								index.allThoughtPaths.push(filePath);
+								index.allThoughtIds.push(thought.id);
 								thought.tags.forEach((tag) => {
-									index.thoughtPathsByTag[tag] = (index.thoughtPathsByTag[tag] || []).concat(
-										filePath,
+									index.thoughtIdsByTag[tag] = (index.thoughtIdsByTag[tag] || []).concat(
+										thought.id,
 									);
 								});
 							}

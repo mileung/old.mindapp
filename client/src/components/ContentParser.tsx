@@ -1,39 +1,80 @@
-import React, { ReactNode, useMemo, useState } from 'react';
-import { Thought } from '../utils/thought';
+import React, { useMemo, useState } from 'react';
+import { Thought, isThoughtId } from '../utils/thought';
 import MentionedThought from './MentionedThought';
-import { Link } from 'react-router-dom';
-import { formatTimestamp } from '../utils/time';
 import { PlayIcon, XMarkIcon } from '@heroicons/react/16/solid';
+import MiniMentionedThought from './MiniMentionedThought';
+import { useMentionedThoughts } from '../utils/state';
 
 export default function ContentParser({
 	disableMentions,
-	mentionedThoughts,
-	content,
+	thought,
 }: {
 	disableMentions?: boolean;
-	mentionedThoughts?: Record<string, Thought>;
-	content: string | string[];
-}): ReactNode[] {
+	thought: Thought;
+}) {
+	const [mentionedThoughts] = useMentionedThoughts();
 	const htmlNodes = useMemo(() => {
-		const arr = Array.isArray(content) ? content : [content];
-		return arr.map((str, i) => {
-			if (i % 2) {
-				return disableMentions ? (
-					<Link
-						key={i}
-						target="_blank"
-						to={`/${str}`}
-						className="px-1 border border-mg2 rounded text-sm font-bold transition text-fg2 hover:border-fg1 hover:text-fg1"
-					>
-						{formatTimestamp(+str.substring(0, str.indexOf('.')))}
-					</Link>
-				) : (
-					<MentionedThought key={i} thought={mentionedThoughts![str]} />
-				);
-			}
-			return parseMd(str);
-		});
-	}, [content]);
+		let { content } = thought;
+		if (typeof content === 'string') content = [content];
+		if (Array.isArray(content)) {
+			return content.map((str, i) => {
+				if (i % 2) {
+					return disableMentions ? (
+						<MiniMentionedThought key={i} thoughtId={str} />
+					) : (
+						<MentionedThought key={i} thought={mentionedThoughts![str]} />
+					);
+				}
+				return parseMd(str);
+			});
+		}
+		const longestKeyLength = Math.max(...Object.keys(content).map((key) => key.length));
+
+		return (
+			<div className="">
+				{Object.entries(content).map(([key, val]) => {
+					return (
+						<div key={key} className="flex">
+							<span className="font-mono font-semibold whitespace-pre">
+								{key.padEnd(longestKeyLength, ' ')}
+							</span>
+							<div className="border-l-2 border-fg2 ml-2 pl-2">
+								{isThoughtId(val) ? (
+									<MiniMentionedThought thoughtId={val} />
+								) : (
+									<span className="whitespace-pre-wrap inline font-semibold">{val}</span>
+								)}
+							</div>
+						</div>
+					);
+				})}
+			</div>
+			// <div className="flex">
+			// 	<div className="">
+			// 		{Object.keys(content).map((key) => {
+			// 			return (
+			// 				<div key={key} className="">
+			// 					<span className="font-semibold">{key}</span>
+			// 				</div>
+			// 			);
+			// 		})}
+			// 	</div>
+			// 	<div className="border-l-2 border-fg2 ml-2 pl-2">
+			// 		{Object.values(content).map((val, i) => {
+			// 			return (
+			// 				<div key={i} className="">
+			// 					{isThoughtId(val) ? (
+			// 						<MiniMentionedThought key={i} thoughtId={val} />
+			// 					) : (
+			// 						<span className="whitespace-pre-wrap inline font-semibold">{val}</span>
+			// 					)}
+			// 				</div>
+			// 			);
+			// 		})}
+			// 	</div>
+			// </div>
+		);
+	}, [thought.content]);
 
 	return htmlNodes;
 }
@@ -64,7 +105,7 @@ function parseMd(text: string) {
 	return result.map((tag, i) => {
 		// console.log('tag:', tag);
 		if (typeof tag === 'string') {
-			return tag === '' ? null : (
+			return !tag ? null : (
 				<p key={i} className="whitespace-pre-wrap inline font-medium">
 					{tag}
 				</p>

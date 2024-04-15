@@ -58,9 +58,12 @@ const TagEditor = ({
 		if (!nodesArr || !suggestTags) return [];
 		let arr = matchSorter(nodesArr, tagFilter);
 		trimmedFilter ? arr.push(trimmedFilter) : arr.unshift(...lastUsedTags);
-		arr = [...new Set(arr)];
+		const ignoredSuggestedTags = new Set(
+			recTag.subRecTags?.map((t) => t.label).concat(recTag.label),
+		);
+		arr = [...new Set(arr)].filter((tag) => !ignoredSuggestedTags.has(tag));
 		return arr;
-	}, [nodesArr, suggestTags, tagFilter, trimmedFilter, lastUsedTags]);
+	}, [nodesArr, suggestTags, tagFilter, trimmedFilter, lastUsedTags, recTag]);
 	const onEditingBlur = useCallback(() => {
 		editingIpt.current!.value = defaultLabel.current;
 		setTimeout(() => {

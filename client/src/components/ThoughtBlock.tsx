@@ -1,22 +1,21 @@
 import {
+	// ArrowDownTrayIcon,
 	ArrowTopRightOnSquareIcon,
-	FingerPrintIcon,
+	EllipsisHorizontalIcon,
 	MinusIcon,
 	PencilIcon,
 	PlusIcon,
-	XMarkIcon,
-	DocumentArrowDownIcon,
-	DocumentArrowUpIcon,
 	TrashIcon,
-	EllipsisHorizontalIcon,
+	XMarkIcon,
 } from '@heroicons/react/16/solid';
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatTimestamp, minute } from '../utils/time';
-import { ThoughtWriter } from './ThoughtWriter';
-import ContentParser from './ContentParser';
 import { buildUrl, ping, post } from '../utils/api';
-import { RecThought, Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
+import { RecThought, getThoughtId } from '../utils/thought';
+import { minute } from '../utils/time';
+import ContentParser from './ContentParser';
+import ThoughtBlockHeader from './ThoughtBlockHeader';
+import { ThoughtWriter } from './ThoughtWriter';
 
 function Highlight({
 	shadow,
@@ -52,10 +51,8 @@ export default function ThoughtBlock({
 	thought,
 	roots,
 	onRootsChange,
-	onMentions,
 	onNewRoot = () => {},
 	rootsIndices,
-	mentionedThoughts,
 	depth = 0,
 	initiallyLinking,
 	highlightedId,
@@ -63,10 +60,8 @@ export default function ThoughtBlock({
 	thought: RecThought;
 	roots: (null | RecThought)[];
 	onRootsChange: (newRoots: (null | RecThought)[]) => void;
-	onMentions: (mentionedThoughts: Record<string, Thought>) => void;
 	onNewRoot?: () => void;
 	rootsIndices: number[];
-	mentionedThoughts: Record<string, Thought>;
 	depth?: number;
 	initiallyLinking?: boolean;
 	highlightedId?: string;
@@ -95,36 +90,7 @@ export default function ThoughtBlock({
 					</div>
 				</button>
 				<div className="mt-0.5 flex-1">
-					<div className="mr-1 fx gap-2 text-fg2">
-						<Link
-							target="_blank"
-							to={`/thought/${thoughtId}`}
-							className="text-sm font-bold transition text-fg2 hover:text-fg1"
-						>
-							{formatTimestamp(thought.createDate)}
-						</Link>
-						<button
-							className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
-							onClick={() => markdownSet(!markdown)}
-						>
-							{markdown ? (
-								<DocumentArrowDownIcon className="absolute h-4 w-4" />
-							) : (
-								<DocumentArrowUpIcon className="absolute h-4 w-4" />
-							)}
-						</button>
-						{/* <button className="h-4 w-4 xy hover:text-fg1 transition" onClick={() => {}}>
-							<ArrowDownTrayIcon className="absolute h-5 w-5" />
-						</button> */}
-						{/* <button className="">Reference</button>
-						<button className="">Bookmark</button> */}
-						<button
-							className="h-4 w-4 xy hover:text-fg1 transition"
-							onClick={() => copyToClipboardAsync(`${thoughtId}`)}
-						>
-							<FingerPrintIcon className="absolute h-4 w-4" />
-						</button>
-					</div>
+					<ThoughtBlockHeader thought={thought} markdownSet={markdownSet} markdown={markdown} />
 					<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 						{editing ? (
 							<div className="mt-1">
@@ -133,8 +99,7 @@ export default function ThoughtBlock({
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
 									initialTags={thought.tags}
-									onWrite={({ mentionedThoughts, thought }, ctrlKey, altKey) => {
-										onMentions(mentionedThoughts);
+									onWrite={({ thought }, ctrlKey, altKey) => {
 										editingSet(false);
 										moreOptionsOpenSet(false);
 										ctrlKey && linkingSet(true);
@@ -155,23 +120,25 @@ export default function ThoughtBlock({
 							<>
 								{thought.content ? (
 									markdown ? (
-										<ContentParser
-											mentionedThoughts={mentionedThoughts}
-											content={thought.content}
-										/>
+										<ContentParser thought={thought} />
 									) : (
 										<p className="whitespace-pre-wrap break-all font-thin font-mono">
-											{thought.content}
+											{typeof thought.content === 'object'
+												? Array.isArray(thought.content)
+													? thought.content.join('')
+													: JSON.stringify(thought.content)
+												: thought.content}
 										</p>
 									)
 								) : (
 									<p className="font-semibold text-fg2 italic">No content</p>
 								)}
-								{!!thought.tags?.length && (
+								{!!thought.tags.length && (
 									<div className="flex flex-wrap gap-x-2">
 										{thought.tags.map((tag) => (
 											<Link
 												key={tag}
+												target="_blank"
 												to={`/search?${new URLSearchParams({ q: `[${tag}]` }).toString()}`}
 												className="font-bold leading-5 transition text-fg2 hover:text-fg1"
 											>
@@ -226,13 +193,13 @@ export default function ThoughtBlock({
 												.catch((err) => alert(JSON.stringify(err)));
 										}}
 									>
-										<TrashIcon className="absolute h-5 w-5" />
+										<TrashIcon className="absolute h-4 w-4" />
 									</button>
 									<button
 										className="h-4 w-4 xy hover:text-fg1 transition"
 										onClick={() => editingSet(!editing)}
 									>
-										<PencilIcon className="absolute h-5 w-5" />
+										<PencilIcon className="absolute h-4 w-4" />
 									</button>
 								</>
 							) : (
@@ -243,6 +210,14 @@ export default function ThoughtBlock({
 									<EllipsisHorizontalIcon className="absolute h-5 w-5" />
 								</button>
 							)}
+							{/* <button
+								className="h-4 w-4 xy hover:text-fg1 transition"
+								onClick={() => {
+									// TODO: save thoughts from the web
+								}}
+							>
+								<ArrowDownTrayIcon className="absolute h-5 w-5" />
+							</button> */}
 						</div>
 						{thought.children && (
 							<div className="mt-1 space-y-1">
@@ -251,12 +226,10 @@ export default function ThoughtBlock({
 										childThought && (
 											<ThoughtBlock
 												key={i}
-												mentionedThoughts={mentionedThoughts}
 												initiallyLinking={linkingThoughtId.current === getThoughtId(childThought)}
 												highlightedId={highlightedId}
 												roots={roots}
 												onRootsChange={onRootsChange}
-												onMentions={onMentions}
 												rootsIndices={[...rootsIndices, i]}
 												thought={childThought}
 												depth={depth + 1}
@@ -270,8 +243,7 @@ export default function ThoughtBlock({
 								<ThoughtWriter
 									parentId={thoughtId}
 									onContentBlur={() => linkingSet(false)}
-									onWrite={({ mentionedThoughts, thought }, ctrlKey, altKey) => {
-										onMentions(mentionedThoughts);
+									onWrite={({ thought }, ctrlKey, altKey) => {
 										altKey ? onNewRoot() : linkingSet(false);
 										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
 										const newRoots = [...roots] as RecThought[];

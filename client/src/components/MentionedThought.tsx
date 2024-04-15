@@ -1,58 +1,32 @@
-import {
-	DocumentArrowDownIcon,
-	DocumentArrowUpIcon,
-	FingerPrintIcon,
-} from '@heroicons/react/16/solid';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatTimestamp } from '../utils/time';
+import { Thought } from '../utils/thought';
 import ContentParser from './ContentParser';
-import { Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
+import ThoughtBlockHeader from './ThoughtBlockHeader';
 
 export default function MentionedThought({ thought }: { thought?: Thought }) {
-	// console.log('thought:', thought);
 	if (!thought) return null;
-
 	const [markdown, markdownSet] = useState(true);
-	const thoughtId = useMemo(() => getThoughtId(thought), [thought]);
 
 	return (
 		<div className={`py-1 px-1.5 border border-mg2 rounded`}>
-			<div className="fx gap-2 text-fg2">
-				<Link
-					target="_blank"
-					to={`/${thoughtId}`}
-					className="text-sm font-bold transition text-fg2 hover:text-fg1"
-				>
-					{formatTimestamp(thought.createDate)}
-				</Link>
-				<button
-					className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
-					onClick={() => markdownSet(!markdown)}
-				>
-					{markdown ? (
-						<DocumentArrowDownIcon className="absolute h-4 w-4" />
-					) : (
-						<DocumentArrowUpIcon className="absolute h-4 w-4" />
-					)}
-				</button>
-				<button
-					className="h-4 w-4 xy hover:text-fg1 transition"
-					onClick={() => copyToClipboardAsync(`${thoughtId}`)}
-				>
-					<FingerPrintIcon className="absolute h-4 w-4" />
-				</button>
-			</div>
+			<ThoughtBlockHeader thought={thought} markdownSet={markdownSet} markdown={markdown} />
 			{thought.content ? (
 				markdown ? (
-					<ContentParser disableMentions content={thought.content} />
+					<ContentParser disableMentions thought={thought} />
 				) : (
-					<p className="whitespace-pre-wrap break-all font-thin font-mono">{thought.content}</p>
+					<p className="whitespace-pre-wrap break-all font-thin font-mono">
+						{typeof thought.content === 'object'
+							? Array.isArray(thought.content)
+								? thought.content.join('')
+								: JSON.stringify(thought.content)
+							: thought.content}
+					</p>
 				)
 			) : (
 				<p className="font-semibold text-fg2 italic">No content</p>
 			)}
-			{!!thought.tags?.length && (
+			{!!thought.tags.length && (
 				<div className="flex flex-wrap gap-x-2">
 					{thought.tags.map((tag) => (
 						<Link

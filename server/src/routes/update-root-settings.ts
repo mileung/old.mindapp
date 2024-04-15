@@ -1,16 +1,11 @@
 import { RequestHandler } from 'express';
 import { RootSettings } from '../types/RootSettings';
-import { Workspace } from '../types/Workspace';
-import { defaultWorkspacePath, testWorkspacePath } from '../utils/files';
+import { WorkingDirectory } from '../types/WorkingDirectory';
 
 const updateRootSettings: RequestHandler = (req, res) => {
-	const rootSettings = RootSettings.get();
-	const newRootSettings = new RootSettings({ ...rootSettings, ...req.body });
-	newRootSettings.overwrite();
-	if (rootSettings.usingDefaultWorkspacePath !== newRootSettings.usingDefaultWorkspacePath) {
-		Workspace.current.setUp();
-	}
-	res.send({ ...newRootSettings, defaultWorkspacePath, testWorkspacePath });
+	const rootSettings = new RootSettings({ ...RootSettings.get(), ...req.body });
+	rootSettings.overwrite();
+	res.send({ rootSettings, workingDirectory: WorkingDirectory.current });
 };
 
 export default updateRootSettings;

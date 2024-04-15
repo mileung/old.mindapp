@@ -1,3 +1,5 @@
+console.log('Mindapp');
+
 addEventListener('keydown', (e) => {
 	if (
 		['µ', 'π'].includes(e.key) && // alt m or alt p
@@ -38,14 +40,17 @@ const urlSelectors: Record<
 	'www.youtube.com/watch': () => {
 		// @ts-ignore
 		const title: string = document.querySelector('h1.style-scope.ytd-watch-metadata')?.innerText;
-		const aTag = document.querySelector(
+		const nameTag = document.querySelector(
 			'#upload-info .yt-simple-endpoint.style-scope.yt-formatted-string',
-		)!;
-		const href = aTag.getAttribute('href');
-		const author: string = href?.startsWith('/channel/')
+		);
+		const ppHref = document
+			.querySelector('#owner > ytd-video-owner-renderer > a')!
+			.getAttribute('href');
+
+		const author: string = ppHref?.startsWith('/channel/')
 			? // @ts-ignore
-				aTag.innerText
-			: `YouTube${href?.slice(1)!}`;
+				nameTag.innerText
+			: `YouTube${ppHref?.slice(1)!}`;
 
 		const unwantedI = location.href.indexOf('&list=WL');
 
@@ -63,6 +68,13 @@ const urlSelectors: Record<
 
 		return { headline: findLargestText(), tags: [`YouTube${author}`] };
 	},
+	'www.youtube.com': () => {
+		const author = location.pathname.startsWith('/@')
+			? location.pathname.slice(1, location.pathname.indexOf('/', 1))
+			: null;
+		const tags = author ? ['YouTube Channel', `YouTube${author}`] : [];
+		return { headline: findLargestText(), tags };
+	},
 	'twitter.com': () => {
 		// @ts-ignore
 		const tweetText = document.querySelector('[data-testid="tweetText"]').innerText;
@@ -72,6 +84,17 @@ const urlSelectors: Record<
 			author = author.slice(0, i);
 		}
 		return { headline: tweetText, tags: [`Twitter@${author}`] };
+	},
+	'www.reddit.com': () => {
+		// @ts-ignore
+		const headline = document.querySelector('div.top-matter > p.title > a').innerText;
+		const subreddit = location.href.match(/\/(r\/[^/]+)/)?.[1];
+		return { headline, tags: subreddit ? [subreddit] : [] };
+	},
+	'news.ycombinator.com': () => {
+		// @ts-ignore
+		const headline = document.querySelector('.titleline a').innerText;
+		return { headline };
 	},
 	// 'www.perplexity.ai/search': () => {
 	// 	const copyButton = document.querySelector(

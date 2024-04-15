@@ -1,6 +1,4 @@
 import TagTree from '../types/TagTree';
-import { Workspace } from '../types/Workspace';
-import { parseFile, writeObjectFile } from './files';
 
 export type Indices = Record<string, string[]>;
 
@@ -13,8 +11,7 @@ export const sortUniArr = (a: string[]) => {
 };
 
 export const addTagsByLabel = (tags: string[]) => {
-	const { tagTreePath } = Workspace.current;
-	const tagTree = parseFile<TagTree>(tagTreePath);
+	const tagTree = TagTree.get();
 	const tagsWithRelatives = new Set<string>();
 	Object.entries(tagTree.parents).forEach(([parent, children]) => {
 		tagsWithRelatives.add(parent);
@@ -25,7 +22,7 @@ export const addTagsByLabel = (tags: string[]) => {
 			tags.map((t) => t.trim()).filter((tag) => tag && !tagsWithRelatives.has(tag)),
 		),
 	);
-	writeObjectFile(tagTreePath, tagTree);
+	tagTree.overwrite();
 };
 
 export function sortObjectProps(obj: Record<string, any>) {

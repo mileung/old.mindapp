@@ -2,17 +2,32 @@ import path from 'path';
 import simpleGit from 'simple-git';
 import { setUpIndex } from '../utils';
 import {
-	defaultWorkspacePath,
+	defaultWorkingDirectoryPath,
 	mkdirIfDne,
 	parseFile,
-	testWorkspacePath,
+	testWorkingDirectoryPath,
 	touchIfDne,
 	writeObjectFile,
 } from '../utils/files';
 import { RootSettings } from './RootSettings';
 import TagTree from './TagTree';
+import Ajv from 'ajv';
+import { Personas } from './Personas';
 
-export class Workspace {
+const ajv = new Ajv();
+
+const schema = {
+	type: 'object',
+	properties: {
+		dirPath: { type: 'string' },
+		gitSnapshotsEnabled: { type: 'boolean' },
+		gitRemoteUrl: { type: 'string' },
+	},
+	required: ['dirPath', 'gitSnapshotsEnabled'],
+	additionalProperties: false,
+};
+
+export class WorkingDirectory {
 	public dirPath: string;
 	public gitSnapshotsEnabled: boolean;
 	public gitRemoteUrl?: string;
@@ -29,19 +44,21 @@ export class Workspace {
 		this.dirPath = dirPath;
 		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
 		this.gitRemoteUrl = gitRemoteUrl;
+		if (!ajv.validate(schema, this))
+			throw new Error('Invalid Root Settings: ' + JSON.stringify(this));
 	}
 
 	static get current() {
 		const rootSettings = RootSettings.get();
-		const dirPath = rootSettings.usingDefaultWorkspacePath
-			? defaultWorkspacePath
-			: testWorkspacePath;
-		const newWorkspace = new Workspace({ dirPath });
+		const dirPath = rootSettings.usingDefaultWorkingDirectoryPath
+			? defaultWorkingDirectoryPath
+			: testWorkingDirectoryPath;
+		const newWorkingDirectory = new WorkingDirectory({ dirPath });
 		try {
-			const settings = parseFile<Workspace>(newWorkspace.settingsPath);
-			return new Workspace({ ...settings, dirPath });
+			const settings = parseFile<WorkingDirectory>(newWorkingDirectory.settingsPath);
+			return new WorkingDirectory({ ...settings, dirPath });
 		} catch (error) {
-			return newWorkspace;
+			return newWorkingDirectory;
 		}
 	}
 
@@ -49,8 +66,9 @@ export class Workspace {
 		setUpIndex();
 		mkdirIfDne(this.dirPath);
 		mkdirIfDne(this.timelinePath);
+		touchIfDne(this.personasPath, JSON.stringify(new Personas({})));
 		touchIfDne(this.tagTreePath, JSON.stringify(new TagTree({ parents: {}, loners: [] })));
-		touchIfDne(this.settingsPath, JSON.stringify(this.criticalProps));
+		touchIfDne(this.settingsPath, JSON.stringify(this.savedProps));
 		const git = simpleGit(this.dirPath);
 		git.checkIsRepo((e, isRepo) => {
 			if (e) return console.error('Error checking repository:', e);
@@ -75,16 +93,21 @@ export class Workspace {
 	}
 
 	get settingsPath() {
-		return path.join(this.dirPath, 'workspace-settings.json');
+		return path.join(this.dirPath, 'working-directory-settings.json');
 	}
 
-	get criticalProps() {
+	get personasPath() {
+		return path.join(this.dirPath, 'personas.json');
+	}
+
+	get savedProps() {
 		return {
 			gitSnapshotsEnabled: this.gitSnapshotsEnabled,
 			gitRemoteUrl: this.gitRemoteUrl,
 		};
 	}
+
 	overwrite() {
-		writeObjectFile(this.settingsPath, this.criticalProps);
+		writeObjectFile(this.settingsPath, this.savedProps);
 	}
 }

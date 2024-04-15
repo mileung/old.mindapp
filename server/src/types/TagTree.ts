@@ -1,4 +1,6 @@
 import Ajv from 'ajv';
+import { parseFile, writeObjectFile } from '../utils/files';
+import { WorkingDirectory } from './WorkingDirectory';
 
 const ajv = new Ajv();
 
@@ -27,5 +29,13 @@ export default class TagTree {
 
 		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid TagTree: ' + JSON.stringify(this));
+	}
+
+	static get() {
+		return new TagTree(parseFile(WorkingDirectory.current.tagTreePath));
+	}
+
+	overwrite() {
+		writeObjectFile(WorkingDirectory.current.tagTreePath, this);
 	}
 }
