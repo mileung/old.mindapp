@@ -26,9 +26,9 @@ const TagEditor = ({
 	subTaggingLineage: string[];
 	recTag: RecursiveTag;
 	parentTag?: string;
-	onRename: (oldTag: string, newTag: string, newSubTaggingLineage: string[]) => Promise<any>;
+	onRename: (oldTag: string, newTag: string, newSubTaggingLineage: string[]) => void | Promise<any>;
 	onLinkClick: (tag: string, e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
-	onSubtag: (tag: string, parentTag: string, newSubTaggingLineage: string[]) => Promise<any>;
+	onSubtag: (tag: string, parentTag: string, newSubTaggingLineage: string[]) => void | Promise<any>;
 	onRemove: (currentTagLabel: string, parentTag?: string) => void;
 	onKeyDown?: React.DOMAttributes<HTMLInputElement>['onKeyDown'];
 }) => {
@@ -90,7 +90,7 @@ const TagEditor = ({
 				tagToAdd,
 				recTag.label,
 				e.ctrlKey ? recTag.lineage.concat(tagToAdd) : e.altKey ? recTag.lineage : [],
-			).then(() => {
+			)?.then(() => {
 				setTimeout(() => {
 					addingIpt.current && (addingIpt.current.value = '');
 					tagFilterSet('');

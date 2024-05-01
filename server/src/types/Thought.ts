@@ -1,12 +1,15 @@
 import path from 'path';
 import Ajv from 'ajv';
-import { parseFile, touchIfDne, writeObjectFile } from '../utils/files';
+import { isFile, parseFile, touchIfDne, writeObjectFile } from '../utils/files';
 import { sortUniArr } from '../utils/tags';
-import { addToAllPaths, addPathsByTag } from '../utils';
 import { WorkingDirectory } from './WorkingDirectory';
 import { day } from '../utils/time';
 import { Personas } from './Personas';
-import { verifyMessage } from '../utils/security';
+import { verifyItem } from '../utils/security';
+import { drizzleClient } from '../db';
+import { thoughtsTable } from '../db/schema';
+import { and, desc, eq, isNull, like, or } from 'drizzle-orm';
+import env from '../utils/env';
 
 const ajv = new Ajv({ verbose: true });
 
@@ -15,251 +18,287 @@ const schema = {
 	properties: {
 		createDate: { type: 'number' },
 		authorId: { type: 'string' },
-		spaceId: { type: 'string' },
-		content: {
-			anyOf: [
-				{ type: 'string' },
-				{ type: 'array', items: { type: 'string' } },
-				{
-					type: 'object',
-					additionalProperties: { type: 'string' },
-				},
-			],
-		},
+		spaceHostname: { type: 'string' },
+		content: { type: 'string' },
 		tags: { type: 'array', items: { type: 'string' } },
 		parentId: { type: 'string' },
-		childrenIds: { type: 'array', items: { type: 'string' } },
-		mentionedByIds: { type: 'array', items: { type: 'string' } },
-		authorSignature: { type: 'string' },
-		spaceSignature: { type: 'string' },
+		signature: { type: 'string' },
 	},
-	required: ['createDate', 'authorId', 'spaceId', 'content'],
+	required: ['createDate', 'authorId', 'spaceHostname', 'content'],
 	additionalProperties: false,
 };
 
-const thoughtIdRegex = /^\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})$/;
+const thoughtIdsRegex = /\s\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})\s/g;
 
 export class Thought {
-	public id: string;
-	public filePath: string;
-	public children?: Thought[];
 	public createDate: number;
 	public authorId: string;
-	public spaceId: string;
-	// Above are temporary. Below are saved on disk.
-	public content: string | string[] | Record<string, string>;
+	public spaceHostname: string;
+	public content: string;
 	public tags: string[];
-	public parentId?: string;
-	public childrenIds?: string[];
-	public mentionedByIds?: string[];
-	public authorSignature?: string;
-	public spaceSignature?: string;
+	public parentId: string;
+	public signature: string;
+	public children?: Thought[];
 
 	constructor(
 		{
 			createDate,
-			authorId = '',
-			authorSignature,
-			spaceId = '',
+			authorId,
+			spaceHostname,
 			content,
 			tags,
 			parentId,
-			childrenIds,
-			mentionedByIds,
+			signature,
 		}: {
 			createDate: number;
-			authorId?: string;
-			authorSignature?: string;
-			spaceId?: string;
-			content: string | string[] | Record<string, string>;
-			tags?: string[];
-			// reactions: Record<string, number>; // emoji, personaId
-			parentId?: string;
-			childrenIds?: string[];
-			mentionedByIds?: string[];
+			authorId?: null | string;
+			spaceHostname?: null | string;
+			content?: null | string;
+			tags?: null | string[];
+			parentId?: null | string;
+			signature?: null | string;
 		},
 		write?: boolean,
 	) {
 		// save these props on disk
 		this.createDate = createDate;
-		this.authorId = authorId;
-		this.authorSignature = authorSignature;
-		this.spaceId = spaceId;
-		if (Array.isArray(content)) {
-			const lastI = content.length - 1;
-			content = content.map((segment, i) => {
-				if (i % 2) {
-					// TODO: validate other segments like file paths and update `get mentionedIds`
-					if (!thoughtIdRegex.test(segment)) throw new Error('Invalid mentioned Id');
-					return segment;
-				} else {
-					if (!i) return segment.trimStart();
-					if (i === lastI) return segment.trimEnd();
-					return segment;
-				}
-			});
-		} else if (typeof content === 'string') content = content.trim();
-		this.content = content;
+		this.authorId = authorId || '';
+		this.spaceHostname = spaceHostname || '';
+		this.content = (content || '').trim();
 		this.tags = sortUniArr((tags || []).map((t) => t.trim()));
-		this.parentId = parentId;
-		this.childrenIds = childrenIds;
-		this.mentionedByIds = mentionedByIds;
-		// Mentioning thoughts by id in the content instead of having multiple parentIds for said mentioned props prevents cyclic graph connections which would make finding root thoughts impossible.
-
-		if (authorId) {
-			if (authorSignature) {
-				const valid = verifyMessage(
-					JSON.stringify(this.standaloneProps),
-					authorId,
-					authorSignature,
-				);
-				if (!valid) throw new Error('Invalid authorSignature');
-			} else this.signAs(authorId);
-		} else if (this.authorSignature) throw new Error('authorId missing');
-
-		// this.spaceSignature;
+		this.parentId = parentId || '';
+		this.signature = signature || '';
 
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Thought: ' + JSON.stringify(this));
 
-		// Saving these props is not necessary
-		this.id = Thought.calcId(createDate, authorId, spaceId);
-		this.filePath = Thought.calcPath(createDate, authorId, spaceId);
-
-		if (write) {
-			if (parentId) {
-				const parent = Thought.parse(parentId);
-				parent.addChild(this.id);
-				this.parentId = parentId;
-			}
-			addToAllPaths(this);
-			this.mentionedIds.forEach((id) => Thought.parse(id).addMention(this.id));
-			this.write();
-			this.tags.forEach((tag) => addPathsByTag(tag, this));
-		}
-	}
-
-	get savedProps() {
-		return {
-			content: this.content,
-			tags: this.tags.length ? this.tags : undefined,
-			parentId: this.parentId,
-			childrenIds: this.childrenIds,
-			mentionedByIds: this.mentionedByIds,
-			authorSignature: this.authorSignature,
-			spaceSignature: this.spaceSignature,
-		};
+		this.verifySignature();
+		if (write) this.write();
 	}
 
 	get standaloneProps() {
 		return {
 			createDate: this.createDate,
-			authorId: this.authorId,
-			spaceId: this.spaceId,
-			content: this.content,
-			tags: this.tags,
-			parentId: this.parentId,
+			authorId: this.authorId || undefined,
+			spaceHostname: this.spaceHostname || undefined,
+			content: this.content || undefined,
+			tags: this.tags.length ? this.tags : undefined,
+			parentId: this.parentId || undefined,
 		};
 	}
 
-	get rootThought(): Thought {
-		return !this.parentId ? this : Thought.parse(this.parentId).rootThought;
+	get dbColumns() {
+		return {
+			...this.standaloneProps,
+			signature: this.signature || undefined,
+		};
 	}
 
-	get parent(): null | Thought {
-		return !this.parentId ? null : Thought.parse(this.parentId);
+	get savedProps() {
+		return {
+			content: this.content || undefined,
+			tags: this.tags.length ? this.tags : undefined,
+			parentId: this.parentId || undefined,
+			signature: this.signature || undefined,
+		};
+	}
+
+	get clientProps(): {
+		createDate: number;
+		authorId?: string;
+		signature?: string;
+		spaceHostname?: string;
+		content?: string;
+		tags?: string[];
+		parentId?: string;
+		children?: Thought['clientProps'][];
+		filedSaved?: true;
+	} {
+		return {
+			createDate: this.createDate,
+			authorId: this.authorId || undefined,
+			signature: this.signature || undefined,
+			spaceHostname: this.spaceHostname || undefined,
+			content: this.content || undefined,
+			tags: this.tags.length ? this.tags : undefined,
+			parentId: this.parentId || undefined,
+			children: this.children?.length ? this.children.map((c) => c.clientProps) : undefined,
+			filedSaved: env.isGlobalSpace ? undefined : isFile(this.filePath) || undefined,
+		} as const;
+	}
+
+	async getRootThought(): Promise<Thought> {
+		if (!this.parentId) return this;
+		const parentThought = await Thought.query(this.parentId);
+		if (!parentThought) throw new Error('Parent thought does not exist');
+		return parentThought.getRootThought();
 	}
 
 	get mentionedIds() {
-		return Array.isArray(this.content) ? this.content.filter((_, i) => !!(i % 2)) : [];
+		return [...` ${this.content} `.matchAll(thoughtIdsRegex)].map((match) => match[0]);
 	}
 
-	write() {
-		const written = touchIfDne(this.filePath, JSON.stringify(this.savedProps));
-		if (!written) {
-			// TODO: the client should retry so the user doesn't have to manually trigger again
-			throw new Error('Duplicate timestamp entry');
-		}
+	get id() {
+		return Thought.calcId(this.createDate, this.authorId, this.spaceHostname);
 	}
 
-	overwrite() {
-		writeObjectFile(this.filePath, this.savedProps);
+	get filePath() {
+		return Thought.calcFilePath(this.createDate, this.authorId, this.spaceHostname);
 	}
 
-	expand() {
-		const allMentionedIds = this.mentionedIds;
+	get reactions() {
+		// reactions: Record<string, number>; // emoji, personaId
+		return {};
+	}
+
+	async expand() {
+		const allMentionedIds = [...this.mentionedIds];
 		const allAuthorIds = [this.authorId];
-		this.children = !this.childrenIds
-			? this.childrenIds
-			: this.childrenIds.map((id) => {
-					const child = Thought.parse(id);
-					const expansion = child.expand();
+		this.children = await Promise.all(
+			(
+				await drizzleClient
+					.select()
+					.from(thoughtsTable)
+					.where(eq(thoughtsTable.parentId, this.id))
+					.orderBy(desc(thoughtsTable.createDate))
+			) // TODO: make asc an option
+				// .orderBy((oldToNew ? asc : desc)(thoughtsTable.createDate))
+				// .limit(8)
+				// .offset(0)
+				.map(async (row) => {
+					const child = new Thought(row);
+					const expansion = await child.expand();
 					allMentionedIds.push(...child.mentionedIds, ...expansion.allMentionedIds);
 					allAuthorIds.push(...expansion.allAuthorIds);
 					return child;
-				});
-		return { allMentionedIds, allAuthorIds: [...new Set(allAuthorIds)] };
-	}
-
-	addChild(thoughtId: string) {
-		this.childrenIds = sortUniArr((this.childrenIds || []).concat(thoughtId));
-		this.overwrite();
-	}
-
-	removeChild(thoughtId: string) {
-		const childIndex = (this.childrenIds || []).indexOf(thoughtId);
-		if (childIndex !== -1) {
-			this.childrenIds!.splice(childIndex, 1);
-			!this.childrenIds?.length && delete this.childrenIds;
-			this.overwrite();
-		}
-	}
-
-	addMention(thoughtId: string) {
-		this.mentionedByIds = this.mentionedByIds || [];
-		this.mentionedByIds = sortUniArr(this.mentionedByIds.concat(thoughtId));
-		this.overwrite();
-	}
-
-	removeMention(thoughtId: string) {
-		const thoughtIdIndex = (this.mentionedByIds || []).indexOf(thoughtId);
-		if (thoughtIdIndex !== -1) {
-			this.mentionedByIds!.splice(thoughtIdIndex, 1);
-			!this.mentionedByIds?.length && delete this.mentionedByIds;
-			this.overwrite();
-		}
-	}
-
-	signAs(personaId: string) {
-		this.authorSignature = Personas.get().signMessageAs(
-			JSON.stringify(this.standaloneProps),
-			personaId,
+				}),
 		);
-		this.authorId = personaId;
+		return {
+			clientProps: this.clientProps,
+			allMentionedIds,
+			allAuthorIds: [...new Set(allAuthorIds)],
+		};
 	}
 
-	static parse(thoughtId: string) {
-		const [createDate, authorId, spaceId] = thoughtId.split('_');
-		const filePath = Thought.calcPath(+createDate, authorId, spaceId);
-		return Thought.read(filePath);
+	signAsAuthor() {
+		this.signature = this.authorId
+			? Personas.get().getSignature(this.standaloneProps, this.authorId)
+			: '';
+	}
+
+	verifySignature() {
+		if (this.authorId) {
+			if (this.content) {
+				if (this.signature) {
+					const valid = verifyItem(this.standaloneProps, this.authorId, this.signature);
+					if (!valid) {
+						// this.signAsAuthor();
+						// this.overwrite();
+						throw new Error('Invalid signature');
+					}
+				} else {
+					// this.signAsAuthor();
+					// this.overwrite();
+					throw new Error('signature missing');
+				}
+			} else if (this.signature) {
+				console.log('Unnecessary signature', this);
+			}
+		}
+	}
+
+	async hasUserInteraction() {
+		// TODO: check for reactions
+		const [childOrMention] = await drizzleClient
+			.select()
+			.from(thoughtsTable)
+			.where(
+				or(
+					//
+					eq(thoughtsTable.parentId, this.id),
+					like(thoughtsTable.content, `%${this.id}%`),
+				),
+			)
+			.limit(1);
+		return !!childOrMention;
+	}
+
+	async write() {
+		if (!env.isGlobalSpace) {
+			const successfulTouch = touchIfDne(this.filePath, JSON.stringify(this.savedProps));
+			if (!successfulTouch) throw new Error('filePath taken');
+		}
+		const existingThought = await Thought.query(this.id);
+		if (existingThought) throw new Error('thoughtId taken');
+		return this.addToDb();
+	}
+
+	async overwrite() {
+		!env.isGlobalSpace && writeObjectFile(this.filePath, this.savedProps);
+		return await drizzleClient
+			.update(thoughtsTable)
+			.set(this.dbColumns)
+			.where(Thought.parseIdFilter(this.id));
+	}
+
+	async addToDb() {
+		return await drizzleClient // QUESTION: Why does removing async and await make this not work?
+			.insert(thoughtsTable)
+			.values(this.dbColumns);
+	}
+
+	async removeFromDb() {
+		const res = await drizzleClient // same here
+			.delete(thoughtsTable)
+			.where(Thought.parseIdFilter(this.id));
+		// console.log('this.id:', this.id);
+		// console.log('res:', res);
+		return res;
+	}
+
+	static async query(thoughtId: string) {
+		const [createDate, authorId, spaceHostname] = thoughtId.split('_', 3);
+		const [row] = await drizzleClient
+			.select()
+			.from(thoughtsTable)
+			.where(Thought.makeIdFilter(+createDate, authorId, spaceHostname))
+			.limit(1);
+		return row ? new Thought(row) : null;
+	}
+
+	static parseIdFilter(id: string) {
+		const [createDate, authorId, spaceHostname] = id.split('_', 3);
+		return Thought.makeIdFilter(+createDate, authorId, spaceHostname);
+	}
+
+	static makeIdFilter(createDate: number, authorId: string, spaceHostname: string) {
+		return and(
+			eq(thoughtsTable.createDate, +createDate),
+			authorId //
+				? eq(thoughtsTable.authorId, authorId)
+				: isNull(thoughtsTable.authorId),
+			spaceHostname //
+				? eq(thoughtsTable.spaceHostname, spaceHostname)
+				: isNull(thoughtsTable.spaceHostname),
+		);
 	}
 
 	static read(filePath: string) {
-		const [createDate, authorId, spaceId] = path
-			.basename(filePath.slice(0, filePath.length - 5))
-			.split('_');
+		const fileName = path.basename(filePath, path.extname(filePath));
+		const [createDate, authorId, spaceHostname] = parseSafeFilename(fileName).split('_');
 		return new Thought({
 			...parseFile<Thought>(filePath),
 			createDate: +createDate,
 			authorId,
-			spaceId,
+			spaceHostname,
 		});
 	}
 
-	static calcId(createDate: number, authorId: string, spaceId: string) {
-		return `${createDate}_${authorId}_${spaceId}`;
+	static calcId(createDate: number, authorId: string, spaceHostname: string) {
+		spaceHostname = spaceHostname.startsWith('localhost:') ? '' : spaceHostname;
+		return `${createDate}_${authorId}_${spaceHostname}`;
 	}
 
-	static calcPath(createDate: number, authorId: string, spaceId: string) {
+	static calcFilePath(createDate: number, authorId: string, spaceHostname: string) {
 		const daysSince1970 = +createDate / day;
 		return path.join(
 			WorkingDirectory.current.timelinePath,
@@ -268,7 +307,19 @@ export class Thought {
 			Math.floor(daysSince1970 / 100) * 100 + '',
 			Math.floor(daysSince1970 / 10) * 10 + '',
 			Math.floor(daysSince1970) + '',
-			`${Thought.calcId(createDate, authorId, spaceId)}.json`,
+			`${makeSafeFilename(Thought.calcId(createDate, authorId, spaceHostname))}.json`,
 		);
 	}
+}
+
+function makeSafeFilename(name: string) {
+	return name //
+		.replace('.', '_dot_')
+		.replace(':', '_colon_');
+}
+
+function parseSafeFilename(name: string) {
+	return name //
+		.replace('_dot_', '.')
+		.replace('_colon_', ':');
 }

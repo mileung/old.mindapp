@@ -1,10 +1,19 @@
 import { RequestHandler } from 'express';
-import { parseFile } from '../utils/files';
-import { WorkingDirectory } from '../types/WorkingDirectory';
+import { drizzleClient } from '../db';
+import { personasTable } from '../db/schema';
+import { inGroup } from '../utils/security';
+import { eq } from 'drizzle-orm';
 
-const getTagTree: RequestHandler = (req, res) => {
-	const ____ = parseFile<___>(WorkingDirectory.current.___);
-	res.send(____);
+const leaveSpace: RequestHandler = async (req, res) => {
+	const { message } = req.body as {
+		message: { from: string };
+	};
+	const fromExistingMember = await inGroup(message.from);
+	if (!fromExistingMember) throw new Error('Access denied');
+	if (fromExistingMember.frozen) throw new Error('Frozen persona');
+	await drizzleClient.delete(personasTable).where(eq(personasTable.id, message.from));
+
+	res.send({});
 };
 
-export default getTagTree;
+export default leaveSpace;

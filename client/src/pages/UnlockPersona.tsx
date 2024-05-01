@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import TextInput, { useTextInputRef } from '../components/TextInput';
-import { buildUrl, ping, post } from '../utils/api';
+import { makeUrl, ping, post } from '../utils/api';
 import { Button } from '../components/Button';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocalState, usePersonas } from '../utils/state';
@@ -21,7 +21,7 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 
 	const unlockPersona = useCallback(() => {
 		ping<{ arr: null | Personas }>(
-			buildUrl('unlock-persona'),
+			makeUrl('unlock-persona'),
 			post({
 				personaId,
 				password: passwordIpt.value,
@@ -33,16 +33,16 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 					if (!manage) {
 						navigate('/');
 						localStateSet({ ...localState, activePersonaId: personaId! });
-						ping<Personas>(buildUrl('set-first-persona-or-space'), post({ personaId }))
+						ping<Personas>(makeUrl('prioritize-persona-or-space'), post({ personaId }))
 							.then((p) => personasSet(p))
-							.catch((err) => alert(JSON.stringify(err)));
+							.catch((err) => alert(err));
 					}
 				} else {
 					passwordIpt.tag?.focus();
 					passwordIpt.error = 'Incorrect password';
 				}
 			})
-			.catch((err) => alert(JSON.stringify(err)));
+			.catch((err) => alert(err));
 	}, [personaId, manage]);
 
 	useEffect(() => passwordIpt.tag?.focus(), [personaId]);
@@ -57,12 +57,13 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 			) : (
 				<>
 					<div className="fx gap-3">
-						<div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full">
-							<DeterministicVisualId input={personaId} />
-						</div>
+						<DeterministicVisualId
+							input={personaId}
+							className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full"
+						/>
 						<div>
 							<div className="fx gap-1">
-								<p className="font-bold text-2xl">{personaToUnlock?.defaultName || 'No name'}</p>
+								<p className="font-bold text-2xl">{personaToUnlock?.name || 'No name'}</p>
 								<LockClosedIcon className="h-6 w-6" />
 							</div>
 							<p className="text-lg text-fg2 font-semibold break-all">{personaId}</p>

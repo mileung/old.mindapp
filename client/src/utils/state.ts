@@ -1,22 +1,44 @@
+import { useCallback } from 'react';
 import { atom, useAtom } from 'jotai';
 import { TagTree } from './tags';
-import { Personas, RootSettings, WorkingDirectory } from './settings';
+import { Personas, RootSettings, Space, WorkingDirectory } from './settings';
 import { Thought } from './thought';
+import { hostedLocally, localApiHostname, makeUrl, ping, post } from './api';
 
 type LocalState = {
-	theme: RootSettings['theme'];
-	activePersonaId: string;
-	activeSpaceId: string;
+	theme: 'System' | 'Light' | 'Dark';
+	personas: Personas;
 };
 
-export const getLocalState = (): LocalState => {
+const defaultSpaceHostname = hostedLocally ? localApiHostname : 'TODO: default global space';
+
+export const getLocalState = () => {
 	const storedLocalState = localStorage.getItem('LocalState');
-	return storedLocalState
-		? JSON.parse(storedLocalState)
+	const localState: LocalState = storedLocalState ? JSON.parse(storedLocalState) : {};
+	const validLocalState = // TODO: make a nicer way of normalizing the local state
+		['System', 'Light', 'Dark'].includes(localState.theme) &&
+		Array.isArray(localState.personas) &&
+		localState.personas.every((p) => {
+			return (
+				typeof p.id === 'string' &&
+				['string', 'undefined'].includes(typeof p.name) &&
+				(typeof p.locked === 'undefined' || p.locked === true) &&
+				Array.isArray(p.spaceHostnames) &&
+				p.spaceHostnames.length &&
+				p.spaceHostnames.every((id) => typeof id === 'string')
+			);
+		});
+
+	return validLocalState
+		? localState
 		: ({
 				theme: 'System',
-				activePersonaId: '',
-				activeSpaceId: '',
+				personas: [
+					{
+						id: '', //
+						spaceHostnames: [defaultSpaceHostname],
+					},
+				],
 			} as LocalState);
 };
 
@@ -32,33 +54,66 @@ export const createAtom = <T>(initialValue: T) => {
 	return () => useAtom(atomInstance);
 };
 
-export const usePersonas = createAtom<null | Personas>(null);
-export const useDefaultNames = createAtom<Record<string, string>>({});
+const currentLocalState = getLocalState();
+export const usePersonas = createAtom<Personas>(currentLocalState.personas);
+export const useSpaces = createAtom<Record<string, Space>>({});
+export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
+export const useNames = createAtom<Record<string, string>>({});
 export const useMentionedThoughts = createAtom<Record<string, Thought>>({});
-export const useTagTree = createAtom<null | TagTree>(null);
 export const useRootSettings = createAtom<null | RootSettings>(null);
 export const useWorkingDirectory = createAtom<undefined | null | WorkingDirectory>(undefined);
 export const useLastUsedTags = createAtom<string[]>([]);
-const _useLocalState = createAtom<LocalState>(getLocalState());
-export const useLocalState = () => {
-	const [localState, localStateSet] = _useLocalState();
-	return [
-		localState,
-		(newLocalState: typeof localState) => {
-			updateLocalState(newLocalState);
-			localStateSet(newLocalState);
-		},
-	] as const;
-};
+export const useLocalState = createAtom<LocalState>(currentLocalState);
+export const useTagTree = createAtom<null | TagTree>(
+	hostedLocally
+		? null
+		: {
+				parents: {},
+				loners: [],
+			},
+);
 
-export function useActivePersona() {
-	const [localState] = useLocalState();
+type Item = string | Record<string, any> | any[];
+export function useGetSignature() {
 	const [personas] = usePersonas();
-	return personas?.find((p) => p.id === localState.activePersonaId && !p.locked) || null;
+	return useCallback(
+		async (item: Item, personaId?: string) => {
+			if (!personaId) return;
+			if (hostedLocally) {
+				const { signature } = await ping<{ signature?: string }>(
+					makeUrl('get-signature'),
+					post({ item, personaId }),
+				);
+				return signature;
+			} else {
+				// TODO: sign on client
+				return 'signature';
+			}
+		},
+		[personas],
+	);
+}
+
+type Message = {
+	[key: string]: any;
+	to: string;
+	from?: string;
+};
+export function useSendMessage() {
+	const getSignature = useGetSignature();
+	return useCallback(
+		async <T>(message: Message) => {
+			return await ping<T>(
+				message.to,
+				post({ message, fromSignature: await getSignature(message, message.from) }),
+			);
+		},
+		[getSignature],
+	);
 }
 
 export function useActiveSpace() {
-	const [localState] = useLocalState();
-	const persona = useActivePersona();
-	return persona?.spaces?.find((p) => p.id === localState.activeSpaceId) || null;
+	const [personas] = usePersonas();
+	const [spaces] = useSpaces();
+	return spaces[personas[0].spaceHostnames[0]] || { hostname: personas[0].spaceHostnames[0] };
 }

@@ -10,20 +10,22 @@ import {
 	useTagTree,
 	usePersonas,
 	useLastUsedTags,
-	useActivePersona,
-	useActiveSpace,
 	useMentionedThoughts,
-	useDefaultNames,
+	useNames,
+	useSpaces,
+	useSendMessage,
+	useActiveSpace,
+	useGetSignature,
 } from '../utils/state';
-import { buildUrl, ping, post } from '../utils/api';
+import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
-import { Thought, separateMentions } from '../utils/thought';
+import { Thought } from '../utils/thought';
 import { useKeyPress } from '../utils/keyboard';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
 import FieldsEditor from './FieldsEditor';
-import { isJsonRecord, isStringRecord } from '../utils/js';
+import { isStringifiedRecord } from '../utils/js';
 
 export const ThoughtWriter = ({
 	parentRef,
@@ -41,7 +43,7 @@ export const ThoughtWriter = ({
 	parentId?: string;
 	onWrite?: (
 		res: {
-			defaultNames: Record<string, string>;
+			names: Record<string, string>;
 			mentionedThoughts: Record<string, Thought>;
 			thought: Thought;
 		},
@@ -50,8 +52,9 @@ export const ThoughtWriter = ({
 	) => void;
 	onContentBlur?: () => void;
 }) => {
-	const activePersona = useActivePersona();
 	const activeSpace = useActiveSpace();
+	const spaces = useSpaces();
+	const [personas] = usePersonas();
 	const [searchParams] = useSearchParams();
 	const jsonString = searchParams.get('json');
 	const jsonParam = useMemo(
@@ -63,11 +66,12 @@ export const ThoughtWriter = ({
 	);
 	const navigate = useNavigate();
 	const { pathname } = useLocation();
-	const [defaultNames, defaultNamesSet] = useDefaultNames();
+	const sendMessage = useSendMessage();
+	const getSignature = useGetSignature();
+	const [names, namesSet] = useNames();
 	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
-	const [personas] = usePersonas();
 	const [tags, tagsSet] = useState<string[]>([...initialTags, ...(jsonParam?.initialTags || [])]);
 	const [tagFilter, tagFilterSet] = useState('');
 	const [tagIndex, tagIndexSet] = useState(0);
@@ -100,55 +104,65 @@ export const ThoughtWriter = ({
 		[suggestedTags, tagIndex, trimmedFilter, tags, lastUsedTags],
 	);
 	const writeThought = useCallback(
-		(ctrlKey?: boolean, altKey?: boolean) => {
+		async (ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
-			if (!content || !personas) return;
+			if (!content || !personas || !activeSpace) return;
 			jsonString && navigate(pathname, { replace: true });
 			contentTextArea.current!.style.height = 'auto';
 			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
 			const trimmedContent = content.trim();
-			ping<{
-				defaultNames: Record<string, string>;
+
+			const [createDate, authorId, spaceHostname] = (editId || '').split('_', 3);
+			const message = {
+				from: editId ? authorId : personas[0]!.id,
+				to: buildUrl({
+					hostname: editId ? spaceHostname : activeSpace.hostname,
+					path: 'write-thought',
+				}),
+				thought: {
+					parentId,
+					content: trimmedContent,
+					tags: sortUniArr([...tags, additionalTag].filter((a) => !!a)),
+					...(editId
+						? { createDate: +createDate, authorId, spaceHostname }
+						: {
+								createDate: Date.now(),
+								authorId: personas[0].id,
+								spaceHostname: activeSpace.hostname,
+							}),
+				} as Thought,
+			};
+
+			if (!message.thought.tags?.length) delete message.thought.tags;
+			message.thought.signature = await getSignature(message.thought, message.thought.authorId);
+
+			sendMessage<{
+				names: Record<string, string>;
 				mentionedThoughts: Record<string, Thought>;
 				thought: Thought;
-			}>(
-				buildUrl('write-thought'),
-				post({
-					parentId,
-					...(editId
-						? { editId }
-						: { authorId: activePersona?.id || '', spaceId: activeSpace?.id || '' }),
-					content: isJsonRecord(trimmedContent)
-						? (() => {
-								const obj = JSON.parse(trimmedContent);
-								Object.entries(obj).forEach(([key, val]) => {
-									if (typeof val !== 'string')
-										obj[key] = typeof val === 'object' ? JSON.stringify(val) : String(val);
-								});
-								return obj;
-							})()
-						: separateMentions(trimmedContent),
-					tags: sortUniArr([...tags, additionalTag].filter((a) => !!a)),
-				}),
-			)
+			}>(message)
 				.then((res) => {
-					console.log('res:', res);
-					defaultNamesSet({ ...defaultNames, ...res.defaultNames });
-					mentionedThoughtsSet({ ...mentionedThoughts, ...res.mentionedThoughts });
+					// console.log('res:', res);
+					namesSet((old) => ({ ...old, ...res.names }));
+					mentionedThoughtsSet((old) => ({ ...old, ...res.mentionedThoughts }));
 					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';
 					tagsSet([]);
 					tagFilterSet('');
 					suggestTagsSet(false);
 					contentTextArea.current!.focus();
-					ping<TagTree>(buildUrl('get-tag-tree'))
-						.then((data) => tagTreeSet(data))
-						.catch((err) => alert(JSON.stringify(err)));
+					if (hostedLocally) {
+						ping<TagTree>(makeUrl('get-tag-tree'))
+							.then((data) => tagTreeSet(data))
+							.catch((err) => alert(err));
+					}
 				})
-				.catch((err) => alert(JSON.stringify(err)));
+				.catch((err) => alert(err));
 		},
 		[
-			activePersona,
+			spaces,
+			sendMessage,
+			personas[0],
 			activeSpace,
 			jsonString,
 			suggestedTags,
@@ -177,12 +191,10 @@ export const ThoughtWriter = ({
 	);
 
 	const defaultValue = useMemo(() => {
-		const initialStuff = initialContent || jsonParam?.initialContent;
-		return Array.isArray(initialStuff)
-			? initialStuff.join('')
-			: isStringRecord(initialStuff)
-				? JSON.stringify(initialStuff, null, 2)
-				: (initialStuff as string) || '';
+		const initialStuff = initialContent || jsonParam?.initialContent || '';
+		return isStringifiedRecord(initialStuff)
+			? JSON.stringify(JSON.parse(initialStuff), null, 2)
+			: initialStuff;
 	}, []);
 
 	return (

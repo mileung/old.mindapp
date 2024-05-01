@@ -1,5 +1,3 @@
-export const hostedLocally = location.host.startsWith('localhost:');
-
 export const localApiHostname = 'localhost:2000';
 
 export function makeUrl(path: string, params?: Record<string, any>) {
@@ -8,16 +6,15 @@ export function makeUrl(path: string, params?: Record<string, any>) {
 
 export function buildUrl({
 	hostname,
-	https,
+	https = !!hostname,
 	path = '',
 	params,
 }: {
-	hostname?: string;
 	https?: boolean;
+	hostname?: string;
 	path?: string;
 	params?: Record<string, any>;
 }) {
-	if (https === undefined) https = !!hostname && !hostname.startsWith('localhost:');
 	let url = `http${https ? 's' : ''}://${(hostname || localApiHostname).replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 	if (params) {
 		url = `${url}?${new URLSearchParams(params).toString()}`;
@@ -28,12 +25,10 @@ export function buildUrl({
 
 export const ping = <T>(...args: Parameters<typeof fetch>): Promise<T> =>
 	new Promise((resolve, reject) => {
-		fetch(...args)
-			.then(async (res) => {
-				const json = await res.json();
-				return res.status === 200 ? resolve(json) : reject(json?.error || JSON.stringify(json));
-			})
-			.catch((e) => reject(e));
+		fetch(...args).then(async (res) => {
+			const json = await res.json();
+			return res.status === 200 ? resolve(json) : reject(json?.error || JSON.stringify(json));
+		});
 	});
 
 export const post = (body: object) => ({

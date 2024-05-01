@@ -1,11 +1,19 @@
 {
 	"name": "mindapp",
+	"engines": {
+		"node": ">=20.12.2"
+	},
 	"scripts": {
 		"client": "cd client && npm run dev",
 		"server": "cd server && npm start",
+		"global-test-server": "cd server && npm run global-test-server",
+		"dk-studio": "cd server && npx drizzle-kit studio",
 		"dev-extension": "cd extension && npm run dev",
 		"build-extension": "cd extension && npm run build",
-		"start": "concurrently \"npm run server\" \"npm run client\" \"npm run build-extension\"",
+		"all": "concurrently \"npm run server\" \"npm run global-test-server\" \"npm run client\" \"npm run build-extension\" \"npm run dk-studio\"",
+		"spaces": "concurrently \"npm run server\" \"npm run global-test-server\" \"npm run client\"",
+		"local-space": "concurrently \"npm run server\" \"npm run dk-studio\" \"npm run client\"",
+		"start": "concurrently \"npm run server\" \"npm run client\"",
 		"dev": "concurrently \"npm run server\" \"npm run client\" \"npm run dev-extension\"",
 		"format": "prettier . --write"
 	},

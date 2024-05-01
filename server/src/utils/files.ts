@@ -1,6 +1,7 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import env from './env';
 
 const homeDir = os.homedir();
 export const mindappRootPath = path.join(homeDir, '.mindapp');
@@ -9,19 +10,23 @@ export const defaultWorkingDirectoryPath = path.join(mindappRootPath, 'default-w
 export const testWorkingDirectoryPath = path.join(mindappRootPath, 'test-working-directory');
 
 export const writeFile = (filePath: string, json: string) => {
+	if (env.isGlobalSpace) throw new Error('Global space cannot write filesystem');
 	fs.writeFileSync(filePath, json);
 };
 
 export const writeObjectFile = (filePath: string, obj: object, format = false) => {
+	if (env.isGlobalSpace) throw new Error('Global space cannot write filesystem');
 	writeFile(filePath, JSON.stringify(obj, null, format ? 2 : 0));
 };
 
 export const parseFile = <T>(filePath: string) => {
+	if (env.isGlobalSpace) throw new Error('Global space cannot read filesystem');
 	return JSON.parse(fs.readFileSync(filePath).toString()) as T;
 };
 
 export const mkdirIfDne = (dirPath: string) => {
-	if (!fs.existsSync(dirPath)) {
+	if (env.isGlobalSpace) throw new Error('Global space cannot write filesystem');
+	if (!isDirectory(dirPath)) {
 		fs.mkdirSync(dirPath, { recursive: true });
 		return true;
 	}
@@ -29,9 +34,10 @@ export const mkdirIfDne = (dirPath: string) => {
 };
 
 export const touchIfDne = (filePath: string, fileContent: string) => {
+	if (env.isGlobalSpace) throw new Error('Global space cannot write filesystem');
 	const dirPath = path.dirname(filePath);
 	mkdirIfDne(dirPath);
-	if (!fs.existsSync(filePath)) {
+	if (!isFile(filePath)) {
 		writeFile(filePath, fileContent);
 		return true;
 	}
@@ -39,26 +45,30 @@ export const touchIfDne = (filePath: string, fileContent: string) => {
 };
 
 export function isFile(path: string) {
-	return fs.statSync(path).isFile();
+	if (env.isGlobalSpace) throw new Error('Global space cannot read filesystem');
+	try {
+		return fs.statSync(path).isFile();
+	} catch (error) {}
+	return false;
 }
 
 export function isDirectory(path: string) {
-	return fs.statSync(path).isDirectory();
+	if (env.isGlobalSpace) throw new Error('Global space cannot read filesystem');
+	try {
+		return fs.statSync(path).isDirectory();
+	} catch (error) {}
+	return false;
 }
 
-export const deletePath = (path: string) => {
+export const deleteFile = (path: string, cb: fs.NoParamCallback = () => {}) => {
+	if (env.isGlobalSpace) throw new Error('Global space cannot write filesystem');
 	try {
-		if (fs.existsSync(path)) {
-			const stats = fs.statSync(path);
-			if (stats.isFile()) {
-				fs.unlinkSync(path);
-			} else if (stats.isDirectory()) {
-				fs.rmdirSync(path, { recursive: true });
-			}
+		if (isFile(path)) {
+			fs.unlink(path, cb);
 		} else {
-			console.error(`Path does not exist: ${path}`);
+			console.error(`File path does not exist: ${path}`);
 		}
 	} catch (error) {
-		console.error(`Error deleting path: ${path}`, error);
+		console.error(`Error deleting file path: ${path}`, error);
 	}
 };

@@ -77,7 +77,7 @@ const urlSelectors: Record<
 	},
 	'twitter.com': () => {
 		// @ts-ignore
-		const tweetText = document.querySelector('[data-testid="tweetText"]').innerText;
+		const tweetText = document.querySelector('[data-testid="tweetText"]')?.innerText;
 		let author = location.pathname.slice(1);
 		const i = author.indexOf('/');
 		if (i !== -1) {
@@ -87,13 +87,44 @@ const urlSelectors: Record<
 	},
 	'www.reddit.com': () => {
 		// @ts-ignore
-		const headline = document.querySelector('div.top-matter > p.title > a').innerText;
+		const headline = document.querySelector('div.top-matter > p.title > a')?.innerText;
 		const subreddit = location.href.match(/\/(r\/[^/]+)/)?.[1];
 		return { headline, tags: subreddit ? [subreddit] : [] };
 	},
 	'news.ycombinator.com': () => {
 		// @ts-ignore
-		const headline = document.querySelector('.titleline a').innerText;
+		const headline = document.querySelector('.titleline a')?.innerText;
+		return { headline };
+	},
+	'www.amazon.com': () => {
+		// @ts-ignore
+		const headline = document.querySelector('#productTitle')?.innerText;
+		const endI = Math.min(
+			...[
+				//
+				location.href.indexOf('?'),
+				location.href.indexOf('/ref='),
+			].filter((n) => n !== -1),
+		);
+		const url = location.href.slice(0, endI);
+		return { headline, url };
+	},
+	'www.ebay.com': () => {
+		// @ts-ignore
+		const headline = document.querySelector('#mainContent h1 > span')?.innerText;
+		const endI = Math.min(
+			...[
+				//
+				location.href.indexOf('?'),
+			].filter((n) => n !== -1),
+		);
+		const url = location.href.slice(0, endI);
+		return { headline, url };
+	},
+	'www.perplexity.ai': () => {
+		// @ts-ignore
+		const headline = document.querySelector('h1').innerText;
+		console.log('headline:', headline);
 		return { headline };
 	},
 	// 'www.perplexity.ai/search': () => {

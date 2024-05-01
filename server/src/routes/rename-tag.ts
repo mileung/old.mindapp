@@ -1,8 +1,6 @@
 import { RequestHandler } from 'express';
 import TagTree from '../types/TagTree';
 import { sortObjectProps, sortUniArr } from '../utils/tags';
-import { Thought } from '../types/Thought';
-import { index } from '../utils';
 import { debouncedSnapshot } from '../utils/git';
 
 const renameTag: RequestHandler = (req, res) => {
@@ -36,23 +34,6 @@ const renameTag: RequestHandler = (req, res) => {
 
 	sortObjectProps(tagTree.parents);
 	tagTree.overwrite();
-
-	(index.thoughtIdsByTag[oldTag] || []).forEach((thoughtIds) => {
-		const thought = Thought.read(thoughtIds);
-		const oldTagIndex = thought.tags.indexOf(oldTag);
-		if (oldTagIndex === -1) throw new Error(`Index for tag "${oldTag}" has misplaced thought`);
-		thought.tags[oldTagIndex] = newTag;
-		thought.tags = sortUniArr(thought.tags);
-		thought.overwrite();
-	});
-	if (index.thoughtIdsByTag[newTag]) {
-		index.thoughtIdsByTag[newTag] = sortUniArr(
-			index.thoughtIdsByTag[newTag]!.concat(index.thoughtIdsByTag[oldTag] || []), // Is the ]!. a bug in TypeScript?
-		);
-	} else if (index.thoughtIdsByTag[oldTag]) {
-		index.thoughtIdsByTag[newTag] = index.thoughtIdsByTag[oldTag];
-	}
-	delete index.thoughtIdsByTag[oldTag];
 
 	res.send({});
 	debouncedSnapshot();

@@ -7,19 +7,23 @@ import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
 import ThoughtId from './pages/ThoughtId';
-import { buildUrl, ping } from './utils/api';
-import { Personas, RootSettings, WorkingDirectory } from './utils/settings';
+import { buildUrl, hostedLocally, localApiHostname, makeUrl, ping } from './utils/api';
+import { Personas, RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
-	useDefaultNames,
+	useNames,
 	useLocalState,
 	usePersonas,
 	useRootSettings,
 	useTagTree,
 	useWorkingDirectory,
+	updateLocalState,
+	useSendMessage,
+	useSpaces,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
 import UnlockPersona from './pages/UnlockPersona';
+import ManageSpaces from './pages/ManageSpaces';
 
 // const isCenterOnLeft = () => window.screenX + window.innerWidth / 2 <= window.screen.width / 2;
 
@@ -27,10 +31,13 @@ function App() {
 	const [localState, localStateSet] = useLocalState();
 	const [, tagTreeSet] = useTagTree();
 	const [personas, personasSet] = usePersonas();
-	const [defaultNames, defaultNamesSet] = useDefaultNames();
+	const [spaces, spacesSet] = useSpaces();
+	const sendMessage = useSendMessage();
+	const [names, namesSet] = useNames();
 	const [rootSettings, rootSettingsSet] = useRootSettings();
 	const [, workingDirectorySet] = useWorkingDirectory();
 	const themeRef = useRef(localState.theme);
+	const pinging = useRef<Record<string, boolean>>({});
 
 	useEffect(() => {
 		// does not exist on older browsers
@@ -42,44 +49,96 @@ function App() {
 	}, []);
 
 	useEffect(() => {
-		if (rootSettings) {
-			themeRef.current = rootSettings.theme;
-			setTheme(rootSettings.theme);
-		}
-	}, [rootSettings?.theme]);
+		themeRef.current = localState.theme;
+		setTheme(localState.theme);
+	}, [localState?.theme]);
 
 	useEffect(() => {
-		ping<{ rootSettings: RootSettings; workingDirectory: WorkingDirectory }>(
-			buildUrl('get-root-settings'),
-		)
-			.then(({ rootSettings, workingDirectory }) => {
-				rootSettingsSet(rootSettings);
-				workingDirectorySet(workingDirectory);
-			})
-			.catch((err) => alert(JSON.stringify(err)));
-		ping<WorkingDirectory>(buildUrl('get-working-directory'))
-			.then((data) => workingDirectorySet(data))
-			.catch((err) => alert(JSON.stringify(err)));
-		ping<TagTree>(buildUrl('get-tag-tree'))
-			.then((data) => tagTreeSet(data))
-			.catch((err) => alert(JSON.stringify(err)));
-		ping<Personas>(buildUrl('get-personas'))
-			.then((data) => {
-				const activePersona = data.find((p) => p.id === localState.activePersonaId);
-				if (!activePersona || activePersona.locked)
-					localStateSet({ ...localState, activePersonaId: '' });
-				personasSet(data);
-			})
-			.catch((err) => alert(JSON.stringify(err)));
-	}, [rootSettings?.usingDefaultWorkingDirectoryPath]);
+		if (hostedLocally) {
+			ping<{ rootSettings: RootSettings; workingDirectory: WorkingDirectory }>(
+				makeUrl('get-root-settings'),
+			)
+				.then(({ rootSettings, workingDirectory }) => {
+					rootSettingsSet(rootSettings);
+					workingDirectorySet(workingDirectory);
+				})
+				.catch((err) => alert(err));
+			ping<WorkingDirectory>(makeUrl('get-working-directory'))
+				.then((data) => workingDirectorySet(data))
+				.catch((err) => alert(err));
+			ping<TagTree>(makeUrl('get-tag-tree'))
+				.then((data) => tagTreeSet(data))
+				.catch((err) => alert(err));
+			ping<Personas>(makeUrl('get-personas'))
+				.then((p) => personasSet(p))
+				.catch((err) => alert(err));
+		} else {
+			// TODO: generating personas client side
+		}
+	}, [rootSettings?.testWorkingDirectory]);
 
 	useEffect(() => {
 		if (personas) {
-			const newDefaultNames = { ...defaultNames };
-			personas.forEach((p) => (newDefaultNames[p.id] = p.defaultName));
-			defaultNamesSet(defaultNames);
+			namesSet((oldDefaultNames) => {
+				const newDefaultNames = { ...oldDefaultNames };
+				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
+				return { ...oldDefaultNames, ...newDefaultNames };
+			});
+			localStateSet((old) => ({
+				...old,
+				personas,
+			}));
 		}
-	}, [personas, defaultNames]);
+	}, [personas]);
+
+	useEffect(() => {
+		spacesSet({});
+		// namesSet({});
+	}, [personas[0].id]);
+
+	useEffect(() => {
+		updateLocalState(localState);
+	}, [localState]);
+
+	useEffect(() => {
+		personas[0].spaceHostnames.forEach(async (hostname) => {
+			if (
+				hostname &&
+				hostname !== localApiHostname &&
+				!spaces[hostname] &&
+				!pinging.current[hostname]
+			) {
+				pinging.current[hostname] = true;
+				try {
+					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
+					const { space } = await sendMessage<{ space: Omit<Space, 'hostname'> }>({
+						from: id,
+						to: buildUrl({ hostname, path: 'update-space-persona' }),
+						joinIfNotInSpace: !!id,
+						getSpaceInfo: true,
+						signedSelf: {
+							id,
+							name,
+							frozen,
+							walletAddress,
+							writeDate,
+							signature,
+						},
+					});
+					// console.log('space:', space);
+					spacesSet((old) => ({ ...old, [hostname]: { hostname, ...space } }));
+				} catch (error) {
+					console.log('error:', error);
+					spacesSet((old) => ({
+						...old,
+						[hostname]: { hostname, self: null },
+					}));
+				} finally {
+					pinging.current[hostname] = false;
+				}
+			}
+		});
+	}, [personas, spaces, spacesSet, sendMessage]);
 
 	return (
 		<main>
@@ -89,8 +148,7 @@ function App() {
 					<Route path="/" Component={Home} />
 					<Route path="/search" Component={Search} />
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />
-					<Route path="/manage-spaces/:spaceId?" Component={null} />
-					<Route path="/add-space" Component={null} />
+					<Route path="/manage-spaces/:spaceHostname?" Component={ManageSpaces} />
 					<Route path="/tags/:tag?" Component={Tags} />
 					<Route path="/Settings" Component={Settings} />
 					<Route path="/unlock/:personaId" Component={UnlockPersona} />

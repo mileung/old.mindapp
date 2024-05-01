@@ -2,13 +2,14 @@ import { ChevronRightIcon, PlusIcon } from '@heroicons/react/16/solid';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLastUsedTags, useTagTree } from '../utils/state';
-import { buildUrl, ping, post } from '../utils/api';
+import { hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { TagTree, getNodes, getNodesArr, getParentsMap, makeRootTag } from '../utils/tags';
 import TagEditor from '../components/TagEditor';
 import { debounce } from '../utils/performance';
 import { useKeyPress } from '../utils/keyboard';
 import { matchSorter } from 'match-sorter';
 import InputAutoWidth from '../components/InputAutoWidth';
+import { error } from '@vite/vitejs';
 
 export default function Tags() {
 	const navigate = useNavigate();
@@ -80,7 +81,8 @@ export default function Tags() {
 
 	const refreshTagTree = useCallback(
 		(rootTagLabel: string, ignoreTagFilter = false) => {
-			ping<TagTree>(buildUrl('get-tag-tree'))
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
+			ping<TagTree>(makeUrl('get-tag-tree'))
 				.then((data) => {
 					tagTreeSet(data);
 					const newNodesArr = getNodesArr(getNodes(data));
@@ -89,21 +91,20 @@ export default function Tags() {
 					const i = newSuggestedTags.indexOf(rootTagLabel);
 					tagIndexSet(i === -1 ? 0 : i);
 				})
-				.catch((err) => alert(JSON.stringify(err)));
+				.catch((err) => alert(err));
 		},
 		[tagFilter, tagToAdd],
 	);
 
 	const addRootTag = useCallback(
 		(newTag: string, ctrlKey: boolean, altKey: boolean) => {
-			console.log('newTag:', newTag);
-			console.log('ctrlKey:', ctrlKey);
-			console.log('altKey:', altKey);
+			console.log('hostedLocally:', hostedLocally);
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
 			altKey && tagFilterSet('');
 			subTaggingLineageSet(ctrlKey ? [newTag] : []);
-			ping(buildUrl('add-tag'), post({ tag: newTag }))
+			ping(makeUrl('add-tag'), post({ tag: newTag }))
 				.then(() => refreshTagTree(newTag, altKey))
-				.catch((err) => alert(JSON.stringify(err)));
+				.catch((err) => alert(err));
 		},
 		[refreshTagTree],
 	);
@@ -113,53 +114,59 @@ export default function Tags() {
 			e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent<HTMLInputElement>,
 			parentTag: string,
 		) => {
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
 			if (!rootTag?.label || !parentTag) return;
 			!e.altKey && addingParentSet(false);
 			parentTagFilterSet('');
 			parentTagIndexSet(0);
-			return ping(buildUrl('add-tag'), post({ tag: rootTag.label, parentTag }))
+			return ping(makeUrl('add-tag'), post({ tag: rootTag.label, parentTag }))
 				.then(() => refreshTagTree(rootTag!.label))
-				.catch((err) => alert(JSON.stringify(err)));
+				.catch((err) => alert(err));
 		},
 		[rootTag?.label, refreshTagTree],
 	);
 
 	const addSubtag = useCallback(
 		(tag: string, parentTag: string, newSubTaggingLineage: string[]) => {
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
 			subTaggingLineageSet(newSubTaggingLineage);
 			!newSubTaggingLineage && searchIpt.current?.focus();
-			return ping(buildUrl('add-tag'), post({ tag, parentTag }))
+			return ping(makeUrl('add-tag'), post({ tag, parentTag }))
 				.then(() => refreshTagTree(rootTag!.label))
-				.catch((err) => alert(JSON.stringify(err)));
+				.catch((err) => alert(err));
 		},
 		[rootTag?.label, refreshTagTree],
 	);
 
 	const renameTag = useCallback(
 		async (oldTag: string, newTag: string, newSubTaggingLineage: string[]) => {
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
 			subTaggingLineageSet(newSubTaggingLineage);
 			return (
-				ping(buildUrl('rename-tag'), post({ oldTag, newTag }))
+				ping(makeUrl('rename-tag'), post({ oldTag, newTag }))
 					.then(() => refreshTagTree(rootTag!.label === oldTag ? newTag : rootTag!.label))
 					// .then(() => searchIpt.current?.focus())
-					.catch((err) => alert(JSON.stringify(err)))
+					.catch((err) => alert(err))
 			);
 		},
 		[rootTag?.label, refreshTagTree],
 	);
 
 	const removeTag = useCallback(
-		(tag: string, parentTag?: string) =>
-			ping(buildUrl('remove-tag'), post({ tag, parentTag }))
+		(tag: string, parentTag?: string) => {
+			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
+			return ping(makeUrl('remove-tag'), post({ tag, parentTag }))
 				.then(() => refreshTagTree(rootTag!.label))
 				.then(() => searchIpt.current?.focus())
-				.catch((err) => alert(JSON.stringify(err))),
+				.catch((err) => alert(err));
+		},
 		[rootTag?.label, refreshTagTree],
 	);
 
 	const showTagInLeftPanel = useCallback(
-		(tag: string, e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-			if (e.metaKey || e.shiftKey || !suggestedTags || !nodesArr) return;
+		(tag: string, e?: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+			console.log('tag:', tag);
+			if (e?.metaKey || e?.shiftKey || !suggestedTags || !nodesArr) return;
 			let i = suggestedTags.indexOf(tag);
 			if (i === -1) {
 				tagFilterSet('');
@@ -211,6 +218,7 @@ export default function Tags() {
 		const newTag = rootTag?.label || (tagIndex && suggestedTags?.[tagIndex]);
 		newTag && debouncedReplaceTag(newTag);
 	}, [rootTag?.label, tagIndex, suggestedTags]);
+
 	useEffect(() => {
 		if (tagIndex === null && suggestedTags && tag) {
 			tagIndexSet(suggestedTags.indexOf(tag));

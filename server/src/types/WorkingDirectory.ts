@@ -1,6 +1,5 @@
 import path from 'path';
 import simpleGit from 'simple-git';
-import { setUpIndex } from '../utils';
 import {
 	defaultWorkingDirectoryPath,
 	mkdirIfDne,
@@ -13,6 +12,8 @@ import { RootSettings } from './RootSettings';
 import TagTree from './TagTree';
 import Ajv from 'ajv';
 import { Personas } from './Personas';
+import { setUpLocalDb } from '../db';
+import env from '../utils/env';
 
 const ajv = new Ajv();
 
@@ -41,6 +42,8 @@ export class WorkingDirectory {
 		gitSnapshotsEnabled?: boolean;
 		gitRemoteUrl?: string;
 	}) {
+		if (env.isGlobalSpace) throw new Error('Global space cannot use WorkingDirectory');
+
 		this.dirPath = dirPath;
 		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
 		this.gitRemoteUrl = gitRemoteUrl;
@@ -49,10 +52,11 @@ export class WorkingDirectory {
 	}
 
 	static get current() {
+		if (env.isGlobalSpace) throw new Error('Global space cannot use WorkingDirectory');
 		const rootSettings = RootSettings.get();
-		const dirPath = rootSettings.usingDefaultWorkingDirectoryPath
-			? defaultWorkingDirectoryPath
-			: testWorkingDirectoryPath;
+		const dirPath = rootSettings.testWorkingDirectory
+			? testWorkingDirectoryPath
+			: defaultWorkingDirectoryPath;
 		const newWorkingDirectory = new WorkingDirectory({ dirPath });
 		try {
 			const settings = parseFile<WorkingDirectory>(newWorkingDirectory.settingsPath);
@@ -63,7 +67,7 @@ export class WorkingDirectory {
 	}
 
 	setUp() {
-		setUpIndex();
+		setUpLocalDb();
 		mkdirIfDne(this.dirPath);
 		mkdirIfDne(this.timelinePath);
 		touchIfDne(this.personasPath, JSON.stringify(new Personas({})));

@@ -1,11 +1,11 @@
 import cors from 'cors';
-import express, { ErrorRequestHandler } from 'express';
+import express, { ErrorRequestHandler, RequestHandler } from 'express';
 import root from './routes/_root';
 import addTag from './routes/add-tag';
 import deleteThought from './routes/delete-thought';
 import { getFile } from './routes/get-file';
 import getRootSettings from './routes/get-root-settings';
-import getLocalThoughts from './routes/get-roots';
+import getRoots from './routes/get-roots';
 import getTagTree from './routes/get-tag-tree';
 import getWorkingDirectory from './routes/get-working-directory';
 import removeTag from './routes/remove-tag';
@@ -20,17 +20,26 @@ import { WorkingDirectory } from './types/WorkingDirectory';
 import { rootSettingsPath, touchIfDne } from './utils/files';
 import getPersonas from './routes/get-personas';
 import addPersona from './routes/add-persona';
-import setFirstPersonaOrSpace from './routes/set-first-persona-or-space';
+import prioritizePersonaOrSpace from './routes/prioritize-persona-or-space';
 import unlockPersona from './routes/unlock-persona';
 import getPersonaMnemonic from './routes/get-persona-mnemonic';
-import updatePersonaDefaultName from './routes/update-persona-default-name';
+import updateLocalPersona from './routes/update-local-persona';
 import deletePersona from './routes/delete-persona';
 import updatePersonaPassword from './routes/update-persona-password';
 import lockAllPersonas from './routes/lock-all-personas';
 import { Personas } from './types/Personas';
+import updateSpacePersona from './routes/update-space-persona';
+import { verifyItem } from './utils/security';
+import Ajv from 'ajv';
+import getSignature from './routes/get-signature';
+import env from './utils/env';
+import leaveSpace from './routes/leave-space';
+import addPersonaToSpace from './routes/add-persona-to-space';
+import updateLocalSpaces from './routes/update-local-space';
 
 const app = express();
-const port = 2000;
+const port = env.isGlobalSpace ? 8080 : 2000;
+const hostname = env.hostname || `localhost`;
 
 app.use((req, res, next) => {
 	// logger
@@ -42,48 +51,114 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(express.json());
 
-app.get('/', root);
-app.get('/whoami', whoami);
-app.get('/get-working-directory', getWorkingDirectory);
-app.post('/update-working-directory', updateWorkingDirectory);
-app.get('/get-root-settings', getRootSettings);
-app.post('/update-root-settings', updateRootSettings);
-app.post('/write-thought', writeThought);
-app.get('/get-tag-tree', getTagTree);
-app.post('/add-tag', addTag);
-app.post('/remove-tag', removeTag);
-app.post('/rename-tag', renameTag);
-app.post('/delete-thought', deleteThought);
-app.get('/get-personas', getPersonas);
-app.post('/set-first-persona-or-space', setFirstPersonaOrSpace);
-app.post('/add-persona', addPersona);
-app.post('/unlock-persona', unlockPersona);
-app.post('/get-persona-mnemonics', getPersonaMnemonic);
-app.post('/update-persona-default-name', updatePersonaDefaultName);
-app.post('/update-persona-password', updatePersonaPassword);
-app.post('/delete-persona', deletePersona);
-app.get('/lock-all-personas', lockAllPersonas);
-// app.post('/invite-to-space', inviteToSpace);
-// app.post('/accept-space-invitation', acceptSpaceInvitation);
-// app.post('/request-to-join-space', requestToJoinSpace);
-// app.post('/approve-request-to-join-space', approveRequestToJoinSpace);
-// app.post('/leave-space', leaveSpace);
-// app.post('/remove-persona-from-space', removePersonaFromSpace);
-// app.post('/archive-persona', archivePersona);
-app.post('/get-roots', getLocalThoughts);
-app.get('/file/:fileName', getFile);
-app.get('/show-working-directory', showWorkingDirectory);
+const tryCatch = (controller: RequestHandler) =>
+	(async (req, res, next) => {
+		try {
+			await controller(req, res, next);
+		} catch (error) {
+			console.error(error);
+			return next(error);
+		}
+	}) as RequestHandler;
+
+if (!env.isGlobalSpace) {
+	// Local-only routes
+	app.get('/', tryCatch(root));
+	app.get('/whoami', tryCatch(whoami));
+	app.get('/get-working-directory', tryCatch(getWorkingDirectory));
+	app.post('/update-working-directory', tryCatch(updateWorkingDirectory));
+	app.get('/get-root-settings', tryCatch(getRootSettings));
+	app.post('/update-root-settings', tryCatch(updateRootSettings));
+	app.get('/get-tag-tree', tryCatch(getTagTree));
+	app.post('/add-tag', tryCatch(addTag));
+	app.post('/remove-tag', tryCatch(removeTag));
+	app.post('/rename-tag', tryCatch(renameTag));
+	app.get('/get-personas', tryCatch(getPersonas));
+	app.post('/prioritize-persona-or-space', tryCatch(prioritizePersonaOrSpace));
+	app.post('/update-local-space', tryCatch(updateLocalSpaces));
+	app.post('/add-persona', tryCatch(addPersona));
+	app.post('/unlock-persona', tryCatch(unlockPersona));
+	app.post('/get-persona-mnemonics', tryCatch(getPersonaMnemonic));
+	app.post('/update-local-persona', tryCatch(updateLocalPersona));
+	app.post('/update-persona-password', tryCatch(updatePersonaPassword));
+	app.post('/delete-persona', tryCatch(deletePersona));
+	app.get('/lock-all-personas', tryCatch(lockAllPersonas));
+	// app.post('/archive-persona', tryCatch(archivePersona));
+	app.get('/file/:fileName', tryCatch(getFile));
+	app.get('/show-working-directory', tryCatch(showWorkingDirectory));
+	app.post('/get-signature', tryCatch(getSignature));
+}
+
+const ajv = new Ajv({ verbose: true });
+
+const schema = {
+	type: 'object',
+	properties: {
+		message: {
+			type: 'object',
+			properties: {
+				from: { type: 'string' },
+				to: { type: 'string' },
+			},
+			required: ['to'],
+			additionalProperties: true,
+		},
+		fromSignature: { type: 'string' },
+	},
+	required: ['message'],
+	additionalProperties: false,
+};
+
+type Message = {
+	[key: string]: any;
+	to: string;
+	from?: string;
+};
+
+app.use((req, res, next) => {
+	// console.log('Public route');
+	const { message, fromSignature } = req.body as {
+		message: Message;
+		fromSignature?: string;
+	};
+	if (!ajv.validate(schema, req.body)) {
+		throw new Error('Invalid public route request body: ' + JSON.stringify(req.body));
+	}
+	const to = new URL(message.to);
+	if (env.isGlobalSpace && (to.hostname !== hostname || to.pathname != req.url))
+		throw new Error('Wrong recipient');
+	if (message.from) {
+		if (!fromSignature) throw new Error('Missing fromSignature');
+		const valid = verifyItem(message, message.from, fromSignature);
+		if (!valid) throw new Error('Invalid fromSignature');
+	}
+
+	next();
+});
+
+// Public routes
+app.post('/write-thought', tryCatch(writeThought));
+app.post('/delete-thought', tryCatch(deleteThought));
+app.post('/get-roots', tryCatch(getRoots));
+app.post('/update-space-persona', tryCatch(updateSpacePersona));
+app.post('/add-persona-to-space', tryCatch(addPersonaToSpace));
+app.post('/leave-space', tryCatch(leaveSpace));
 
 app.use(((err, req, res, next) => {
-	console.log('err:', err);
-	res.status(err.status || 500);
-	res.send({ error: { message: err.message } });
+	// console.log('err:', err);
+	res.status(500).json({ error: err.message });
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	touchIfDne(rootSettingsPath, JSON.stringify(new RootSettings({})));
-	WorkingDirectory.current.setUp();
-	const personas = Personas.get();
-	personas.list.forEach((p) => personas.unlockPersona(p.id, ''));
-	console.log(`Server is running on http://localhost:${port}`);
+	if (!env.isGlobalSpace) {
+		touchIfDne(rootSettingsPath, JSON.stringify(new RootSettings({})));
+		WorkingDirectory.current.setUp();
+		const personas = Personas.get();
+		personas.list.forEach((p) => {
+			if (p.id) {
+				personas.unlockPersona(p.id, '');
+			}
+		});
+	}
+	console.log(`Server is running at ${hostname}:${port}`);
 });

@@ -12,21 +12,21 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
 import {
-	useActivePersona,
 	useActiveSpace,
 	useLastUsedTags,
 	useLocalState,
 	usePersonas,
 	useRootSettings,
+	useSpaces,
 	useTagTree,
 } from '../utils/state';
 import { matchSorter } from 'match-sorter';
 import { useKeyPress } from '../utils/keyboard';
 import { bracketRegex, getNodes, getNodesArr, getTags } from '../utils/tags';
 import DeterministicVisualId from './DeterministicVisualId';
-import { buildUrl, ping, post } from '../utils/api';
+import { hostedLocally, localApiHostname, makeUrl, ping, post } from '../utils/api';
 import { shortenString } from '../utils/js';
-import { Personas } from '../utils/settings';
+import { Personas, Space } from '../utils/settings';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -54,11 +54,9 @@ window.addEventListener('scroll', () => {
 });
 
 export default function Header() {
-	const location = useLocation();
-	const [localState, localStateSet] = useLocalState();
-	const [personas, personasSet] = usePersonas();
 	const activeSpace = useActiveSpace();
-	const activePersona = useActivePersona();
+	const [personas, personasSet] = usePersonas();
+	const [spaces] = useSpaces();
 	const [rootSettings] = useRootSettings();
 	const navigate = useNavigate();
 	const [tagTree] = useTagTree();
@@ -166,7 +164,7 @@ export default function Header() {
 						<img
 							src={logo}
 							alt="logo"
-							className={`h-7 ${!rootSettings?.usingDefaultWorkingDirectoryPath && 'grayscale'}`}
+							className={`h-7 ${hostedLocally && rootSettings?.testWorkingDirectory && 'grayscale'}`}
 						/>
 						<p className="ml-2 text-2xl font-black">Mindapp</p>
 					</Link>
@@ -265,9 +263,10 @@ export default function Header() {
 								}
 							}}
 						>
-							<div className="rounded overflow-hidden h-7 w-7">
-								<DeterministicVisualId input={activeSpace?.id} />
-							</div>
+							<DeterministicVisualId
+								input={activeSpace?.hostname}
+								className="rounded overflow-hidden h-7 w-7"
+							/>
 						</button>
 						<button
 							ref={personaBtn}
@@ -284,9 +283,10 @@ export default function Header() {
 								}
 							}}
 						>
-							<div className="rounded-full overflow-hidden h-7 w-7">
-								<DeterministicVisualId input={activePersona?.id} />
-							</div>
+							<DeterministicVisualId
+								input={personas[0].id}
+								className="rounded-full overflow-hidden h-7 w-7"
+							/>
 						</button>
 					</div>
 					{(switchingSpaces || switchingPersonas) && (
@@ -294,88 +294,108 @@ export default function Header() {
 							className={`absolute shadow rounded h-fit overflow-hidden top-12 bg-mg1 ${switchingSpaces ? 'right-12' : 'right-2'} mr-1`}
 						>
 							<div className="max-h-48 overflow-scroll">
-								{[null, ...((switchingSpaces ? activePersona?.spaces || [] : personas) || [])].map(
-									(thing, i) => {
-										return (
-											// activePersona?.id !== thing?.id && (
-											<div className="flex transition hover:bg-mg2" key={i}>
-												<button
+								{(
+									((switchingSpaces
+										? personas[0].spaceHostnames.map((hostname) => spaces[hostname] || { hostname })
+										: personas) || []) as (Space & Personas[number])[]
+								).map((thing, i) => {
+									const thingKey = switchingSpaces ? thing.hostname : thing.id;
+									const showCheck = !i;
+									return (
+										<div className="flex transition hover:bg-mg2" key={thingKey}>
+											<button
+												onMouseDown={(e) => e.preventDefault()}
+												className="w-44 pl-2 h-11 fx"
+												onClick={() => {
+													switchingSpacesSet(false);
+													switchingPersonasSet(false);
+													if (thing.locked) {
+														return navigate(`/unlock/${thingKey}`);
+													}
+													if (hostedLocally) {
+														ping<Personas>(
+															makeUrl('prioritize-persona-or-space'),
+															post(
+																switchingSpaces
+																	? { personaId: personas[0].id, spaceHostname: thing.hostname }
+																	: { personaId: thing.id },
+															),
+														)
+															.then((p) => personasSet(p))
+															.catch((err) => alert(err));
+													} else {
+														personasSet((old) => {
+															if (switchingSpaces) {
+																old[0].spaceHostnames.splice(
+																	0,
+																	0,
+																	old[0].spaceHostnames.splice(
+																		old[0].spaceHostnames.findIndex((h) => h === thing.hostname),
+																		1,
+																	)[0],
+																);
+															} else {
+																old.splice(
+																	0,
+																	0,
+																	old.splice(
+																		old.findIndex((p) => p.id === thing.id),
+																		1,
+																	)[0],
+																);
+															}
+															return [...old];
+														});
+													}
+												}}
+											>
+												<DeterministicVisualId
+													input={thingKey}
+													className={`h-6 w-6 overflow-hidden ${switchingSpaces ? 'rounded' : 'rounded-full'}`}
+												/>
+												<div className="flex-1 ml-1.5 truncate">
+													<p
+														className={`max-w-full text-left text-lg font-semibold leading-5  ${!thing?.name && 'text-fg2'} truncate`}
+													>
+														{thing?.name ||
+															(switchingSpaces ? 'Local space' : !thing.id && 'Anon') ||
+															'No name'}
+													</p>
+													<p className="text-left font-mono text-fg2 leading-5 truncate">
+														{switchingSpaces
+															? thingKey || localApiHostname
+															: shortenString(thingKey)}
+													</p>
+												</div>
+											</button>
+											{!thingKey ? (
+												<div className="w-8 xy">
+													{showCheck && <CheckIcon className="h-5 w-5" />}
+												</div>
+											) : (
+												<Link
+													className="xy w-8 group relative"
+													aria-disabled={!thingKey}
+													to={`/manage-${switchingSpaces ? 'spaces' : 'personas'}/${thingKey}`}
 													onMouseDown={(e) => e.preventDefault()}
-													className="w-44 pl-2 pr-1.5 h-11 fx"
 													onClick={() => {
 														switchingSpacesSet(false);
 														switchingPersonasSet(false);
-														// @ts-ignore
-														if (thing?.locked) {
-															return navigate(`/unlock/${thing.id}`);
-														}
-														switchingSpaces
-															? localStateSet({ ...localState, activeSpaceId: thing?.id || '' })
-															: localStateSet({
-																	...localState,
-																	activePersonaId: thing?.id || '',
-																});
-														thing?.id &&
-															ping<Personas>(
-																buildUrl('set-first-persona-or-space'),
-																post(
-																	switchingSpaces
-																		? { personaId: activePersona?.id, spaceId: thing!.id }
-																		: { personaId: thing?.id },
-																),
-															)
-																.then((data) => personasSet(data))
-																.catch((err) => alert(JSON.stringify(err)));
 													}}
 												>
-													<div
-														className={`h-6 w-6 overflow-hidden ${switchingSpaces ? 'rounded' : 'rounded-full'}`}
-													>
-														<DeterministicVisualId input={thing?.id} />
+													{showCheck ? (
+														<CheckIcon className="h-5 w-5" />
+													) : (
+														thing.locked && <LockClosedIcon className="h-4 w-4 text-fg2" />
+													)}
+													<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
+														<EllipsisHorizontalIcon className="h-5 w-5" />
 													</div>
-													<div className="flex-1 ml-1.5 mr-2 truncate">
-														<p
-															className={`max-w-full text-left text-lg font-semibold leading-5  ${!thing?.defaultName && 'text-fg2'} truncate`}
-														>
-															{thing === null
-																? switchingSpaces
-																	? 'Local'
-																	: 'Anon'
-																: thing?.defaultName || 'No name'}
-														</p>
-														{thing?.id && (
-															<p className="text-left font-mono text-fg2 leading-5">
-																{shortenString(thing.id)}
-															</p>
-														)}
-													</div>
-												</button>
-
-												{thing?.id && (
-													<Link
-														className="xy w-8 group relative"
-														to={`/manage-personas/${thing.id}`}
-														onMouseDown={(e) => e.preventDefault()}
-														onClick={() => {
-															switchingSpacesSet(false);
-															switchingPersonasSet(false);
-														}}
-													>
-														{thing?.id === (switchingSpaces ? activeSpace : activePersona)?.id ? (
-															<CheckIcon className="h-5 w-5" />
-														) : (
-															// @ts-ignore
-															thing?.locked && <LockClosedIcon className="h-4 w-4 text-fg2" />
-														)}
-														<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
-															<EllipsisHorizontalIcon className="h-5 w-5" />
-														</div>
-													</Link>
-												)}
-											</div>
-										);
-									},
-								)}
+												</Link>
+											)}
+										</div>
+									);
+								})}
 							</div>
 							<Link
 								to={switchingSpaces ? '/manage-spaces' : '/manage-personas'}
@@ -404,10 +424,31 @@ export default function Header() {
 									onClick={() => {
 										switchingSpacesSet(false);
 										switchingPersonasSet(false);
-										navigate('/');
-										ping<Personas>(buildUrl('lock-all-personas'))
-											.then((data) => personasSet(data))
-											.catch((err) => alert(JSON.stringify(err)));
+										if (hostedLocally) {
+											ping<Personas>(makeUrl('lock-all-personas'))
+												.then((p) => {
+													personasSet(p);
+													navigate('/');
+												})
+												.catch((err) => alert(err));
+										} else {
+											const newPersonas: typeof personas = JSON.parse(JSON.stringify(personas));
+											newPersonas.forEach((p) => {
+												if (!!p.id) {
+													p.locked = true;
+												}
+											});
+											newPersonas.splice(
+												0,
+												0,
+												newPersonas.splice(
+													newPersonas.findIndex((p) => !p.id),
+													1,
+												)[0],
+											);
+											personasSet(newPersonas);
+											navigate('/');
+										}
 									}}
 								>
 									<div className="h-6 w-6 xy">

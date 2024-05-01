@@ -44,7 +44,10 @@ export default function Search() {
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const q = searchParams.get('q') || '';
-	const query = useMemo(() => parseQuery(q, tagTree || { parents: {}, loners: [] }), [q, tagTree]);
+	const urlQuery = useMemo(
+		() => parseQuery(q, tagTree || { parents: {}, loners: [] }),
+		[q, tagTree],
+	);
 
-	return <div className="p-3">{tagTree && <Results query={query} />}</div>;
+	return <div className="p-3">{tagTree && <Results urlQuery={urlQuery} />}</div>;
 }

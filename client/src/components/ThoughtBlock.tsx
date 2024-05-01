@@ -1,5 +1,4 @@
 import {
-	// ArrowDownTrayIcon,
 	ArrowTopRightOnSquareIcon,
 	EllipsisHorizontalIcon,
 	MinusIcon,
@@ -11,7 +10,9 @@ import {
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buildUrl, ping, post } from '../utils/api';
-import { RecThought, getThoughtId } from '../utils/thought';
+import { isStringifiedRecord } from '../utils/js';
+import { useActiveSpace, useSendMessage, usePersonas } from '../utils/state';
+import { Thought, getThoughtId } from '../utils/thought';
 import { minute } from '../utils/time';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
@@ -57,20 +58,23 @@ export default function ThoughtBlock({
 	initiallyLinking,
 	highlightedId,
 }: {
-	thought: RecThought;
-	roots: (null | RecThought)[];
-	onRootsChange: (newRoots: (null | RecThought)[]) => void;
+	thought: Thought;
+	roots: (null | Thought)[];
+	onRootsChange: (newRoots: (null | Thought)[]) => void;
 	onNewRoot?: () => void;
 	rootsIndices: number[];
 	depth?: number;
 	initiallyLinking?: boolean;
 	highlightedId?: string;
 }) {
+	const activeSpace = useActiveSpace();
+	const [personas] = usePersonas();
+	const sendMessage = useSendMessage();
 	const [moreOptionsOpen, moreOptionsOpenSet] = useState(false);
 	const [editing, editingSet] = useState(false);
 	const [open, openSet] = useState(true);
 	const [linking, linkingSet] = useState(!!initiallyLinking);
-	const [markdown, markdownSet] = useState(true);
+	const [parsed, parsedSet] = useState(true);
 	const thoughtId = useMemo(() => getThoughtId(thought), [thought]);
 	const highlighted = useMemo(() => highlightedId === thoughtId, [highlightedId, thoughtId]);
 	const linkingThoughtId = useRef('');
@@ -90,12 +94,13 @@ export default function ThoughtBlock({
 					</div>
 				</button>
 				<div className="mt-0.5 flex-1">
-					<ThoughtBlockHeader thought={thought} markdownSet={markdownSet} markdown={markdown} />
+					<ThoughtBlockHeader thought={thought} parsedSet={parsedSet} parsed={parsed} />
 					<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 						{editing ? (
 							<div className="mt-1">
 								<ThoughtWriter
 									editId={thoughtId}
+									parentId={thought.parentId}
 									onContentBlur={() => editingSet(false)}
 									initialContent={thought.content}
 									initialTags={thought.tags}
@@ -104,7 +109,7 @@ export default function ThoughtBlock({
 										moreOptionsOpenSet(false);
 										ctrlKey && linkingSet(true);
 										altKey && onNewRoot();
-										const newRoots = [...roots] as RecThought[];
+										const newRoots = [...roots] as Thought[];
 										let pointer = newRoots;
 										for (let i = 0; i < rootsIndices.length - 1; i++) {
 											pointer = pointer[rootsIndices[i]].children!;
@@ -119,21 +124,19 @@ export default function ThoughtBlock({
 						) : (
 							<>
 								{thought.content ? (
-									markdown ? (
+									parsed ? (
 										<ContentParser thought={thought} />
 									) : (
 										<p className="whitespace-pre-wrap break-all font-thin font-mono">
-											{typeof thought.content === 'object'
-												? Array.isArray(thought.content)
-													? thought.content.join('')
-													: JSON.stringify(thought.content)
+											{isStringifiedRecord(thought.content)
+												? JSON.stringify(JSON.parse(thought.content), null, 2)
 												: thought.content}
 										</p>
 									)
 								) : (
 									<p className="font-semibold text-fg2 italic">No content</p>
 								)}
-								{!!thought.tags.length && (
+								{!!thought.tags?.length && (
 									<div className="flex flex-wrap gap-x-2">
 										{thought.tags.map((tag) => (
 											<Link
@@ -166,21 +169,25 @@ export default function ThoughtBlock({
 									</button>
 									<button
 										className="h-4 w-4 xy hover:text-fg1 transition"
-										onClick={() => {
+										onClick={async () => {
 											const ok =
+												!!thought.spaceHostname ||
 												Date.now() - thought.createDate < minute ||
 												confirm(
 													'This thought has already been archived in the Git snapshot history; delete it anyways?',
 												);
 											if (!ok) return;
-											const newRoots = [...roots] as RecThought[];
+											const newRoots = [...roots] as Thought[];
 											let pointer = newRoots;
 											for (let i = 0; i < rootsIndices.length - 1; i++) {
 												pointer = pointer[rootsIndices[i]].children!;
 											}
 											const deletedThought = pointer[rootsIndices.slice(-1)[0]];
-
-											ping<{ softDelete: true }>(buildUrl('delete-thought'), post({ thoughtId }))
+											sendMessage<{ softDelete: true }>({
+												from: personas[0]!.id,
+												to: buildUrl({ hostname: activeSpace!.hostname, path: 'delete-thought' }),
+												thoughtId,
+											})
 												.then(({ softDelete }) => {
 													if (softDelete) {
 														deletedThought.content = '';
@@ -190,7 +197,7 @@ export default function ThoughtBlock({
 													}
 													onRootsChange(newRoots);
 												})
-												.catch((err) => alert(JSON.stringify(err)));
+												.catch((err) => alert(err));
 										}}
 									>
 										<TrashIcon className="absolute h-4 w-4" />
@@ -210,14 +217,6 @@ export default function ThoughtBlock({
 									<EllipsisHorizontalIcon className="absolute h-5 w-5" />
 								</button>
 							)}
-							{/* <button
-								className="h-4 w-4 xy hover:text-fg1 transition"
-								onClick={() => {
-									// TODO: save thoughts from the web
-								}}
-							>
-								<ArrowDownTrayIcon className="absolute h-5 w-5" />
-							</button> */}
 						</div>
 						{thought.children && (
 							<div className="mt-1 space-y-1">
@@ -246,7 +245,7 @@ export default function ThoughtBlock({
 									onWrite={({ thought }, ctrlKey, altKey) => {
 										altKey ? onNewRoot() : linkingSet(false);
 										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
-										const newRoots = [...roots] as RecThought[];
+										const newRoots = [...roots] as Thought[];
 										let pointer = newRoots;
 										for (let i = 0; i < rootsIndices.length; i++) {
 											if (!pointer[rootsIndices[i]].children) {

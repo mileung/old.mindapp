@@ -1,6 +1,5 @@
 export type RootSettings = {
-	theme: 'System' | 'Light' | 'Dark';
-	usingDefaultWorkingDirectoryPath: boolean;
+	testWorkingDirectory: boolean;
 };
 
 export type WorkingDirectory = {
@@ -9,12 +8,40 @@ export type WorkingDirectory = {
 	dirPath: string;
 };
 
-export type Personas = {
+export type UnsignedSelf = {
+	writeDate?: number;
 	id: string;
-	defaultName: string;
-	locked: boolean;
-	spaces: {
+	name?: string;
+	frozen?: true;
+	walletAddress?: string;
+};
+
+export type SignedSelf = UnsignedSelf & {
+	signature?: string;
+};
+
+export type Personas = (SignedSelf & {
+	locked?: true;
+	spaceHostnames: string[];
+	encryptedMnemonic?: string; // this is only for clients not hosted locally
+})[];
+
+export type Space = {
+	hostname: string;
+	name?: string;
+	hubAddress?: string;
+	faucetAddress?: string;
+	owner?: {
 		id: string;
-		defaultName?: string;
-	}[];
-}[];
+		name?: string;
+	};
+	self?:
+		| null
+		| (SignedSelf & {
+				addDate: number;
+				addedBy?: {
+					id: string;
+					name?: string;
+				};
+		  });
+};

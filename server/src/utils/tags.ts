@@ -33,6 +33,7 @@ export function sortObjectProps(obj: Record<string, any>) {
 			delete obj[key];
 			obj[key] = temp;
 		});
+	return obj;
 }
 
 export function shouldBeLoner(tagTree: TagTree, tag: string) {

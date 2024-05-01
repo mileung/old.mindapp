@@ -2,21 +2,13 @@ export function isRecord(value: unknown) {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function isStringRecord(value: unknown) {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		!Array.isArray(value) &&
-		Object.values(value as object).every((v) => typeof v === 'string')
-	);
-}
-
-export function isJsonRecord(str: unknown): boolean {
+export function isStringifiedRecord(value?: string) {
+	if (!value) return false;
 	try {
-		return isRecord(JSON.parse(str as string));
-	} catch (e) {
-		return false;
-	}
+		const obj = JSON.parse(value);
+		return isRecord(obj);
+	} catch (error) {}
+	return false;
 }
 
 export const shortenString = (str: string, startCount = 5, endCount = 5) => {
@@ -25,3 +17,9 @@ export const shortenString = (str: string, startCount = 5, endCount = 5) => {
 	}
 	return str.slice(0, startCount) + '~' + str.slice(-endCount);
 };
+
+export function sortRecursiveEntries(obj: Record<string, any>): [string, any][] {
+	return Object.entries(obj)
+		.sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
+		.map(([key, val]) => [key, isRecord(val) ? sortRecursiveEntries(val) : val]);
+}

@@ -4,6 +4,7 @@ import MentionedThought from './MentionedThought';
 import { PlayIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import MiniMentionedThought from './MiniMentionedThought';
 import { useMentionedThoughts } from '../utils/state';
+import { isRecord } from '../utils/js';
 
 export default function ContentParser({
 	disableMentions,
@@ -14,22 +15,28 @@ export default function ContentParser({
 }) {
 	const [mentionedThoughts] = useMentionedThoughts();
 	const htmlNodes = useMemo(() => {
-		let { content } = thought;
-		if (typeof content === 'string') content = [content];
+		let content: undefined | string[] | Record<string, string>;
+		try {
+			const record = JSON.parse(thought.content || '');
+			if (isRecord(record)) content = record;
+		} catch (e) {}
+		content = content || separateMentions(thought.content || '');
+
 		if (Array.isArray(content)) {
 			return content.map((str, i) => {
 				if (i % 2) {
 					return disableMentions ? (
 						<MiniMentionedThought key={i} thoughtId={str} />
+					) : mentionedThoughts[str] ? (
+						<MentionedThought key={i} thought={mentionedThoughts[str]} />
 					) : (
-						<MentionedThought key={i} thought={mentionedThoughts![str]} />
+						<p key={i}>{str}</p>
 					);
 				}
 				return parseMd(str);
 			});
 		}
 		const longestKeyLength = Math.max(...Object.keys(content).map((key) => key.length));
-
 		return (
 			<div className="">
 				{Object.entries(content).map(([key, val]) => {
@@ -49,30 +56,6 @@ export default function ContentParser({
 					);
 				})}
 			</div>
-			// <div className="flex">
-			// 	<div className="">
-			// 		{Object.keys(content).map((key) => {
-			// 			return (
-			// 				<div key={key} className="">
-			// 					<span className="font-semibold">{key}</span>
-			// 				</div>
-			// 			);
-			// 		})}
-			// 	</div>
-			// 	<div className="border-l-2 border-fg2 ml-2 pl-2">
-			// 		{Object.values(content).map((val, i) => {
-			// 			return (
-			// 				<div key={i} className="">
-			// 					{isThoughtId(val) ? (
-			// 						<MiniMentionedThought key={i} thoughtId={val} />
-			// 					) : (
-			// 						<span className="whitespace-pre-wrap inline font-semibold">{val}</span>
-			// 					)}
-			// 				</div>
-			// 			);
-			// 		})}
-			// 	</div>
-			// </div>
 		);
 	}, [thought.content]);
 
@@ -159,3 +142,21 @@ const IframePreview = ({ uri }: { uri: string }) => {
 		)
 	);
 };
+
+const thoughtIdsRegex = /\s\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})\s/g;
+function separateMentions(text: string) {
+	text = ` ${text} `;
+	const matches = text.matchAll(thoughtIdsRegex);
+	const result: string[] = [];
+	let start = 0;
+	for (const match of matches) {
+		result.push(text.substring(start, match.index), match[0]);
+		start = match.index! + match[0].length;
+	}
+	if (start < text.length) {
+		result.push(text.substring(start));
+	}
+	result[0] = result[0].trimStart();
+	result[result.length - 1] = result[result.length - 1].trimEnd();
+	return result;
+}

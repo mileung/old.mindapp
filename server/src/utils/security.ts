@@ -1,11 +1,16 @@
 import crypto from 'crypto';
-// import * as bitcoin from 'bitcoinjs-lib';
-// import * as bitcoinMessage from 'bitcoinjs-message';
 import * as bip32 from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { base58 } from '@scure/base';
 import * as secp256k1 from 'secp256k1';
+import { drizzleClient } from '../db';
+import { personasTable } from '../db/schema';
+import { and, eq, exists } from 'drizzle-orm';
+import env from './env';
+import { sortKeysRecursively } from './js';
+
+export type Item = string | Record<string, any> | any[];
 
 export function encrypt(text: string, password: string) {
 	const iv = crypto.randomBytes(16);
@@ -17,9 +22,6 @@ export function encrypt(text: string, password: string) {
 	const cipher = crypto.createCipheriv('aes-256-ctr', key, iv);
 	let encrypted = cipher.update(text, 'utf8', 'hex');
 	encrypted += cipher.final('hex');
-	// let encrypted = cipher.update(text, 'utf8', 'hex');
-	// encrypted += cipher.final('hex');
-	// return `${iv.toString('hex')}:${encrypted}`;
 	return `${base58.encode(iv)}:${base58.encode(Buffer.from(encrypted, 'hex'))}`;
 }
 
@@ -30,9 +32,7 @@ export function decrypt(encrypted: string, password: string) {
 		.update(String(password))
 		.digest('base64')
 		.substring(0, 32);
-	// const decipher = crypto.createDecipheriv('aes-256-ctr', key, Buffer.from(iv, 'hex'));
 	const decipher = crypto.createDecipheriv('aes-256-ctr', key, base58.decode(iv));
-	// let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
 	let decrypted = decipher.update(
 		Buffer.from(base58.decode(encryptedText)).toString('hex'),
 		'hex',
@@ -42,111 +42,118 @@ export function decrypt(encrypted: string, password: string) {
 	return decrypted;
 }
 
-// const mnemonic = bip39.generateMnemonic(wordlist);
-// console.log('Mnemonic:', mnemonic);
-// // Derive the seed from the mnemonic
-// const seed = bip39.mnemonicToSeedSync(mnemonic);
-// // const seed = Buffer.from(bip39.mnemonicToSeedSync(mnemonic));
-
-// console.log('seed:', seed);
-// const masterKey = bip32.HDKey.fromMasterSeed(seed);
-// console.log('masterKey:', masterKey);
-// const address_index = 0;
-// // Derive the child key (e.g., the first receiving address)
-// const childKey = masterKey.derive(`m/44'/0'/0'/0/${address_index}`);
-// // const privateKey = Buffer.from(childKey.privateKey!).toString('hex');
-// // const publicKey = Buffer.from(childKey.publicKey!).toString('hex');
-// const privateKey = Buffer.from(childKey.privateKey!);
-// const publicKey = Buffer.from(childKey.publicKey!);
-// console.log('privateKey:', privateKey);
-// console.log('publicKey:', publicKey);
-
-// // Get the Bitcoin address derived from the public key
-// const { address } = bitcoin.payments.p2pkh({ pubkey: publicKey });
-
-// console.log('Private Key:', privateKey!.toString('hex'));
-// console.log('Public Key:', publicKey.toString('hex'));
-// console.log('Bitcoin Address:', address);
-
-// const keyPair = bitcoin.ECPair.fromPrivateKey(privateKey);
-
-// const signature = bitcoinMessage.sign(message, privateKey!, keyPair.compressed);
-// console.log('signature:', signature.toString('hex').length);
-
-// const isValid = bitcoinMessage.verify(message, address!, signature);
-
-// console.log('Signature is valid:', isValid); // true
-
 export function createKeyPair(mnemonic?: string) {
 	mnemonic = bip39.validateMnemonic(mnemonic!, wordlist)
 		? mnemonic!
 		: bip39.generateMnemonic(wordlist);
 	const seed = bip39.mnemonicToSeedSync(mnemonic);
-	// const seed = Buffer.from(bip39.mnemonicToSeedSync(mnemonic));
 	const masterKey = bip32.HDKey.fromMasterSeed(seed);
 	const address_index = 0;
 	const childKey = masterKey.derive(`m/44'/0'/0'/0/${address_index}`);
-	// const ROOT_PATH = "m/44'/666666'"; // this is what's in @vite/vitejs
-	// function getPath(index: number): string {
-	// 	return `${ROOT_PATH}/${index}\'`;
-	// }
-	// const childKey = masterKey.derive(getPath(0));
-	// const { address } = bitcoin.payments.p2pkh({ pubkey: Buffer.from(childKey.publicKey!) });
 
 	return {
-		// address: address!,
-		// privateKey: Buffer.from(childKey.privateKey!).toString('hex'),
-		// publicKey: Buffer.from(childKey.publicKey!).toString('hex'),
 		privateKey: base58.encode(childKey.privateKey!),
 		publicKey: base58.encode(childKey.publicKey!),
 	};
 }
 
-// export function signMessage(message: string, privateKey: string) {
-// 	const privKeyBuffer = Buffer.from(privateKey, 'hex');
-// 	const keyPair = bitcoin.ECPair.fromPrivateKey(privKeyBuffer);
-// 	const signature = bitcoinMessage.sign(message, privKeyBuffer, keyPair.compressed);
-// 	return Buffer.from(signature).toString('hex');
-// }
-
-// export function verifyMessage(message: string, publicKey: string, signature: string) {
-// 	const { address } = bitcoin.payments.p2pkh({ pubkey: Buffer.from(publicKey!, 'hex') });
-// 	const isValid = bitcoinMessage.verify(message, address!, Buffer.from(signature, 'hex'));
-// 	console.log('isValid:', isValid);
-// 	// bip32.HDKey.
-// 	return isValid;
-// }
-
-function bufferMessage(message: string) {
-	const sha256MessageHash = crypto.createHash('sha256').update(message).digest('hex');
-	const messageBuffer = Buffer.from(sha256MessageHash, 'hex');
-	return messageBuffer;
+function bufferItem(item: Item) {
+	item = typeof item === 'string' ? item : JSON.stringify(sortKeysRecursively(item));
+	const sha256ItemHash = crypto.createHash('sha256').update(item).digest('hex');
+	const itemBuffer = Buffer.from(sha256ItemHash, 'hex');
+	return itemBuffer;
 }
 
-export function signMessage(message: string, privateKey: string) {
-	// const privKeyBuffer = Buffer.from(privateKey, 'hex');
+export function signItem(item: Item, privateKey: string) {
 	const privKeyBuffer = base58.decode(privateKey);
-	const { signature } = secp256k1.ecdsaSign(bufferMessage(message), privKeyBuffer);
-	// return Buffer.from(signature).toString('hex');
+	const { signature } = secp256k1.ecdsaSign(bufferItem(item), privKeyBuffer);
 	return base58.encode(signature);
 }
 
-export function verifyMessage(message: string, publicKey: string, signature: string) {
-	// const publicKeyBuffer = Buffer.from(publicKey, 'hex');
+export function verifyItem(item: Item, publicKey: string, signature?: string) {
+	if (!signature) return false;
 	const publicKeyBuffer = base58.decode(publicKey);
 	const isValid = secp256k1.ecdsaVerify(
-		// Buffer.from(signature, 'hex'),
 		base58.decode(signature),
-		bufferMessage(message),
+		bufferItem(item),
 		publicKeyBuffer,
 	);
 	return isValid;
+}
+
+export function hashString(str: string) {
+	return base58.encode(bufferItem(str));
 }
 
 // const message =
 // 	'This is an example of a signed message. This is an example of a signed message. This is an example of a signed message.';
 // const kp = createKeyPair();
 // console.log('kp:', kp);
-// const sig = signMessage(message, kp.privateKey);
-// const result = verifyMessage(message, kp.publicKey, sig);
+// const sig = signItem(message, kp.privateKey);
+// const result = verifyItem(message, kp.publicKey, sig);
 // console.log('result:', result);
+
+// console.log(1, bufferItem('test').toString('hex'));
+// 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+// console.log(2, base58.encode(bufferItem('test')));
+// Bjj4AWTNrjQVHqgWbP2XaxXz4DYH1WZMyERHxsad7b2w
+// console.log(hashString('test'));
+// Bjj4AWTNrjQVHqgWbP2XaxXz4DYH1WZMyERHxsad7b2w
+
+export async function checkPrivilege(personaId?: string) {
+	if (personaId === env.ownerId || !env.isGlobalSpace) {
+		return {
+			read: true,
+			write: true,
+		};
+	} else if (!personaId) {
+		return {
+			// read: env.nullCanRead,
+			// write: env.nullCanWrite,
+			read: env.anyoneCanJoin,
+			write: env.anyoneCanJoin,
+		};
+	}
+
+	const [row] = await drizzleClient
+		.select()
+		.from(personasTable)
+		.where(eq(personasTable.id, personaId))
+		.limit(1);
+	return row
+		? {
+				read: true, // !!row.read,
+				write: true, // !!row.write,
+			}
+		: {
+				// read: env.nullCanRead,
+				// write: env.nullCanWrite,
+				read: env.anyoneCanJoin,
+				write: env.anyoneCanJoin,
+			};
+}
+
+export async function inGroup(personaId?: string) {
+	if (!personaId) {
+		return undefined;
+	}
+	const result = await drizzleClient
+		.select()
+		.from(personasTable)
+		.where(eq(personasTable.id, personaId))
+		.limit(1);
+
+	return result[0]
+		? {
+				id: result[0].id || undefined,
+				name: result[0].name || undefined,
+				frozen: result[0].frozen || undefined,
+				walletAddress: result[0].walletAddress || undefined,
+				writeDate: result[0].writeDate || undefined,
+				signature: result[0].signature || undefined,
+
+				addDate: result[0].addDate,
+				addedById: result[0].addedById || undefined,
+			}
+		: undefined;
+}

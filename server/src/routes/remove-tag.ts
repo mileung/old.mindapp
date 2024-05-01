@@ -44,9 +44,6 @@ const removeTag: RequestHandler = (req, res) => {
 					}
 				}
 			});
-			// When you remove a root tag from the tags page, it does and should not remove the tag from
-			// every thought that has that tag.
-			// Don not do `delete index.thoughtIdsByTag[tag];` here!
 		}
 	}
 	tagTree.overwrite();

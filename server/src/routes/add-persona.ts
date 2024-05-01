@@ -4,16 +4,16 @@ import { RequestHandler } from 'express';
 import { Personas } from '../types/Personas';
 
 const addPersona: RequestHandler = (req, res) => {
-	let { defaultName, mnemonic, password } = req.body as {
-		defaultName: string;
+	let { name, mnemonic, password } = req.body as {
+		name: string;
 		mnemonic: string;
 		password: string;
 	};
 	const personas = Personas.get();
 	mnemonic = mnemonic || bip39.generateMnemonic(wordlist, 256);
 	if (!bip39.validateMnemonic(mnemonic, wordlist)) throw new Error('Invalid mnemonic');
-	personas.addPersona(mnemonic, password, defaultName);
-	res.send(personas.arr);
+	personas.addPersona({ mnemonic, password, name });
+	res.send(personas.clientArr);
 };
 
 export default addPersona;

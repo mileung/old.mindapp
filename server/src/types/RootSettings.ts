@@ -1,40 +1,36 @@
 import Ajv from 'ajv';
 import { parseFile, rootSettingsPath, writeObjectFile } from '../utils/files';
 import { WorkingDirectory } from './WorkingDirectory';
+import env from '../utils/env';
 
 const ajv = new Ajv();
 
 const schema = {
 	type: 'object',
 	properties: {
-		theme: { type: 'string', enum: ['System', 'Light', 'Dark'] },
-		usingDefaultWorkingDirectoryPath: { type: 'boolean' },
+		testWorkingDirectory: { type: 'boolean' },
 		// customWorkingDirectoryPath: { type: 'string' },
 	},
 	required: [
-		'theme',
-		'usingDefaultWorkingDirectoryPath',
+		'testWorkingDirectory',
 		// 'customWorkingDirectoryPath',
 	],
 	additionalProperties: false,
 };
 
 export class RootSettings {
-	public theme: string;
-	public usingDefaultWorkingDirectoryPath: boolean;
+	public testWorkingDirectory: boolean;
 	// public customWorkingDirectoryPath?: string;
 
 	constructor({
-		theme = 'System',
-		usingDefaultWorkingDirectoryPath = true,
+		testWorkingDirectory = false,
 		// customWorkingDirectoryPath,
 	}: {
-		theme?: string;
-		usingDefaultWorkingDirectoryPath?: boolean;
+		testWorkingDirectory?: boolean;
 		// customWorkingDirectoryPath?: string;
 	}) {
-		this.theme = theme;
-		this.usingDefaultWorkingDirectoryPath = usingDefaultWorkingDirectoryPath;
+		if (env.isGlobalSpace) throw new Error('Global space cannot use RootSettings');
+		this.testWorkingDirectory = testWorkingDirectory;
 		// // this.customWorkingDirectoryPath = customWorkingDirectoryPath;
 
 		if (!ajv.validate(schema, this))
@@ -46,9 +42,7 @@ export class RootSettings {
 	}
 
 	overwrite() {
-		if (
-			RootSettings.get().usingDefaultWorkingDirectoryPath !== this.usingDefaultWorkingDirectoryPath
-		) {
+		if (RootSettings.get().testWorkingDirectory !== this.testWorkingDirectory) {
 			WorkingDirectory.current.setUp();
 		}
 		writeObjectFile(rootSettingsPath, this);

@@ -3,30 +3,28 @@ import { Link } from 'react-router-dom';
 import { Thought } from '../utils/thought';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
+import { isStringifiedRecord } from '../utils/js';
 
-export default function MentionedThought({ thought }: { thought?: Thought }) {
-	if (!thought) return null;
-	const [markdown, markdownSet] = useState(true);
+export default function MentionedThought({ thought }: { thought: Thought }) {
+	const [parsed, parsedSet] = useState(true);
 
 	return (
 		<div className={`py-1 px-1.5 border border-mg2 rounded`}>
-			<ThoughtBlockHeader thought={thought} markdownSet={markdownSet} markdown={markdown} />
+			<ThoughtBlockHeader thought={thought} parsedSet={parsedSet} parsed={parsed} />
 			{thought.content ? (
-				markdown ? (
+				parsed ? (
 					<ContentParser disableMentions thought={thought} />
 				) : (
 					<p className="whitespace-pre-wrap break-all font-thin font-mono">
-						{typeof thought.content === 'object'
-							? Array.isArray(thought.content)
-								? thought.content.join('')
-								: JSON.stringify(thought.content)
+						{isStringifiedRecord(thought.content)
+							? JSON.stringify(JSON.parse(thought.content), null, 2)
 							: thought.content}
 					</p>
 				)
 			) : (
 				<p className="font-semibold text-fg2 italic">No content</p>
 			)}
-			{!!thought.tags.length && (
+			{!!thought.tags?.length && (
 				<div className="flex flex-wrap gap-x-2">
 					{thought.tags.map((tag) => (
 						<Link

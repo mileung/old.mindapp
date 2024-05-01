@@ -8,7 +8,7 @@ const deletePersona: RequestHandler = (req, res) => {
 	};
 	const personas = Personas.get();
 	const deleted = personas.deletePersona(personaId, mnemonic);
-	res.send({ arr: deleted ? personas.arr : null });
+	res.send({ arr: deleted ? personas.clientArr : null });
 };
 
 export default deletePersona;

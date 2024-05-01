@@ -5,43 +5,53 @@ import {
 	BarsArrowUpIcon,
 } from '@heroicons/react/16/solid';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import ThoughtBlock from '../components/ThoughtBlock';
 import { buildUrl, ping, post } from '../utils/api';
-import { RecThought, Thought, getThoughtId } from '../utils/thought';
+import { Thought, getThoughtId } from '../utils/thought';
 import { ThoughtWriter } from './ThoughtWriter';
-import { isRecord } from '../utils/js';
-import { useDefaultNames, useMentionedThoughts } from '../utils/state';
+import { isStringifiedRecord } from '../utils/js';
+import {
+	useNames,
+	useMentionedThoughts,
+	useSendMessage,
+	useSpaces,
+	usePersonas,
+	useActiveSpace,
+} from '../utils/state';
 
 const defaultColumnLabels = [
 	'createDate',
 	'authorId',
-	'spaceId',
+	'spaceHostname',
 	'content',
 	'tags',
 	'parentId',
-	'childrenIds',
-	'mentionedByIds',
 ];
 
 export default function Results({
-	query,
+	urlQuery,
 }: {
-	query?: {
+	urlQuery?: {
 		tags?: string[];
 		other?: string[];
 		thoughtId?: string;
 	};
 }) {
+	const activeSpace = useActiveSpace();
 	const location = useLocation();
-	const [defaultNames, defaultNamesSet] = useDefaultNames();
+	const [searchParams, searchParamsSet] = useSearchParams();
+	const sendMessage = useSendMessage();
+	const [personas] = usePersonas();
+	const spaces = useSpaces();
+	const [names, namesSet] = useNames();
 	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
-	const [queriedThoughtRoot, queriedThoughtRootSet] = useState<null | RecThought>(null);
-	const [roots, rootsSet] = useState<(null | RecThought)[]>([]);
-	const [freeForm, freeFormSet] = useState(!!true);
+	const [queriedThoughtRoot, queriedThoughtRootSet] = useState<null | Thought>(null);
+	const [roots, rootsSet] = useState<(null | Thought)[]>([]);
+	const [freeForm, freeFormSet] = useState(searchParams.get('spreadsheet') !== 'true');
 	const [oldToNew, oldToNewSet] = useState(false);
 	const [columnLabels, columnLabelsSet] = useState(defaultColumnLabels);
-	const queriedThoughtId = useMemo(() => query?.thoughtId, [query?.thoughtId]);
+	const queriedThoughtId = useMemo(() => urlQuery?.thoughtId, [urlQuery?.thoughtId]);
 	const thoughtsBeyond = useRef(oldToNew ? 0 : Number.MAX_SAFE_INTEGER);
 	const pinging = useRef(false);
 	const rootTextArea = useRef<HTMLTextAreaElement>(null);
@@ -51,28 +61,35 @@ export default function Results({
 		queriedThoughtId && roots[0] && queriedThoughtRootSet(roots[0]);
 	}, [roots]);
 
-	const loadMoreThoughts = useCallback(() => {
+	const loadMoreThoughts = useCallback(async () => {
 		const lastRoot = roots.slice(-1)[0];
-		if (lastRoot === null) return;
-		const ignoreRootIds = roots.map((root) => root && getThoughtId(root));
+		if (lastRoot === null || !activeSpace) return;
+		const ignoreRootIds = freeForm
+			? roots.map((root) => root && getThoughtId(root))
+			: roots
+					.filter((r) => r?.createDate === roots.slice(-1)[0]?.createDate)
+					.map((r) => getThoughtId(r!));
 		pinging.current = true;
-		ping<{
+
+		sendMessage<{
 			moreMentions: Record<string, Thought>;
 			moreDefaultNames: Record<string, string>;
 			latestCreateDate: number;
-			moreRoots: RecThought[];
-		}>(
-			buildUrl('get-roots'),
-			post({
-				...query,
+			moreRoots: Thought[];
+		}>({
+			from: personas[0].id,
+			to: buildUrl({ hostname: activeSpace.hostname, path: 'get-roots' }),
+			query: {
+				...urlQuery,
 				ignoreRootIds,
 				freeForm,
 				oldToNew,
 				thoughtsBeyond: thoughtsBeyond.current,
-			}),
-		)
+			},
+		})
 			.then((data) => {
-				defaultNamesSet({ ...defaultNames, ...data.moreDefaultNames });
+				// console.log('data:', data);
+				namesSet({ ...names, ...data.moreDefaultNames });
 				mentionedThoughtsSet({ ...mentionedThoughts, ...data.moreMentions });
 				const rootsPerLoad = freeForm ? 8 : 40;
 				const newRoots = roots.concat(data.moreRoots);
@@ -81,18 +98,18 @@ export default function Results({
 				rootsSet(newRoots);
 
 				data.moreRoots.forEach((root) => {
-					if (isRecord(root.content)) {
+					if (isStringifiedRecord(root.content)) {
 						const newColumnLabels = [...columnLabels];
 						newColumnLabels.unshift(
-							...Object.keys(root.content).filter((a) => !columnLabels.includes(a)),
+							...Object.keys(JSON.parse(root.content!)).filter((a) => !columnLabels.includes(a)),
 						);
 						columnLabelsSet(newColumnLabels);
 					}
 				});
 			})
-			.catch((err) => alert(JSON.stringify(err)))
+			.catch((err) => alert(err))
 			.finally(() => (pinging.current = false));
-	}, [roots, freeForm, oldToNew, query]);
+	}, [sendMessage, personas[0], activeSpace, roots, freeForm, oldToNew, urlQuery]);
 
 	useEffect(() => {
 		let rootsLengthLastLoad: number;
@@ -114,6 +131,7 @@ export default function Results({
 
 	useEffect(() => {
 		if (!roots.length && !pinging.current) {
+			mentionedThoughtsSet({});
 			thoughtsBeyond.current = oldToNew ? 0 : Number.MAX_SAFE_INTEGER;
 			loadMoreThoughts();
 		}
@@ -142,7 +160,7 @@ export default function Results({
 					{roots.length === 2 ? 'No mentions' : 'Mentions'}
 				</p>
 			)}
-			{!query && (
+			{!urlQuery && (
 				<ThoughtWriter
 					parentRef={rootTextArea}
 					initialContent={queriedThoughtId}
@@ -161,6 +179,10 @@ export default function Results({
 						className="h-4 fx text-fg2 hover:text-fg1 transition"
 						onClick={() => {
 							freeFormSet(!freeForm);
+							freeForm
+								? searchParams.set('spreadsheet', 'true')
+								: searchParams.delete('spreadsheet');
+							searchParamsSet(searchParams);
 							rootsSet([]);
 						}}
 					>
@@ -227,8 +249,11 @@ export default function Results({
 										)}
 									</div>
 								))}
-								{roots.slice(queriedThoughtId ? 1 : 0).map(
-									(thought, i) =>
+								{roots.slice(queriedThoughtId ? 1 : 0).map((thought, i) => {
+									const contentAsRecord = isStringifiedRecord(thought?.content)
+										? (JSON.parse(thought!.content!) as Record<string, any>)
+										: null;
+									return (
 										thought && (
 											<React.Fragment key={getThoughtId(thought)}>
 												<div className="w-full fy whitespace-pre font-mono px-1 border border-fg2">
@@ -238,9 +263,8 @@ export default function Results({
 													const val = defaultColumnLabels.includes(col)
 														? // @ts-ignore
 															thought[col]
-														: isRecord(thought.content)
-															? // @ts-ignore
-																thought.content[col]
+														: contentAsRecord
+															? contentAsRecord[col]
 															: undefined;
 													return (
 														<button
@@ -256,8 +280,9 @@ export default function Results({
 													);
 												})}
 											</React.Fragment>
-										),
-								)}
+										)
+									);
+								})}
 							</div>
 						</div>
 					)}
