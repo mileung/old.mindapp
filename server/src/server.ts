@@ -39,7 +39,7 @@ import updateLocalSpaces from './routes/update-local-space';
 
 const app = express();
 const port = env.isGlobalSpace ? 8080 : 2000;
-const hostname = env.hostname || `localhost`;
+const host = env.host || `localhost${port}`;
 
 app.use((req, res, next) => {
 	// logger
@@ -125,7 +125,7 @@ app.use((req, res, next) => {
 		throw new Error('Invalid public route request body: ' + JSON.stringify(req.body));
 	}
 	const to = new URL(message.to);
-	if (env.isGlobalSpace && (to.hostname !== hostname || to.pathname != req.url))
+	if (env.isGlobalSpace && (to.host !== host || to.pathname !== req.url))
 		throw new Error('Wrong recipient');
 	if (message.from) {
 		if (!fromSignature) throw new Error('Missing fromSignature');
@@ -160,5 +160,5 @@ app.listen(port, () => {
 			}
 		});
 	}
-	console.log(`Server is running at ${hostname}:${port}`);
+	console.log(`Server is running at ${host}`);
 });

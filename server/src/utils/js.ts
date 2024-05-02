@@ -8,7 +8,7 @@ export function sortKeysRecursively(thing: Record<string, any> | any[]): any[] {
 				return typeof e === 'object' && e !== null ? sortKeysRecursively(e) : e;
 			})
 		: Object.entries(thing)
-				.filter(([key, val]) => val !== undefined)
-				.sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
+				.filter(([key, val]) => !!val)
+				.sort(([a], [b]) => a.localeCompare(b))
 				.map(([key, val]) => [key, isRecord(val) ? sortKeysRecursively(val) : val]);
 }

@@ -1,33 +1,25 @@
 import {
-	TableCellsIcon,
-	ChatBubbleBottomCenterTextIcon,
 	BarsArrowDownIcon,
 	BarsArrowUpIcon,
+	ChatBubbleBottomCenterTextIcon,
+	TableCellsIcon,
 } from '@heroicons/react/16/solid';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import ThoughtBlock from '../components/ThoughtBlock';
-import { buildUrl, ping, post } from '../utils/api';
-import { Thought, getThoughtId } from '../utils/thought';
-import { ThoughtWriter } from './ThoughtWriter';
+import { buildUrl } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
-	useNames,
-	useMentionedThoughts,
-	useSendMessage,
-	useSpaces,
-	usePersonas,
 	useActiveSpace,
+	useMentionedThoughts,
+	useNames,
+	usePersonas,
+	useSendMessage,
 } from '../utils/state';
+import { Thought, getThoughtId } from '../utils/thought';
+import { ThoughtWriter } from './ThoughtWriter';
 
-const defaultColumnLabels = [
-	'createDate',
-	'authorId',
-	'spaceHostname',
-	'content',
-	'tags',
-	'parentId',
-];
+const defaultColumnLabels = ['createDate', 'authorId', 'spaceHost', 'content', 'tags', 'parentId'];
 
 export default function Results({
 	urlQuery,
@@ -43,7 +35,6 @@ export default function Results({
 	const [searchParams, searchParamsSet] = useSearchParams();
 	const sendMessage = useSendMessage();
 	const [personas] = usePersonas();
-	const spaces = useSpaces();
 	const [names, namesSet] = useNames();
 	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
 	const [queriedThoughtRoot, queriedThoughtRootSet] = useState<null | Thought>(null);
@@ -78,7 +69,7 @@ export default function Results({
 			moreRoots: Thought[];
 		}>({
 			from: personas[0].id,
-			to: buildUrl({ hostname: activeSpace.hostname, path: 'get-roots' }),
+			to: buildUrl({ host: activeSpace.host, path: 'get-roots' }),
 			query: {
 				...urlQuery,
 				ignoreRootIds,
@@ -137,7 +128,7 @@ export default function Results({
 		}
 	}, [oldToNew, roots, loadMoreThoughts]);
 
-	useEffect(() => rootsSet([]), [location]);
+	useEffect(() => rootsSet([]), [location, personas[0].spaceHosts[0]]);
 
 	return (
 		<div className={`space-y-1.5 relative`}>

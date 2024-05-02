@@ -11,8 +11,8 @@ export default {
 	driver: 'turso',
 	dbCredentials: {
 		// url: ':memory:',
-		// url: 'file:./src/db/global-test.db',
-		url: 'file:./src/db/local.db',
+		url: 'file:./src/db/global-test.db',
+		// url: 'file:./src/db/local.db',
 		// ...(useTursoEnvVars
 		// 	? {
 		// 			url: process.env.TURSO_DATABASE_URL!,

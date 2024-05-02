@@ -2,7 +2,7 @@ import TextInput, { useTextInputRef } from '../components/TextInput';
 import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { Button } from '../components/Button';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useGetSignature, usePersonas, useSendMessage, useSpaces } from '../utils/state';
+import { useGetSignature, usePersonas, useSendMessage, useFetchedSpaces } from '../utils/state';
 import { Personas, UnsignedSelf } from '../utils/settings';
 import DeterministicVisualId from '../components/DeterministicVisualId';
 import { shortenString } from '../utils/js';
@@ -21,7 +21,7 @@ export default function ManagePersonas() {
 	const [personas, personasSet] = usePersonas();
 	const sendMessage = useSendMessage();
 	const getSignature = useGetSignature();
-	const [spaces, spacesSet] = useSpaces();
+	const [, fetchedSpacesSet] = useFetchedSpaces();
 	const navigate = useNavigate();
 	const [secrets, secretsSet] = useState('');
 	const [changingPw, changingPwSet] = useState(false);
@@ -50,7 +50,7 @@ export default function ManagePersonas() {
 			frozen?: true;
 		}) => {
 			if (!selectedPersona) return;
-			spacesSet({});
+			fetchedSpacesSet({});
 			if (hostedLocally) {
 				ping<Personas>(makeUrl('update-local-persona'), post({ personaId, updates }))
 					.then((p) => personasSet(p))
@@ -247,11 +247,9 @@ export default function ManagePersonas() {
 									<Button
 										label="Mark as frozen"
 										onClick={async () => {
-											const hostnames = selectedPersona.spaceHostnames
-												.filter((h) => !!h)
-												.join(', ');
+											const hosts = selectedPersona.spaceHosts.filter((h) => !!h).join(', ');
 											const mnemonic = prompt(
-												`Enter mnemonic to inform the following hostnames that this persona (${selectedPersona.name || 'No name'}) has been frozen: ${hostnames}\n\nThis will block all read and write activity from this persona\n\nYou may want to do this for archival or security reasons`,
+												`Enter mnemonic to inform the following hosts that this persona (${selectedPersona.name || 'No name'}) has been frozen: ${hosts}\n\nThis will block all read and write activity from this persona\n\nYou may want to do this for archival or security reasons`,
 											);
 											if (mnemonic === null) return false;
 

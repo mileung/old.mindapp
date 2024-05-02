@@ -9,30 +9,33 @@ import { inGroup } from '../utils/security';
 const writeThought: RequestHandler = async (req, res) => {
 	// return res.send({});
 	const { message } = req.body as {
-		message: { from?: string; thought: Thought['clientProps'] };
+		message: { from?: string; thought: { signature: string } & Thought['standaloneProps'] };
 		fromSignature?: string;
 	};
 	// console.log('message:', message);
-
+	// console.log('thought:', message.thought);
+	if (env.isGlobalSpace && !message.from) throw new Error('Anon cannot write in global spaces');
 	if ((message.from || '') !== (message.thought.authorId || '')) {
 		throw new Error('message sender and thought author do not match');
 	}
 
 	const fromExistingMember = await inGroup(message.from);
+	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 	if (env.isGlobalSpace && !env.anyoneCanJoin && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
-	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
 	let newThought: Thought;
+
 	const oldThought = await Thought.query(
 		Thought.calcId(
+			//
 			message.thought.createDate,
-			message.thought.authorId || '',
-			message.thought.spaceHostname || '',
+			message.thought.authorId,
+			message.thought.spaceHost,
 		),
 	);
-
+	// console.log('oldThought:', oldThought);
 	if (oldThought) {
 		if (env.isGlobalSpace && (await oldThought.hasUserInteraction())) {
 			// TODO: make this atomic with the overwrite
@@ -57,7 +60,7 @@ const writeThought: RequestHandler = async (req, res) => {
 		const thought = await Thought.query(id);
 		if (thought) {
 			mentionedThoughts[id] = thought;
-			const { authorId, spaceHostname } = mentionedThoughts[id];
+			const { authorId, spaceHost } = mentionedThoughts[id];
 			if (!env.isGlobalSpace && authorId) {
 				const name = await Personas.getDefaultName(authorId);
 				name && (names[authorId] = name);

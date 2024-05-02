@@ -22,12 +22,12 @@ export type SignedSelf = UnsignedSelf & {
 
 export type Personas = (SignedSelf & {
 	locked?: true;
-	spaceHostnames: string[];
+	spaceHosts: string[];
 	encryptedMnemonic?: string; // this is only for clients not hosted locally
 })[];
 
 export type Space = {
-	hostname: string;
+	host: string;
 	name?: string;
 	hubAddress?: string;
 	faucetAddress?: string;

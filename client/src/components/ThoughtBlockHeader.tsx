@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
 import { formatTimestamp } from '../utils/time';
 import DeterministicVisualId from './DeterministicVisualId';
-import { useNames, useSavedFileThoughtIds } from '../utils/state';
+import { useFetchedSpaces, useNames, useSavedFileThoughtIds } from '../utils/state';
 import { makeUrl, ping, post } from '../utils/api';
 
 export default function ThoughtBlockHeader({
@@ -23,6 +23,7 @@ export default function ThoughtBlockHeader({
 	parsedSet: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
 	const [names] = useNames();
+	const [fetchedSpaces] = useFetchedSpaces();
 	const [savedFileThoughtIds, savedFileThoughtIdsSet] = useSavedFileThoughtIds();
 	const thoughtId = useMemo(() => getThoughtId(thought), [thought]);
 	const filedSaved = useMemo(
@@ -53,14 +54,14 @@ export default function ThoughtBlockHeader({
 			</Link>
 			<Link
 				target="_blank"
-				to={`/search?${new URLSearchParams({ q: `@${thought.authorId || ''}` }).toString()}`}
+				to={`/search?${new URLSearchParams({ q: `@${thought.spaceHost || ''}` }).toString()}`}
 				className="fx text-sm font-bold transition text-fg2 hover:text-fg1"
 			>
 				<DeterministicVisualId
-					input={thought.spaceHostname}
+					input={thought.spaceHost}
 					className="rounded-sm overflow-hidden h-3 w-3 mr-1"
 				/>
-				{thought.spaceHostname ? 'No name' : 'Local'}
+				{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
 			</Link>
 			<Link
 				target="_blank"

@@ -1,15 +1,7 @@
 import Ajv from 'ajv';
 import { WorkingDirectory } from './WorkingDirectory';
 import { parseFile, writeObjectFile } from '../utils/files';
-import {
-	Item,
-	createKeyPair,
-	decrypt,
-	encrypt,
-	inGroup,
-	signItem,
-	verifyItem,
-} from '../utils/security';
+import { Item, createKeyPair, decrypt, encrypt, inGroup, signItem } from '../utils/security';
 import { validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { wallet } from '@vite/vitejs';
@@ -32,12 +24,12 @@ const schema = {
 					frozen: { type: 'boolean' },
 					writeDate: { type: 'number' },
 					signature: { type: 'string' },
-					spaceHostnames: {
+					spaceHosts: {
 						type: 'array',
 						items: { type: 'string' },
 					},
 				},
-				required: ['id', 'spaceHostnames'],
+				required: ['id', 'spaceHosts'],
 			},
 		},
 	},
@@ -59,7 +51,7 @@ export type SignedSelf = UnsignedSelf & {
 
 type Persona = Partial<SignedSelf> & {
 	encryptedMnemonic?: string;
-	spaceHostnames: string[];
+	spaceHosts: string[];
 };
 
 let passwords: Record<string, string> = {};
@@ -67,7 +59,7 @@ let passwords: Record<string, string> = {};
 export class Personas {
 	public list: Persona[];
 
-	constructor({ list = [{ id: '', spaceHostnames: [''] }] }: { list?: Persona[] }) {
+	constructor({ list = [{ id: '', spaceHosts: [''] }] }: { list?: Persona[] }) {
 		if (env.isGlobalSpace) throw new Error('Global space cannot use Personas');
 		this.list = list;
 		// console.log("this:", this);
@@ -106,27 +98,27 @@ export class Personas {
 		this.overwrite();
 	}
 
-	prioritizeSpace(personaId: string, spaceHostname: string, index = 0) {
+	prioritizeSpace(personaId: string, spaceHost: string, index = 0) {
 		const personaIndex = this.findIndex(personaId);
 		if (personaIndex === -1) throw new Error('persona Persona not found');
 		const persona = this.list[personaIndex];
-		const spaceIndex = persona.spaceHostnames.findIndex((id) => id === spaceHostname);
+		const spaceIndex = persona.spaceHosts.findIndex((id) => id === spaceHost);
 		if (spaceIndex === -1) throw new Error('space persona not found');
-		persona.spaceHostnames.splice(index, 0, persona.spaceHostnames.splice(spaceIndex, 1)[0]);
+		persona.spaceHosts.splice(index, 0, persona.spaceHosts.splice(spaceIndex, 1)[0]);
 		this.overwrite();
 	}
 
-	addSpace(personaId: string, spaceHostname: string) {
+	addSpace(personaId: string, spaceHost: string) {
 		const persona = this.find(personaId);
 		if (!persona) throw new Error('Persona not found');
-		persona.spaceHostnames.unshift(spaceHostname);
+		persona.spaceHosts.unshift(spaceHost);
 		this.overwrite();
 	}
 
-	removeSpace(personaId: string, spaceHostname: string) {
+	removeSpace(personaId: string, spaceHost: string) {
 		const persona = this.find(personaId);
 		if (!persona) throw new Error('Persona not found');
-		persona.spaceHostnames.splice(persona.spaceHostnames.indexOf(spaceHostname), 1);
+		persona.spaceHosts.splice(persona.spaceHosts.indexOf(spaceHost), 1);
 		this.overwrite();
 	}
 
@@ -161,7 +153,7 @@ export class Personas {
 		this.list.unshift({
 			...signedSelf,
 			encryptedMnemonic: encrypt(mnemonic, password),
-			spaceHostnames: [''],
+			spaceHosts: [''],
 		});
 		passwords[publicKey] = password;
 		this.overwrite();
@@ -279,8 +271,8 @@ export class Personas {
 		passwords = {};
 	}
 
-	static async getDefaultName(personaId: string, spaceHostname?: string) {
-		if (!env.isGlobalSpace && !spaceHostname) {
+	static async getDefaultName(personaId: string, spaceHost?: string) {
+		if (!env.isGlobalSpace && !spaceHost) {
 			const persona = Personas.get().find(personaId);
 			if (persona) return persona.name;
 		}

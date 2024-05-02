@@ -5,7 +5,7 @@ import path from 'path';
 const whoami: RequestHandler = (req, res) => {
 	const userDesktopPath = path.join(require('os').homedir(), 'Desktop');
 	const folderName = 'mindapp';
-	console.log(req.hostname);
+	console.log(req.host);
 
 	const identities = {
 		'localhost:5173': { self: 'public key' },

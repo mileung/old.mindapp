@@ -1,21 +1,21 @@
-export const localApiHostname = 'localhost:2000';
+export const localApiHost = 'localhost:2000';
 
 export function makeUrl(path: string, params?: Record<string, any>) {
 	return buildUrl({ path, params });
 }
 
 export function buildUrl({
-	hostname,
-	https = !!hostname,
+	host,
+	https = !!host,
 	path = '',
 	params,
 }: {
 	https?: boolean;
-	hostname?: string;
+	host?: string;
 	path?: string;
 	params?: Record<string, any>;
 }) {
-	let url = `http${https ? 's' : ''}://${(hostname || localApiHostname).replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+	let url = `http${https ? 's' : ''}://${(host || localApiHost).replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 	if (params) {
 		url = `${url}?${new URLSearchParams(params).toString()}`;
 	}

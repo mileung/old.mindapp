@@ -10,7 +10,7 @@ export default function ThoughtId() {
 	return (
 		<div className="p-3">
 			{validThoughtId ? (
-				<Results query={{ thoughtId }} />
+				<Results urlQuery={{ thoughtId }} />
 			) : (
 				<div className="xy h-40">
 					<p className="text-2xl">Invalid thought ID in URL</p>

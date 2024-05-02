@@ -143,9 +143,8 @@ const IframePreview = ({ uri }: { uri: string }) => {
 	);
 };
 
-const thoughtIdsRegex = /\s\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})\s/g;
+const thoughtIdsRegex = /\b\d{9,}_(|[A-HJ-NP-Za-km-z1-9]{9,})_(|[\w:\.-]{3,})\b/g;
 function separateMentions(text: string) {
-	text = ` ${text} `;
 	const matches = text.matchAll(thoughtIdsRegex);
 	const result: string[] = [];
 	let start = 0;
@@ -156,7 +155,5 @@ function separateMentions(text: string) {
 	if (start < text.length) {
 		result.push(text.substring(start));
 	}
-	result[0] = result[0].trimStart();
-	result[result.length - 1] = result[result.length - 1].trimEnd();
 	return result;
 }

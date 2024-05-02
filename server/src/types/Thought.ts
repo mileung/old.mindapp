@@ -10,6 +10,7 @@ import { drizzleClient } from '../db';
 import { thoughtsTable } from '../db/schema';
 import { and, desc, eq, isNull, like, or } from 'drizzle-orm';
 import env from '../utils/env';
+import { localApiHost } from '../utils/api';
 
 const ajv = new Ajv({ verbose: true });
 
@@ -18,22 +19,22 @@ const schema = {
 	properties: {
 		createDate: { type: 'number' },
 		authorId: { type: 'string' },
-		spaceHostname: { type: 'string' },
+		spaceHost: { type: 'string' },
 		content: { type: 'string' },
 		tags: { type: 'array', items: { type: 'string' } },
 		parentId: { type: 'string' },
 		signature: { type: 'string' },
 	},
-	required: ['createDate', 'authorId', 'spaceHostname', 'content'],
+	required: ['createDate', 'authorId', 'spaceHost', 'content'],
 	additionalProperties: false,
 };
 
-const thoughtIdsRegex = /\s\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})\s/g;
+const thoughtIdsRegex = /\b\d{9,}_(|[A-HJ-NP-Za-km-z1-9]{9,})_(|[\w:\.-]{3,})\b/g;
 
 export class Thought {
 	public createDate: number;
 	public authorId: string;
-	public spaceHostname: string;
+	public spaceHost: string;
 	public content: string;
 	public tags: string[];
 	public parentId: string;
@@ -44,7 +45,7 @@ export class Thought {
 		{
 			createDate,
 			authorId,
-			spaceHostname,
+			spaceHost,
 			content,
 			tags,
 			parentId,
@@ -52,7 +53,7 @@ export class Thought {
 		}: {
 			createDate: number;
 			authorId?: null | string;
-			spaceHostname?: null | string;
+			spaceHost?: null | string;
 			content?: null | string;
 			tags?: null | string[];
 			parentId?: null | string;
@@ -63,7 +64,7 @@ export class Thought {
 		// save these props on disk
 		this.createDate = createDate;
 		this.authorId = authorId || '';
-		this.spaceHostname = spaceHostname || '';
+		this.spaceHost = spaceHost || '';
 		this.content = (content || '').trim();
 		this.tags = sortUniArr((tags || []).map((t) => t.trim()));
 		this.parentId = parentId || '';
@@ -79,7 +80,7 @@ export class Thought {
 		return {
 			createDate: this.createDate,
 			authorId: this.authorId || undefined,
-			spaceHostname: this.spaceHostname || undefined,
+			spaceHost: this.spaceHost || undefined,
 			content: this.content || undefined,
 			tags: this.tags.length ? this.tags : undefined,
 			parentId: this.parentId || undefined,
@@ -88,8 +89,13 @@ export class Thought {
 
 	get dbColumns() {
 		return {
-			...this.standaloneProps,
-			signature: this.signature || undefined,
+			createDate: this.createDate,
+			authorId: this.authorId || null,
+			spaceHost: this.spaceHost || null,
+			content: this.content || null,
+			tags: this.tags.length ? this.tags : null,
+			parentId: this.parentId || null,
+			signature: this.signature || null,
 		};
 	}
 
@@ -106,7 +112,7 @@ export class Thought {
 		createDate: number;
 		authorId?: string;
 		signature?: string;
-		spaceHostname?: string;
+		spaceHost?: string;
 		content?: string;
 		tags?: string[];
 		parentId?: string;
@@ -117,7 +123,7 @@ export class Thought {
 			createDate: this.createDate,
 			authorId: this.authorId || undefined,
 			signature: this.signature || undefined,
-			spaceHostname: this.spaceHostname || undefined,
+			spaceHost: this.spaceHost || undefined,
 			content: this.content || undefined,
 			tags: this.tags.length ? this.tags : undefined,
 			parentId: this.parentId || undefined,
@@ -138,11 +144,11 @@ export class Thought {
 	}
 
 	get id() {
-		return Thought.calcId(this.createDate, this.authorId, this.spaceHostname);
+		return Thought.calcId(this.createDate, this.authorId, this.spaceHost);
 	}
 
 	get filePath() {
-		return Thought.calcFilePath(this.createDate, this.authorId, this.spaceHostname);
+		return Thought.calcFilePath(this.createDate, this.authorId, this.spaceHost);
 	}
 
 	get reactions() {
@@ -256,49 +262,52 @@ export class Thought {
 	}
 
 	static async query(thoughtId: string) {
-		const [createDate, authorId, spaceHostname] = thoughtId.split('_', 3);
+		const [createDate, authorId, spaceHost] = thoughtId.split('_', 3);
+		// if (authorId) {
+		// 	console.log('createDate, authorId, spaceHost:', createDate, authorId, spaceHost);
+		// }
 		const [row] = await drizzleClient
 			.select()
 			.from(thoughtsTable)
-			.where(Thought.makeIdFilter(+createDate, authorId, spaceHostname))
+			.where(Thought.makeIdFilter(+createDate, authorId, spaceHost))
 			.limit(1);
 		return row ? new Thought(row) : null;
 	}
 
 	static parseIdFilter(id: string) {
-		const [createDate, authorId, spaceHostname] = id.split('_', 3);
-		return Thought.makeIdFilter(+createDate, authorId, spaceHostname);
+		const [createDate, authorId, spaceHost] = id.split('_', 3);
+		return Thought.makeIdFilter(+createDate, authorId, spaceHost);
 	}
 
-	static makeIdFilter(createDate: number, authorId: string, spaceHostname: string) {
+	static makeIdFilter(createDate: number, authorId: string, spaceHost: string) {
 		return and(
 			eq(thoughtsTable.createDate, +createDate),
 			authorId //
 				? eq(thoughtsTable.authorId, authorId)
 				: isNull(thoughtsTable.authorId),
-			spaceHostname //
-				? eq(thoughtsTable.spaceHostname, spaceHostname)
-				: isNull(thoughtsTable.spaceHostname),
+			spaceHost //
+				? eq(thoughtsTable.spaceHost, spaceHost)
+				: isNull(thoughtsTable.spaceHost),
 		);
 	}
 
 	static read(filePath: string) {
 		const fileName = path.basename(filePath, path.extname(filePath));
-		const [createDate, authorId, spaceHostname] = parseSafeFilename(fileName).split('_');
+		const [createDate, authorId, spaceHost] = parseSafeFilename(fileName).split('_');
 		return new Thought({
 			...parseFile<Thought>(filePath),
 			createDate: +createDate,
 			authorId,
-			spaceHostname,
+			spaceHost,
 		});
 	}
 
-	static calcId(createDate: number, authorId: string, spaceHostname: string) {
-		spaceHostname = spaceHostname.startsWith('localhost:') ? '' : spaceHostname;
-		return `${createDate}_${authorId}_${spaceHostname}`;
+	static calcId(createDate: number, authorId = '', spaceHost = '') {
+		spaceHost = spaceHost === localApiHost ? '' : spaceHost;
+		return `${createDate}_${authorId}_${spaceHost}`;
 	}
 
-	static calcFilePath(createDate: number, authorId: string, spaceHostname: string) {
+	static calcFilePath(createDate: number, authorId: string, spaceHost: string) {
 		const daysSince1970 = +createDate / day;
 		return path.join(
 			WorkingDirectory.current.timelinePath,
@@ -307,7 +316,7 @@ export class Thought {
 			Math.floor(daysSince1970 / 100) * 100 + '',
 			Math.floor(daysSince1970 / 10) * 10 + '',
 			Math.floor(daysSince1970) + '',
-			`${makeSafeFilename(Thought.calcId(createDate, authorId, spaceHostname))}.json`,
+			`${makeSafeFilename(Thought.calcId(createDate, authorId, spaceHost))}.json`,
 		);
 	}
 }

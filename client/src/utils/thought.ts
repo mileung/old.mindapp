@@ -2,7 +2,7 @@ export type Thought = {
 	createDate: number;
 	authorId?: string;
 	signature?: string;
-	spaceHostname?: string;
+	spaceHost?: string;
 	content?: string;
 	tags?: string[];
 	parentId?: string;
@@ -11,7 +11,7 @@ export type Thought = {
 };
 
 export function getThoughtId(thought: Thought) {
-	return `${thought.createDate}_${thought.authorId || ''}_${thought.spaceHostname || ''}`;
+	return `${thought.createDate}_${thought.authorId || ''}_${thought.spaceHost || ''}`;
 }
 
 export const copyToClipboardAsync = (str = '') => {
@@ -20,7 +20,7 @@ export const copyToClipboardAsync = (str = '') => {
 	return window.alert('The Clipboard API is not available.');
 };
 
-const thoughtIdRegex = /^\d{3,}_(|[A-HJ-NP-Za-km-z1-9]{3,})_(|[A-HJ-NP-Za-km-z1-9]{3,})$/;
+const thoughtIdRegex = /^\d{9,}_(|[A-HJ-NP-Za-km-z1-9]{9,})_(|[\w:\.-]{3,})$/;
 export function isThoughtId(str: string) {
 	return thoughtIdRegex.test(str);
 }

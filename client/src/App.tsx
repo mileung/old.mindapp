@@ -7,7 +7,7 @@ import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
 import ThoughtId from './pages/ThoughtId';
-import { buildUrl, hostedLocally, localApiHostname, makeUrl, ping } from './utils/api';
+import { buildUrl, hostedLocally, localApiHost, makeUrl, ping } from './utils/api';
 import { Personas, RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
 	useNames,
@@ -18,7 +18,7 @@ import {
 	useWorkingDirectory,
 	updateLocalState,
 	useSendMessage,
-	useSpaces,
+	useFetchedSpaces,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
@@ -31,7 +31,7 @@ function App() {
 	const [localState, localStateSet] = useLocalState();
 	const [, tagTreeSet] = useTagTree();
 	const [personas, personasSet] = usePersonas();
-	const [spaces, spacesSet] = useSpaces();
+	const [fetchedSpaces, fetchedSpacesSet] = useFetchedSpaces();
 	const sendMessage = useSendMessage();
 	const [names, namesSet] = useNames();
 	const [rootSettings, rootSettingsSet] = useRootSettings();
@@ -92,7 +92,7 @@ function App() {
 	}, [personas]);
 
 	useEffect(() => {
-		spacesSet({});
+		fetchedSpacesSet({});
 		// namesSet({});
 	}, [personas[0].id]);
 
@@ -101,44 +101,41 @@ function App() {
 	}, [localState]);
 
 	useEffect(() => {
-		personas[0].spaceHostnames.forEach(async (hostname) => {
-			if (
-				hostname &&
-				hostname !== localApiHostname &&
-				!spaces[hostname] &&
-				!pinging.current[hostname]
-			) {
-				pinging.current[hostname] = true;
+		personas[0].spaceHosts.forEach(async (host) => {
+			if (host && host !== localApiHost && !fetchedSpaces[host] && !pinging.current[host]) {
+				pinging.current[host] = true;
 				try {
 					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
-					const { space } = await sendMessage<{ space: Omit<Space, 'hostname'> }>({
+					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
 						from: id,
-						to: buildUrl({ hostname, path: 'update-space-persona' }),
+						to: buildUrl({ host, path: 'update-space-persona' }),
 						joinIfNotInSpace: !!id,
 						getSpaceInfo: true,
-						signedSelf: {
-							id,
-							name,
-							frozen,
-							walletAddress,
-							writeDate,
-							signature,
-						},
+						signedSelf: !id
+							? undefined
+							: {
+									id,
+									name,
+									frozen,
+									walletAddress,
+									writeDate,
+									signature,
+								},
 					});
 					// console.log('space:', space);
-					spacesSet((old) => ({ ...old, [hostname]: { hostname, ...space } }));
+					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
 				} catch (error) {
 					console.log('error:', error);
-					spacesSet((old) => ({
+					fetchedSpacesSet((old) => ({
 						...old,
-						[hostname]: { hostname, self: null },
+						[host]: { host, self: null },
 					}));
 				} finally {
-					pinging.current[hostname] = false;
+					pinging.current[host] = false;
 				}
 			}
 		});
-	}, [personas, spaces, spacesSet, sendMessage]);
+	}, [personas, fetchedSpaces, sendMessage]);
 
 	return (
 		<main>
@@ -148,7 +145,7 @@ function App() {
 					<Route path="/" Component={Home} />
 					<Route path="/search" Component={Search} />
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />
-					<Route path="/manage-spaces/:spaceHostname?" Component={ManageSpaces} />
+					<Route path="/manage-spaces/:spaceHost?" Component={ManageSpaces} />
 					<Route path="/tags/:tag?" Component={Tags} />
 					<Route path="/Settings" Component={Settings} />
 					<Route path="/unlock/:personaId" Component={UnlockPersona} />

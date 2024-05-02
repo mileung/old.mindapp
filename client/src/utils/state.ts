@@ -3,14 +3,14 @@ import { atom, useAtom } from 'jotai';
 import { TagTree } from './tags';
 import { Personas, RootSettings, Space, WorkingDirectory } from './settings';
 import { Thought } from './thought';
-import { hostedLocally, localApiHostname, makeUrl, ping, post } from './api';
+import { hostedLocally, localApiHost, makeUrl, ping, post } from './api';
 
 type LocalState = {
 	theme: 'System' | 'Light' | 'Dark';
 	personas: Personas;
 };
 
-const defaultSpaceHostname = hostedLocally ? localApiHostname : 'TODO: default global space';
+const defaultSpaceHost = hostedLocally ? localApiHost : 'TODO: default global space';
 
 export const getLocalState = () => {
 	const storedLocalState = localStorage.getItem('LocalState');
@@ -23,9 +23,9 @@ export const getLocalState = () => {
 				typeof p.id === 'string' &&
 				['string', 'undefined'].includes(typeof p.name) &&
 				(typeof p.locked === 'undefined' || p.locked === true) &&
-				Array.isArray(p.spaceHostnames) &&
-				p.spaceHostnames.length &&
-				p.spaceHostnames.every((id) => typeof id === 'string')
+				Array.isArray(p.spaceHosts) &&
+				p.spaceHosts.length &&
+				p.spaceHosts.every((id) => typeof id === 'string')
 			);
 		});
 
@@ -36,7 +36,7 @@ export const getLocalState = () => {
 				personas: [
 					{
 						id: '', //
-						spaceHostnames: [defaultSpaceHostname],
+						spaceHosts: [defaultSpaceHost],
 					},
 				],
 			} as LocalState);
@@ -56,7 +56,7 @@ export const createAtom = <T>(initialValue: T) => {
 
 const currentLocalState = getLocalState();
 export const usePersonas = createAtom<Personas>(currentLocalState.personas);
-export const useSpaces = createAtom<Record<string, Space>>({});
+export const useFetchedSpaces = createAtom<Record<string, Space>>({});
 export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
 export const useNames = createAtom<Record<string, string>>({});
 export const useMentionedThoughts = createAtom<Record<string, Thought>>({});
@@ -78,6 +78,7 @@ export function useGetSignature() {
 	const [personas] = usePersonas();
 	return useCallback(
 		async (item: Item, personaId?: string) => {
+			// console.log(item, personaId);
 			if (!personaId) return;
 			if (hostedLocally) {
 				const { signature } = await ping<{ signature?: string }>(
@@ -114,6 +115,6 @@ export function useSendMessage() {
 
 export function useActiveSpace() {
 	const [personas] = usePersonas();
-	const [spaces] = useSpaces();
-	return spaces[personas[0].spaceHostnames[0]] || { hostname: personas[0].spaceHostnames[0] };
+	const [spaces] = useFetchedSpaces();
+	return spaces[personas[0].spaceHosts[0]] || { host: personas[0].spaceHosts[0] };
 }

@@ -12,7 +12,6 @@ import {
 	useLastUsedTags,
 	useMentionedThoughts,
 	useNames,
-	useSpaces,
 	useSendMessage,
 	useActiveSpace,
 	useGetSignature,
@@ -53,7 +52,6 @@ export const ThoughtWriter = ({
 	onContentBlur?: () => void;
 }) => {
 	const activeSpace = useActiveSpace();
-	const spaces = useSpaces();
 	const [personas] = usePersonas();
 	const [searchParams] = useSearchParams();
 	const jsonString = searchParams.get('json');
@@ -112,25 +110,33 @@ export const ThoughtWriter = ({
 			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
 			const trimmedContent = content.trim();
 
-			const [createDate, authorId, spaceHostname] = (editId || '').split('_', 3);
+			let [createDate, authorId, spaceHost] = (editId || '').split('_', 3);
+			console.log('spaceHost:', spaceHost);
 			const message = {
 				from: editId ? authorId : personas[0]!.id,
 				to: buildUrl({
-					hostname: editId ? spaceHostname : activeSpace.hostname,
+					host: editId ? spaceHost : activeSpace.host,
 					path: 'write-thought',
 				}),
 				thought: {
-					parentId,
+					parentId: parentId || undefined,
 					content: trimmedContent,
-					tags: sortUniArr([...tags, additionalTag].filter((a) => !!a)),
+					tags: (() => {
+						const arr = sortUniArr([...tags, additionalTag].filter((a) => !!a));
+						return arr.length ? arr : undefined;
+					})(),
 					...(editId
-						? { createDate: +createDate, authorId, spaceHostname }
+						? {
+								createDate: +createDate,
+								authorId: authorId || undefined,
+								spaceHost: spaceHost || undefined,
+							}
 						: {
 								createDate: Date.now(),
-								authorId: personas[0].id,
-								spaceHostname: activeSpace.hostname,
+								authorId: personas[0].id || undefined,
+								spaceHost: activeSpace.host || undefined,
 							}),
-				} as Thought,
+				} as Omit<Thought, 'children' | 'filedSaved'>,
 			};
 
 			if (!message.thought.tags?.length) delete message.thought.tags;
@@ -160,7 +166,6 @@ export const ThoughtWriter = ({
 				.catch((err) => alert(err));
 		},
 		[
-			spaces,
 			sendMessage,
 			personas[0],
 			activeSpace,

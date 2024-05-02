@@ -25,7 +25,7 @@ export const thoughtsTable = sqliteTable(
 	{
 		createDate: integer('create_date').notNull(),
 		authorId: text('author_id'),
-		spaceHostname: text('space_hostname'),
+		spaceHost: text('space_host'),
 		content: text('content'),
 		tags: text('tags', { mode: 'json' }).$type<string[]>(),
 		parentId: text('parent_id'),
@@ -39,11 +39,11 @@ export const thoughtsTable = sqliteTable(
 			// https://orm.drizzle.team/docs/indexes-constraints#composite-primary-key
 			pkWithCustomName: primaryKey({
 				name: 'id',
-				columns: [table.createDate, table.authorId, table.spaceHostname],
+				columns: [table.createDate, table.authorId, table.spaceHost],
 			}),
 			createDateIdx: index('create_date_idx').on(table.createDate),
 			authorIdIdx: index('author_id_idx').on(table.authorId),
-			spaceHostnameIdx: index('space_hostname_idx').on(table.spaceHostname),
+			spaceHostIdx: index('space_host_idx').on(table.spaceHost),
 			contentIdx: index('content_idx').on(table.content),
 			tagsIdx: index('tags_idx').on(table.tags),
 			parentIdIdx: index('parent_id_idx').on(table.parentId),

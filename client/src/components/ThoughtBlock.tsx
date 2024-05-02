@@ -171,7 +171,7 @@ export default function ThoughtBlock({
 										className="h-4 w-4 xy hover:text-fg1 transition"
 										onClick={async () => {
 											const ok =
-												!!thought.spaceHostname ||
+												!!thought.spaceHost ||
 												Date.now() - thought.createDate < minute ||
 												confirm(
 													'This thought has already been archived in the Git snapshot history; delete it anyways?',
@@ -185,7 +185,7 @@ export default function ThoughtBlock({
 											const deletedThought = pointer[rootsIndices.slice(-1)[0]];
 											sendMessage<{ softDelete: true }>({
 												from: personas[0]!.id,
-												to: buildUrl({ hostname: activeSpace!.hostname, path: 'delete-thought' }),
+												to: buildUrl({ host: activeSpace!.host, path: 'delete-thought' }),
 												thoughtId,
 											})
 												.then(({ softDelete }) => {

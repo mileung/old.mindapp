@@ -1,5 +1,5 @@
 const env = {
-	hostname: process.env.HOSTNAME,
+	host: process.env.HOST,
 	spaceName: process.env.SPACE_NAME,
 	hubAddress: process.env.HUB_ADDRESS,
 	faucetAddress: process.env.FAUCET_ADDRESS,

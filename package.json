@@ -11,7 +11,7 @@
 		"dev-extension": "cd extension && npm run dev",
 		"build-extension": "cd extension && npm run build",
 		"all": "concurrently \"npm run server\" \"npm run global-test-server\" \"npm run client\" \"npm run build-extension\" \"npm run dk-studio\"",
-		"spaces": "concurrently \"npm run server\" \"npm run global-test-server\" \"npm run client\"",
+		"spaces": "concurrently \"npm run server\" \"npm run global-test-server\" \"npm run dk-studio\" \"npm run client\"",
 		"local-space": "concurrently \"npm run server\" \"npm run dk-studio\" \"npm run client\"",
 		"start": "concurrently \"npm run server\" \"npm run client\"",
 		"dev": "concurrently \"npm run server\" \"npm run client\" \"npm run dev-extension\"",

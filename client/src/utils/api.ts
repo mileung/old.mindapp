@@ -1,24 +1,24 @@
 export const hostedLocally = location.host.startsWith('localhost:');
 
-export const localApiHostname = 'localhost:2000';
+export const localApiHost = 'localhost:2000';
 
 export function makeUrl(path: string, params?: Record<string, any>) {
 	return buildUrl({ path, params });
 }
 
 export function buildUrl({
-	hostname,
+	host,
 	https,
 	path = '',
 	params,
 }: {
-	hostname?: string;
+	host?: string;
 	https?: boolean;
 	path?: string;
 	params?: Record<string, any>;
 }) {
-	if (https === undefined) https = !!hostname && !hostname.startsWith('localhost:');
-	let url = `http${https ? 's' : ''}://${(hostname || localApiHostname).replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+	if (https === undefined) https = !!host && !host.startsWith('localhost:');
+	let url = `http${https ? 's' : ''}://${(host || localApiHost).replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 	if (params) {
 		url = `${url}?${new URLSearchParams(params).toString()}`;
 	}

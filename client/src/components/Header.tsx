@@ -17,14 +17,14 @@ import {
 	useLocalState,
 	usePersonas,
 	useRootSettings,
-	useSpaces,
+	useFetchedSpaces,
 	useTagTree,
 } from '../utils/state';
 import { matchSorter } from 'match-sorter';
 import { useKeyPress } from '../utils/keyboard';
 import { bracketRegex, getNodes, getNodesArr, getTags } from '../utils/tags';
 import DeterministicVisualId from './DeterministicVisualId';
-import { hostedLocally, localApiHostname, makeUrl, ping, post } from '../utils/api';
+import { hostedLocally, localApiHost, makeUrl, ping, post } from '../utils/api';
 import { shortenString } from '../utils/js';
 import { Personas, Space } from '../utils/settings';
 
@@ -56,7 +56,7 @@ window.addEventListener('scroll', () => {
 export default function Header() {
 	const activeSpace = useActiveSpace();
 	const [personas, personasSet] = usePersonas();
-	const [spaces] = useSpaces();
+	const [fetchedSpaces] = useFetchedSpaces();
 	const [rootSettings] = useRootSettings();
 	const navigate = useNavigate();
 	const [tagTree] = useTagTree();
@@ -264,7 +264,7 @@ export default function Header() {
 							}}
 						>
 							<DeterministicVisualId
-								input={activeSpace?.hostname}
+								input={activeSpace?.host}
 								className="rounded overflow-hidden h-7 w-7"
 							/>
 						</button>
@@ -296,10 +296,10 @@ export default function Header() {
 							<div className="max-h-48 overflow-scroll">
 								{(
 									((switchingSpaces
-										? personas[0].spaceHostnames.map((hostname) => spaces[hostname] || { hostname })
+										? personas[0].spaceHosts.map((host) => fetchedSpaces[host] || { host })
 										: personas) || []) as (Space & Personas[number])[]
 								).map((thing, i) => {
-									const thingKey = switchingSpaces ? thing.hostname : thing.id;
+									const thingKey = switchingSpaces ? thing.host : thing.id;
 									const showCheck = !i;
 									return (
 										<div className="flex transition hover:bg-mg2" key={thingKey}>
@@ -317,7 +317,7 @@ export default function Header() {
 															makeUrl('prioritize-persona-or-space'),
 															post(
 																switchingSpaces
-																	? { personaId: personas[0].id, spaceHostname: thing.hostname }
+																	? { personaId: personas[0].id, spaceHost: thing.host }
 																	: { personaId: thing.id },
 															),
 														)
@@ -326,11 +326,11 @@ export default function Header() {
 													} else {
 														personasSet((old) => {
 															if (switchingSpaces) {
-																old[0].spaceHostnames.splice(
+																old[0].spaceHosts.splice(
 																	0,
 																	0,
-																	old[0].spaceHostnames.splice(
-																		old[0].spaceHostnames.findIndex((h) => h === thing.hostname),
+																	old[0].spaceHosts.splice(
+																		old[0].spaceHosts.findIndex((h) => h === thing.host),
 																		1,
 																	)[0],
 																);
@@ -362,9 +362,7 @@ export default function Header() {
 															'No name'}
 													</p>
 													<p className="text-left font-mono text-fg2 leading-5 truncate">
-														{switchingSpaces
-															? thingKey || localApiHostname
-															: shortenString(thingKey)}
+														{switchingSpaces ? thingKey || localApiHost : shortenString(thingKey)}
 													</p>
 												</div>
 											</button>

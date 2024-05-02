@@ -82,7 +82,10 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 			message.from,
 			signature!,
 		);
-		if (!valid) throw new Error('Invalid signature');
+		if (!valid) {
+			// console.log('message.signedSelf:', message.signedSelf);
+			throw new Error('Invalid signature');
+		}
 		const now = Date.now();
 		if (writeDate > now + minute) throw new Error('writeDate out of sync');
 		if (!message.signedSelf.walletAddress)
