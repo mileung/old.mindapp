@@ -6,8 +6,7 @@ import { base58 } from '@scure/base';
 import * as secp256k1 from 'secp256k1';
 import { drizzleClient } from '../db';
 import { personasTable } from '../db/schema';
-import { and, eq, exists } from 'drizzle-orm';
-import env from './env';
+import { eq } from 'drizzle-orm';
 import { sortKeysRecursively } from './js';
 
 export type Item = string | Record<string, any> | any[];
@@ -83,54 +82,6 @@ export function verifyItem(item: Item, publicKey: string, signature?: string) {
 
 export function hashString(str: string) {
 	return base58.encode(bufferItem(str));
-}
-
-// const message =
-// 	'This is an example of a signed message. This is an example of a signed message. This is an example of a signed message.';
-// const kp = createKeyPair();
-// console.log('kp:', kp);
-// const sig = signItem(message, kp.privateKey);
-// const result = verifyItem(message, kp.publicKey, sig);
-// console.log('result:', result);
-
-// console.log(1, bufferItem('test').toString('hex'));
-// 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
-// console.log(2, base58.encode(bufferItem('test')));
-// Bjj4AWTNrjQVHqgWbP2XaxXz4DYH1WZMyERHxsad7b2w
-// console.log(hashString('test'));
-// Bjj4AWTNrjQVHqgWbP2XaxXz4DYH1WZMyERHxsad7b2w
-
-export async function checkPrivilege(personaId?: string) {
-	if (personaId === env.ownerId || !env.isGlobalSpace) {
-		return {
-			read: true,
-			write: true,
-		};
-	} else if (!personaId) {
-		return {
-			// read: env.nullCanRead,
-			// write: env.nullCanWrite,
-			read: env.anyoneCanJoin,
-			write: env.anyoneCanJoin,
-		};
-	}
-
-	const [row] = await drizzleClient
-		.select()
-		.from(personasTable)
-		.where(eq(personasTable.id, personaId))
-		.limit(1);
-	return row
-		? {
-				read: true, // !!row.read,
-				write: true, // !!row.write,
-			}
-		: {
-				// read: env.nullCanRead,
-				// write: env.nullCanWrite,
-				read: env.anyoneCanJoin,
-				write: env.anyoneCanJoin,
-			};
 }
 
 export async function inGroup(personaId?: string) {

@@ -7,11 +7,12 @@ import {
 } from '@heroicons/react/16/solid';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Thought, copyToClipboardAsync, getThoughtId } from '../utils/thought';
+import { Thought, getThoughtId } from '../utils/ClientThought';
 import { formatTimestamp } from '../utils/time';
 import DeterministicVisualId from './DeterministicVisualId';
 import { useFetchedSpaces, useNames, useSavedFileThoughtIds } from '../utils/state';
 import { makeUrl, ping, post } from '../utils/api';
+import { copyToClipboardAsync } from '../utils/js';
 
 export default function ThoughtBlockHeader({
 	thought,
@@ -43,8 +44,15 @@ export default function ThoughtBlockHeader({
 		<div className="mr-1 fx gap-2 text-fg2">
 			<Link
 				target="_blank"
+				to={`/thought/${thoughtId}`}
+				className="text-sm font-bold transition text-fg2 hover:text-fg1"
+			>
+				{formatTimestamp(thought.createDate)}
+			</Link>
+			<Link
+				target="_blank"
 				to={`/search?${new URLSearchParams({ q: `@${thought.authorId || ''}` }).toString()}`}
-				className={`fx text-sm font-bold transition ${names[thought.authorId || ''] ? 'text-fg1 hover:underline' : 'text-fg2 hover:text-fg1'}`}
+				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${names[thought.authorId || ''] ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={thought.authorId}
@@ -55,20 +63,13 @@ export default function ThoughtBlockHeader({
 			<Link
 				target="_blank"
 				to={`/search?${new URLSearchParams({ q: `@${thought.spaceHost || ''}` }).toString()}`}
-				className="fx text-sm font-bold transition text-fg2 hover:text-fg1"
+				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={thought.spaceHost}
 					className="rounded-sm overflow-hidden h-3 w-3 mr-1"
 				/>
 				{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
-			</Link>
-			<Link
-				target="_blank"
-				to={`/thought/${thoughtId}`}
-				className="text-sm font-bold transition text-fg2 hover:text-fg1"
-			>
-				{formatTimestamp(thought.createDate)}
 			</Link>
 			<button
 				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"

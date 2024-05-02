@@ -18,6 +18,7 @@ export type ResultsQuery = {
 };
 
 const getRoots: RequestHandler = async (req, res) => {
+	console.time('query time');
 	const {
 		message: {
 			from,

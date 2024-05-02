@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useGetSignature, usePersonas, useSendMessage, useFetchedSpaces } from '../utils/state';
 import { Personas, UnsignedSelf } from '../utils/settings';
 import DeterministicVisualId from '../components/DeterministicVisualId';
-import { shortenString } from '../utils/js';
+import { copyToClipboardAsync, shortenString } from '../utils/js';
 import {
 	CheckIcon,
 	DocumentDuplicateIcon,
@@ -14,7 +14,6 @@ import {
 } from '@heroicons/react/16/solid';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import UnlockPersona from './UnlockPersona';
-import { copyToClipboardAsync } from '../utils/thought';
 
 export default function ManagePersonas() {
 	const { personaId } = useParams();
@@ -44,17 +43,15 @@ export default function ManagePersonas() {
 	}, [selectedPersona]);
 
 	const updateSelectedPersona = useCallback(
-		async (updates: {
-			name?: string;
-			// walletAddress?: string;
-			frozen?: true;
-		}) => {
+		async (updates: { name?: string; frozen?: true }) => {
 			if (!selectedPersona) return;
-			fetchedSpacesSet({});
 			if (hostedLocally) {
+				// TODO: rn App only informs the spaces about a name change of personas[0] - not the selectedPersona
+				// so... let me just make selectedPersona
 				ping<Personas>(makeUrl('update-local-persona'), post({ personaId, updates }))
 					.then((p) => personasSet(p))
-					.catch((err) => alert(err));
+					.catch((err) => alert(err))
+					.finally(() => fetchedSpacesSet({}));
 			} else {
 				// TODO: get new personas (with signedSelf)
 				// const newUnsignedSelf: UnsignedSelf = {

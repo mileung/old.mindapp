@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { buildUrl, ping, post } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import { useActiveSpace, useSendMessage, usePersonas } from '../utils/state';
-import { Thought, getThoughtId } from '../utils/thought';
+import { Thought, getThoughtId } from '../utils/ClientThought';
 import { minute } from '../utils/time';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
@@ -170,12 +170,12 @@ export default function ThoughtBlock({
 									<button
 										className="h-4 w-4 xy hover:text-fg1 transition"
 										onClick={async () => {
-											const ok =
-												!!thought.spaceHost ||
-												Date.now() - thought.createDate < minute ||
-												confirm(
-													'This thought has already been archived in the Git snapshot history; delete it anyways?',
-												);
+											const ok = !thought.spaceHost
+												? Date.now() - thought.createDate < minute ||
+													confirm(
+														'This thought has already been archived in the Git snapshot history; delete it anyways?',
+													)
+												: confirm('Are you sure you want to delete this thought?');
 											if (!ok) return;
 											const newRoots = [...roots] as Thought[];
 											let pointer = newRoots;
@@ -210,12 +210,15 @@ export default function ThoughtBlock({
 									</button>
 								</>
 							) : (
-								<button
-									className="h-4 w-4 xy hover:text-fg1 transition"
-									onClick={() => moreOptionsOpenSet(true)}
-								>
-									<EllipsisHorizontalIcon className="absolute h-5 w-5" />
-								</button>
+								thought.authorId === personas[0].id &&
+								(!thought.spaceHost || !!thought.content) && (
+									<button
+										className="h-4 w-4 xy hover:text-fg1 transition"
+										onClick={() => moreOptionsOpenSet(true)}
+									>
+										<EllipsisHorizontalIcon className="absolute h-5 w-5" />
+									</button>
+								)
 							)}
 						</div>
 						{thought.children && (

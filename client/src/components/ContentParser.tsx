@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Thought, isThoughtId } from '../utils/thought';
+import { Thought, isThoughtId } from '../utils/ClientThought';
 import MentionedThought from './MentionedThought';
 import { PlayIcon, XMarkIcon } from '@heroicons/react/16/solid';
 import MiniMentionedThought from './MiniMentionedThought';

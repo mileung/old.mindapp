@@ -358,8 +358,7 @@ export default function Header() {
 														className={`max-w-full text-left text-lg font-semibold leading-5  ${!thing?.name && 'text-fg2'} truncate`}
 													>
 														{thing?.name ||
-															(switchingSpaces ? 'Local space' : !thing.id && 'Anon') ||
-															'No name'}
+															(thingKey ? 'No name' : switchingSpaces ? 'Local space' : 'Anon')}
 													</p>
 													<p className="text-left font-mono text-fg2 leading-5 truncate">
 														{switchingSpaces ? thingKey || localApiHost : shortenString(thingKey)}

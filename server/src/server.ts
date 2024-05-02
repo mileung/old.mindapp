@@ -34,8 +34,8 @@ import Ajv from 'ajv';
 import getSignature from './routes/get-signature';
 import env from './utils/env';
 import leaveSpace from './routes/leave-space';
-import addPersonaToSpace from './routes/add-persona-to-space';
 import updateLocalSpaces from './routes/update-local-space';
+import addSpacePersona from './routes/add-space-persona';
 
 const app = express();
 const port = env.isGlobalSpace ? 8080 : 2000;
@@ -141,7 +141,7 @@ app.post('/write-thought', tryCatch(writeThought));
 app.post('/delete-thought', tryCatch(deleteThought));
 app.post('/get-roots', tryCatch(getRoots));
 app.post('/update-space-persona', tryCatch(updateSpacePersona));
-app.post('/add-persona-to-space', tryCatch(addPersonaToSpace));
+app.post('/add-space-persona', tryCatch(addSpacePersona));
 app.post('/leave-space', tryCatch(leaveSpace));
 
 app.use(((err, req, res, next) => {

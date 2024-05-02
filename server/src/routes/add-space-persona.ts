@@ -3,9 +3,8 @@ import { inGroup, verifyItem } from '../utils/security';
 import { drizzleClient } from '../db';
 import { personasTable } from '../db/schema';
 import env from '../utils/env';
-import { eq } from 'drizzle-orm';
 
-const addPersonaToSpace: RequestHandler = async (req, res) => {
+const addSpacePersona: RequestHandler = async (req, res) => {
 	const { message } = req.body as {
 		message: {
 			from: string;
@@ -29,4 +28,4 @@ const addPersonaToSpace: RequestHandler = async (req, res) => {
 	return res.send({});
 };
 
-export default addPersonaToSpace;
+export default addSpacePersona;

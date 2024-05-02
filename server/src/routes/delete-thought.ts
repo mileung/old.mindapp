@@ -16,6 +16,7 @@ const deleteThought: RequestHandler = async (req: Request & { body: Thought }, r
 
 	const thought = await Thought.query(message.thoughtId);
 	if (!thought) throw new Error('Thought does not exist');
+	if (thought.authorId !== message.from) throw new Error('message.from not from authorId');
 	const softDelete = await thought.hasUserInteraction(); // TODO: make this atomic with the overwrite
 	if (softDelete) {
 		thought.content = '';

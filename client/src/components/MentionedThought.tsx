@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Thought } from '../utils/thought';
+import { Thought } from '../utils/ClientThought';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
 import { isStringifiedRecord } from '../utils/js';

@@ -16,7 +16,7 @@ import {
 	usePersonas,
 	useSendMessage,
 } from '../utils/state';
-import { Thought, getThoughtId } from '../utils/thought';
+import { Thought, getThoughtId } from '../utils/ClientThought';
 import { ThoughtWriter } from './ThoughtWriter';
 
 const defaultColumnLabels = ['createDate', 'authorId', 'spaceHost', 'content', 'tags', 'parentId'];
@@ -128,7 +128,10 @@ export default function Results({
 		}
 	}, [oldToNew, roots, loadMoreThoughts]);
 
-	useEffect(() => rootsSet([]), [location, personas[0].spaceHosts[0]]);
+	useEffect(() => {
+		queriedThoughtRootSet(null);
+		rootsSet([]);
+	}, [location, personas[0].spaceHosts[0]]);
 
 	return (
 		<div className={`space-y-1.5 relative`}>

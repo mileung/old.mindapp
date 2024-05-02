@@ -72,7 +72,7 @@ export default function ManageSpaces() {
 			</div>
 			<div className="flex-1 space-y-3 p-3">
 				{fetchedSpace ? (
-					fetchedSpace.self === null ? (
+					fetchedSpace.fetchedSelf === null ? (
 						<div className="space-y-2">
 							<p className="text-2xl font-semibold">Unable to join {fetchedSpace.host}</p>
 							<Button
@@ -131,22 +131,31 @@ export default function ManageSpaces() {
 							</div>
 							<div className="">
 								<p className="text-2xl font-semibold">Self info</p>
-								<NameTag id={fetchedSpace.self?.id} name={fetchedSpace.self?.name} />
+								<NameTag id={fetchedSpace.fetchedSelf?.id} name={fetchedSpace.fetchedSelf?.name} />
 							</div>
-							{fetchedSpace.self && (
+							{fetchedSpace.fetchedSelf && (
 								<>
-									<LabelValue label="Add date" value={formatTimestamp(fetchedSpace.self.addDate)} />
-									{fetchedSpace.self.addedBy?.id && (
+									<LabelValue
+										label="Add date"
+										value={formatTimestamp(fetchedSpace.fetchedSelf.addDate)}
+									/>
+									{fetchedSpace.fetchedSelf.addedBy?.id && (
 										<div className="">
 											<p className="text-xl font-semibold text-fg2">Added by</p>
 											<NameTag
-												id={fetchedSpace.self.addedBy?.id}
-												name={fetchedSpace.self.addedBy?.name}
+												id={fetchedSpace.fetchedSelf.addedBy?.id}
+												name={fetchedSpace.fetchedSelf.addedBy?.name}
 											/>
 										</div>
 									)}
-									<LabelValue label="Frozen" value={fetchedSpace.self.frozen ? 'True' : 'False'} />
-									<LabelValue label="Wallet address" value={fetchedSpace.self.walletAddress} />
+									<LabelValue
+										label="Frozen"
+										value={fetchedSpace.fetchedSelf.frozen ? 'True' : 'False'}
+									/>
+									<LabelValue
+										label="Wallet address"
+										value={fetchedSpace.fetchedSelf.walletAddress}
+									/>
 									<p className="text-2xl font-semibold mb-1">Danger zone</p>
 									<Button
 										label="Leave space"

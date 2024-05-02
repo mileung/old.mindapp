@@ -2,12 +2,14 @@ import { useCallback } from 'react';
 import { atom, useAtom } from 'jotai';
 import { TagTree } from './tags';
 import { Personas, RootSettings, Space, WorkingDirectory } from './settings';
-import { Thought } from './thought';
+import { Thought } from './ClientThought';
 import { hostedLocally, localApiHost, makeUrl, ping, post } from './api';
+import { isRecord } from './js';
 
 type LocalState = {
 	theme: 'System' | 'Light' | 'Dark';
 	personas: Personas;
+	fetchedSpaces: Record<string, Space>;
 };
 
 const defaultSpaceHost = hostedLocally ? localApiHost : 'TODO: default global space';
@@ -27,7 +29,9 @@ export const getLocalState = () => {
 				p.spaceHosts.length &&
 				p.spaceHosts.every((id) => typeof id === 'string')
 			);
-		});
+		}) &&
+		isRecord(localState.fetchedSpaces);
+	// TODO: validate localState.fetchedSpaces. I may need to use ajv client side but prefer not to...
 
 	return validLocalState
 		? localState
@@ -39,6 +43,7 @@ export const getLocalState = () => {
 						spaceHosts: [defaultSpaceHost],
 					},
 				],
+				fetchedSpaces: {},
 			} as LocalState);
 };
 
@@ -56,7 +61,7 @@ export const createAtom = <T>(initialValue: T) => {
 
 const currentLocalState = getLocalState();
 export const usePersonas = createAtom<Personas>(currentLocalState.personas);
-export const useFetchedSpaces = createAtom<Record<string, Space>>({});
+export const useFetchedSpaces = createAtom<Record<string, Space>>(currentLocalState.fetchedSpaces);
 export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
 export const useNames = createAtom<Record<string, string>>({});
 export const useMentionedThoughts = createAtom<Record<string, Thought>>({});

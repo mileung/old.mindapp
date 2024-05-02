@@ -19,7 +19,7 @@ import {
 import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
-import { Thought } from '../utils/thought';
+import { Thought } from '../utils/ClientThought';
 import { useKeyPress } from '../utils/keyboard';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
@@ -111,9 +111,8 @@ export const ThoughtWriter = ({
 			const trimmedContent = content.trim();
 
 			let [createDate, authorId, spaceHost] = (editId || '').split('_', 3);
-			console.log('spaceHost:', spaceHost);
 			const message = {
-				from: editId ? authorId : personas[0]!.id,
+				from: editId ? authorId : personas[0].id,
 				to: buildUrl({
 					host: editId ? spaceHost : activeSpace.host,
 					path: 'write-thought',
@@ -272,6 +271,10 @@ export const ThoughtWriter = ({
 										) {
 											tagIpt.current?.focus();
 										}
+									}}
+									onMouseUp={() => {
+										tagIndexSet(-1);
+										setTimeout(() => tagIpt.current?.focus(), 0);
 									}}
 								>
 									<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />

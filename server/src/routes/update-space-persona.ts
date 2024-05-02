@@ -1,9 +1,9 @@
 import { RequestHandler } from 'express';
 import { inGroup, verifyItem } from '../utils/security';
 import { drizzleClient } from '../db';
-import { personasTable } from '../db/schema';
+import { SelectPersona, personasTable } from '../db/schema';
 import env from '../utils/env';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import Ajv from 'ajv';
 import { SignedSelf, UnsignedSelf } from '../types/Personas';
 import { minute } from '../utils/time';
@@ -57,20 +57,20 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 				hubAddress: env.hubAddress,
 				faucetAddress: env.faucetAddress,
 				owner: { id: env.ownerId, name: (await inGroup(env.ownerId))?.name },
-				self:
+				fetchedSelf:
 					(fromExistingMember as SignedSelf & {
 						addDate: number;
 						addedBy?: {
 							id: string;
 							name?: string;
 						};
-					}) || undefined,
+					}) || null,
 			}
 		: undefined;
 
 	if (message.signedSelf) {
 		const { writeDate, id, name, frozen, walletAddress, signature } = message.signedSelf;
-
+		let row: undefined | SelectPersona;
 		const valid = verifyItem(
 			{
 				writeDate,
@@ -80,7 +80,7 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 				walletAddress,
 			} as UnsignedSelf,
 			message.from,
-			signature!,
+			signature,
 		);
 		if (!valid) {
 			// console.log('message.signedSelf:', message.signedSelf);
@@ -92,39 +92,50 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 			throw new Error('Missing message.signedSelf.walletAddress');
 
 		if (fromExistingMember) {
-			const result = await drizzleClient
-				.update(personasTable)
-				.set(message.signedSelf)
-				.where(
-					and(
-						eq(personasTable.id, message.from),
-						gt(personasTable.writeDate, writeDate),
-						eq(personasTable.walletAddress, message.signedSelf.walletAddress),
-					),
-				);
-			// console.log('update result:', result);
-			// TODO: check that duplicate walletAddress cannot happen
-		} else if (message.joinIfNotInSpace) {
-			const [row] = await drizzleClient
-				.insert(personasTable)
-				.values({
-					...message.signedSelf, //
-					addDate: now,
-				})
-				.returning();
-			// console.log('join result:', result);
-			if (space && row && message.getSpaceInfo) {
-				space.self = {
-					id: row.id,
-					name: row.name || undefined,
-					frozen: row.frozen || undefined,
-					walletAddress: row.walletAddress || undefined,
-					writeDate: row.writeDate!,
-					signature: row.signature!,
-					addDate: row.addDate,
-				};
+			if (fromExistingMember.signature !== message.signedSelf.signature) {
+				console.log('message:', message);
+				row = (
+					await drizzleClient
+						.update(personasTable)
+						.set({
+							writeDate,
+							name: name || null,
+							frozen: frozen || null,
+							signature,
+						})
+						.where(
+							and(
+								eq(personasTable.id, message.from),
+								lt(personasTable.writeDate, writeDate),
+								eq(personasTable.walletAddress, message.signedSelf.walletAddress),
+							),
+						)
+						.returning()
+				)[0];
 			}
+		} else if (message.joinIfNotInSpace) {
+			row = (
+				await drizzleClient
+					.insert(personasTable)
+					.values({
+						...message.signedSelf, //
+						addDate: now,
+					})
+					.returning()
+			)[0];
+			// console.log('join result:', result);
 		} else throw new Error('Access denied');
+		if (space && row && message.getSpaceInfo) {
+			space.fetchedSelf = {
+				id: row.id,
+				name: row.name || undefined,
+				frozen: row.frozen || undefined,
+				walletAddress: row.walletAddress || undefined,
+				writeDate: row.writeDate!,
+				signature: row.signature!,
+				addDate: row.addDate,
+			};
+		}
 	}
 	return res.send({ space });
 };

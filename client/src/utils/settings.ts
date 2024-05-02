@@ -35,7 +35,7 @@ export type Space = {
 		id: string;
 		name?: string;
 	};
-	self?:
+	fetchedSelf?:
 		| null
 		| (SignedSelf & {
 				addDate: number;

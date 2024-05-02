@@ -84,16 +84,17 @@ function App() {
 				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
 				return { ...oldDefaultNames, ...newDefaultNames };
 			});
-			localStateSet((old) => ({
-				...old,
-				personas,
-			}));
+			localStateSet((old) => ({ ...old, personas }));
 		}
 	}, [personas]);
 
 	useEffect(() => {
-		fetchedSpacesSet({});
-		// namesSet({});
+		fetchedSpacesSet((old) => {
+			Object.entries(old).forEach(([key, val]) => {
+				old[key] = { ...val, fetchedSelf: undefined };
+			});
+			return old;
+		});
 	}, [personas[0].id]);
 
 	useEffect(() => {
@@ -102,7 +103,12 @@ function App() {
 
 	useEffect(() => {
 		personas[0].spaceHosts.forEach(async (host) => {
-			if (host && host !== localApiHost && !fetchedSpaces[host] && !pinging.current[host]) {
+			if (
+				host &&
+				host !== localApiHost &&
+				fetchedSpaces[host]?.fetchedSelf === undefined &&
+				!pinging.current[host]
+			) {
 				pinging.current[host] = true;
 				try {
 					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
@@ -122,14 +128,11 @@ function App() {
 									signature,
 								},
 					});
-					// console.log('space:', space);
+					console.log('space:', space);
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
 				} catch (error) {
 					console.log('error:', error);
-					fetchedSpacesSet((old) => ({
-						...old,
-						[host]: { host, self: null },
-					}));
+					fetchedSpacesSet((old) => ({ ...old, [host]: { host, fetchedSelf: null } }));
 				} finally {
 					pinging.current[host] = false;
 				}

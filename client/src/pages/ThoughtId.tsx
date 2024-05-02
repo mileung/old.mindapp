@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useMemo } from 'react';
 import Results from '../components/Results';
-import { isThoughtId } from '../utils/thought';
+import { isThoughtId } from '../utils/ClientThought';
 
 export default function ThoughtId() {
 	const { thoughtId } = useParams();

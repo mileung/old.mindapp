@@ -23,3 +23,9 @@ export function sortRecursiveEntries(obj: Record<string, any>): [string, any][] 
 		.sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
 		.map(([key, val]) => [key, isRecord(val) ? sortRecursiveEntries(val) : val]);
 }
+
+export const copyToClipboardAsync = (str = '') => {
+	if (navigator && navigator.clipboard && navigator.clipboard.writeText)
+		return navigator.clipboard.writeText(str);
+	return window.alert('The Clipboard API is not available.');
+};
