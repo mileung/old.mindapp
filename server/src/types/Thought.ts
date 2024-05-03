@@ -76,7 +76,7 @@ export class Thought {
 		if (write) this.write();
 	}
 
-	get standaloneProps() {
+	get signedProps() {
 		return {
 			createDate: this.createDate,
 			authorId: this.authorId || undefined,
@@ -128,7 +128,7 @@ export class Thought {
 			tags: this.tags.length ? this.tags : undefined,
 			parentId: this.parentId || undefined,
 			children: this.children?.length ? this.children.map((c) => c.clientProps) : undefined,
-			filedSaved: env.isGlobalSpace ? undefined : isFile(this.filePath) || undefined,
+			filedSaved: env.IS_GLOBAL_SPACE ? undefined : isFile(this.filePath) || undefined,
 		} as const;
 	}
 
@@ -187,7 +187,7 @@ export class Thought {
 
 	signAsAuthor() {
 		this.signature = this.authorId
-			? Personas.get().getSignature(this.standaloneProps, this.authorId)
+			? Personas.get().getSignature(this.signedProps, this.authorId)
 			: '';
 	}
 
@@ -195,7 +195,7 @@ export class Thought {
 		if (this.authorId) {
 			if (this.content) {
 				if (this.signature) {
-					const valid = verifyItem(this.standaloneProps, this.authorId, this.signature);
+					const valid = verifyItem(this.signedProps, this.authorId, this.signature);
 					if (!valid) {
 						// this.signAsAuthor();
 						// this.overwrite();
@@ -229,7 +229,7 @@ export class Thought {
 	}
 
 	async write() {
-		if (!env.isGlobalSpace) {
+		if (!env.IS_GLOBAL_SPACE) {
 			const successfulTouch = touchIfDne(this.filePath, JSON.stringify(this.savedProps));
 			if (!successfulTouch) throw new Error('filePath taken');
 		}
@@ -239,7 +239,7 @@ export class Thought {
 	}
 
 	async overwrite() {
-		!env.isGlobalSpace && writeObjectFile(this.filePath, this.savedProps);
+		!env.IS_GLOBAL_SPACE && writeObjectFile(this.filePath, this.savedProps);
 		return await drizzleClient
 			.update(thoughtsTable)
 			.set(this.dbColumns)

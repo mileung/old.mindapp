@@ -128,7 +128,7 @@ function App() {
 									signature,
 								},
 					});
-					console.log('space:', space);
+					// console.log('space:', space);
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
 				} catch (error) {
 					console.log('error:', error);

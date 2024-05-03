@@ -1,11 +1,11 @@
 {
 	"name": "mindapp-server",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
 		"start": "tsnd --respawn src/server.ts",
 		"global-test-server": "tsnd --env-file .env --respawn src/server.ts"
 	},
 	"devDependencies": {
+		"@flydotio/dockerfile": "0.5.7",
 		"@types/cors": "2.8.17",
 		"@types/secp256k1": "4.0.6",
 		"drizzle-kit": "0.20.17",

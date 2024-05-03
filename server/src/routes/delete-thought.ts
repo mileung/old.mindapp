@@ -9,14 +9,15 @@ const deleteThought: RequestHandler = async (req: Request & { body: Thought }, r
 	const { message } = req.body as { message: { from: string; thoughtId: string } };
 
 	const fromExistingMember = await inGroup(message.from);
-	if (env.isGlobalSpace && !env.anyoneCanJoin && !fromExistingMember) {
+	if (env.IS_GLOBAL_SPACE && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
 	const thought = await Thought.query(message.thoughtId);
 	if (!thought) throw new Error('Thought does not exist');
-	if (thought.authorId !== message.from) throw new Error('message.from not from authorId');
+	if (env.IS_GLOBAL_SPACE && thought.authorId !== message.from)
+		throw new Error('message.from not from authorId');
 	const softDelete = await thought.hasUserInteraction(); // TODO: make this atomic with the overwrite
 	if (softDelete) {
 		thought.content = '';
@@ -24,7 +25,7 @@ const deleteThought: RequestHandler = async (req: Request & { body: Thought }, r
 		thought.signature = '';
 		thought.overwrite();
 	} else {
-		!env.isGlobalSpace && deleteFile(thought.filePath);
+		!env.IS_GLOBAL_SPACE && deleteFile(thought.filePath);
 		thought.removeFromDb();
 	}
 

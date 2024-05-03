@@ -29,7 +29,7 @@ export class RootSettings {
 		testWorkingDirectory?: boolean;
 		// customWorkingDirectoryPath?: string;
 	}) {
-		if (env.isGlobalSpace) throw new Error('Global space cannot use RootSettings');
+		if (env.IS_GLOBAL_SPACE) throw new Error('Global space cannot use RootSettings');
 		this.testWorkingDirectory = testWorkingDirectory;
 		// // this.customWorkingDirectoryPath = customWorkingDirectoryPath;
 

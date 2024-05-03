@@ -35,7 +35,7 @@ const getRoots: RequestHandler = async (req, res) => {
 	} = req.body as { message: { from: string; query: ResultsQuery } };
 
 	const fromExistingMember = await inGroup(from);
-	if (env.isGlobalSpace && !env.anyoneCanJoin && !fromExistingMember) {
+	if (env.IS_GLOBAL_SPACE && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');

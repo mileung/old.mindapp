@@ -210,8 +210,9 @@ export default function ThoughtBlock({
 									</button>
 								</>
 							) : (
-								thought.authorId === personas[0].id &&
-								(!thought.spaceHost || !!thought.content) && (
+								(!personas[0].spaceHosts[0] ||
+									(thought.authorId === personas[0].id &&
+										(thought.spaceHost || !!thought.content))) && (
 									<button
 										className="h-4 w-4 xy hover:text-fg1 transition"
 										onClick={() => moreOptionsOpenSet(true)}

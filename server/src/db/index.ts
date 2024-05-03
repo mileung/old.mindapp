@@ -14,15 +14,15 @@ import env from '../utils/env';
 // 	// encryptionKey: env.encryptionKey,
 // });
 
-const useTursoEnvVars = !env.locallyTesting && env.isGlobalSpace;
+const useTursoEnvVars = !env.LOCALLY_TESTING && env.IS_GLOBAL_SPACE;
 const tursoClient = createClient({
 	...(useTursoEnvVars
 		? {
-				url: env.tursoDatabaseUrl!,
-				authToken: env.tursoAuthToken!,
+				url: env.TURSO_DATABASE_URL!,
+				authToken: env.TURSO_AUTH_TOKEN!,
 			}
 		: {
-				url: env.isGlobalSpace //
+				url: env.IS_GLOBAL_SPACE //
 					? 'file:./src/db/global-test.db'
 					: 'file:./src/db/local.db',
 			}),
@@ -44,7 +44,7 @@ export const drizzleClient = drizzle(tursoClient, { schema });
 // 	.catch((err) => console.error('Error creating table:', err));
 
 export async function setUpLocalDb() {
-	if (env.isGlobalSpace || useTursoEnvVars) throw new Error('Global space cannot setUpLocalDb');
+	if (env.IS_GLOBAL_SPACE || useTursoEnvVars) throw new Error('Global space cannot setUpLocalDb');
 
 	// deleteAllRows
 	const result = await drizzleClient.delete(schema.thoughtsTable).run();

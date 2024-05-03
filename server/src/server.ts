@@ -36,10 +36,11 @@ import env from './utils/env';
 import leaveSpace from './routes/leave-space';
 import updateLocalSpaces from './routes/update-local-space';
 import addSpacePersona from './routes/add-space-persona';
+import saveThought from './routes/save-thought';
 
 const app = express();
-const port = env.isGlobalSpace ? 8080 : 2000;
-const host = env.host || `localhost${port}`;
+const port = env.IS_GLOBAL_SPACE ? 8080 : 2000;
+const host = env.HOST || `localhost${port}`;
 
 app.use((req, res, next) => {
 	// logger
@@ -61,7 +62,7 @@ const tryCatch = (controller: RequestHandler) =>
 		}
 	}) as RequestHandler;
 
-if (!env.isGlobalSpace) {
+if (!env.IS_GLOBAL_SPACE) {
 	// Local-only routes
 	app.get('/', tryCatch(root));
 	app.get('/whoami', tryCatch(whoami));
@@ -87,6 +88,7 @@ if (!env.isGlobalSpace) {
 	app.get('/file/:fileName', tryCatch(getFile));
 	app.get('/show-working-directory', tryCatch(showWorkingDirectory));
 	app.post('/get-signature', tryCatch(getSignature));
+	app.post('/save-thought', tryCatch(saveThought));
 }
 
 const ajv = new Ajv({ verbose: true });
@@ -125,7 +127,7 @@ app.use((req, res, next) => {
 		throw new Error('Invalid public route request body: ' + JSON.stringify(req.body));
 	}
 	const to = new URL(message.to);
-	if (env.isGlobalSpace && (to.host !== host || to.pathname !== req.url))
+	if (env.IS_GLOBAL_SPACE && (to.host !== host || to.pathname !== req.url))
 		throw new Error('Wrong recipient');
 	if (message.from) {
 		if (!fromSignature) throw new Error('Missing fromSignature');
@@ -150,7 +152,7 @@ app.use(((err, req, res, next) => {
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	if (!env.isGlobalSpace) {
+	if (!env.IS_GLOBAL_SPACE) {
 		touchIfDne(rootSettingsPath, JSON.stringify(new RootSettings({})));
 		WorkingDirectory.current.setUp();
 		const personas = Personas.get();

@@ -60,7 +60,7 @@ export class Personas {
 	public list: Persona[];
 
 	constructor({ list = [{ id: '', spaceHosts: [''] }] }: { list?: Persona[] }) {
-		if (env.isGlobalSpace) throw new Error('Global space cannot use Personas');
+		if (env.IS_GLOBAL_SPACE) throw new Error('Global space cannot use Personas');
 		this.list = list;
 		// console.log("this:", this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Personas: ' + JSON.stringify(this));
@@ -272,7 +272,7 @@ export class Personas {
 	}
 
 	static async getDefaultName(personaId: string, spaceHost?: string) {
-		if (!env.isGlobalSpace && !spaceHost) {
+		if (!env.IS_GLOBAL_SPACE && !spaceHost) {
 			const persona = Personas.get().find(personaId);
 			if (persona) return persona.name;
 		}

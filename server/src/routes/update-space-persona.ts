@@ -45,18 +45,18 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 	}
 
 	const fromExistingMember = await inGroup(message.from);
-	// This assumes if env.anyoneCanJoin, anyone can at least read - even without joining.
-	if (!fromExistingMember && !env.anyoneCanJoin && message.from !== env.ownerId) {
+	// This assumes if env.ANYONE_CAN_JOIN, anyone can at least read - even without joining.
+	if (!fromExistingMember && !env.ANYONE_CAN_JOIN && message.from !== env.OWNER_ID) {
 		throw new Error('Access denied');
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
 	const space = message.getSpaceInfo
 		? {
-				name: env.spaceName,
-				hubAddress: env.hubAddress,
-				faucetAddress: env.faucetAddress,
-				owner: { id: env.ownerId, name: (await inGroup(env.ownerId))?.name },
+				name: env.SPACE_NAME,
+				hubAddress: env.HUB_ADDRESS,
+				faucetAddress: env.FAUCET_ADDRESS,
+				owner: { id: env.OWNER_ID, name: (await inGroup(env.OWNER_ID))?.name },
 				fetchedSelf:
 					(fromExistingMember as SignedSelf & {
 						addDate: number;

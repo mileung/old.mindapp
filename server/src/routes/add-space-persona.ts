@@ -12,9 +12,9 @@ const addSpacePersona: RequestHandler = async (req, res) => {
 		};
 	};
 
-	if (!env.anyoneCanAdd && message.from !== env.ownerId) throw new Error('Access denied');
+	if (!env.ANYONE_CAN_ADD && message.from !== env.OWNER_ID) throw new Error('Access denied');
 	const fromExistingMember = await inGroup(message.from);
-	if (env.isGlobalSpace && !env.anyoneCanAdd && !fromExistingMember) {
+	if (env.IS_GLOBAL_SPACE && !env.ANYONE_CAN_ADD && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');

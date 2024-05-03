@@ -16,7 +16,7 @@ import {
 	useActiveSpace,
 	useGetSignature,
 } from '../utils/state';
-import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
+import { buildUrl, hostedLocally, localApiHost, makeUrl, ping, post } from '../utils/api';
 import { matchSorter } from 'match-sorter';
 import { TagTree, getNodes, getNodesArr, sortUniArr } from '../utils/tags';
 import { Thought } from '../utils/ClientThought';
@@ -141,7 +141,7 @@ export const ThoughtWriter = ({
 			if (!message.thought.tags?.length) delete message.thought.tags;
 			message.thought.signature = await getSignature(message.thought, message.thought.authorId);
 
-			sendMessage<{
+			await sendMessage<{
 				names: Record<string, string>;
 				mentionedThoughts: Record<string, Thought>;
 				thought: Thought;
@@ -156,13 +156,22 @@ export const ThoughtWriter = ({
 					tagFilterSet('');
 					suggestTagsSet(false);
 					contentTextArea.current!.focus();
-					if (hostedLocally) {
+				})
+				.catch((err) => alert(err));
+
+			if (hostedLocally) {
+				ping(
+					buildUrl({ host: localApiHost, path: 'save-thought' }),
+					post({ thought: message.thought }),
+				)
+					.then((res) => {
+						console.log('res:', res);
 						ping<TagTree>(makeUrl('get-tag-tree'))
 							.then((data) => tagTreeSet(data))
 							.catch((err) => alert(err));
-					}
-				})
-				.catch((err) => alert(err));
+					})
+					.catch((err) => alert(err));
+			}
 		},
 		[
 			sendMessage,
