@@ -222,6 +222,28 @@ export default function ThoughtBlock({
 								)
 							)}
 						</div>
+						{linking && (
+							<div ref={linkingDiv} className="bg-bg1 p-1 rounded mt-1">
+								<ThoughtWriter
+									parentId={thoughtId}
+									onContentBlur={() => linkingSet(false)}
+									onWrite={({ thought }, ctrlKey, altKey) => {
+										altKey ? onNewRoot() : linkingSet(false);
+										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
+										const newRoots = [...roots] as Thought[];
+										let pointer = newRoots;
+										for (let i = 0; i < rootsIndices.length; i++) {
+											if (!pointer[rootsIndices[i]].children) {
+												pointer[rootsIndices[i]].children = [];
+											}
+											pointer = pointer[rootsIndices[i]].children!;
+										}
+										pointer.unshift(thought);
+										onRootsChange(newRoots);
+									}}
+								/>
+							</div>
+						)}
 						{thought.children && (
 							<div className="mt-1 space-y-1">
 								{thought.children.map(
@@ -239,28 +261,6 @@ export default function ThoughtBlock({
 											/>
 										),
 								)}
-							</div>
-						)}
-						{linking && (
-							<div ref={linkingDiv} className="bg-bg1 p-1 rounded mt-1">
-								<ThoughtWriter
-									parentId={thoughtId}
-									onContentBlur={() => linkingSet(false)}
-									onWrite={({ thought }, ctrlKey, altKey) => {
-										altKey ? onNewRoot() : linkingSet(false);
-										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
-										const newRoots = [...roots] as Thought[];
-										let pointer = newRoots;
-										for (let i = 0; i < rootsIndices.length; i++) {
-											if (!pointer[rootsIndices[i]].children) {
-												pointer[rootsIndices[i]].children = [];
-											}
-											pointer = pointer[rootsIndices[i]].children!;
-										}
-										pointer.push(thought);
-										onRootsChange(newRoots);
-									}}
-								/>
 							</div>
 						)}
 					</div>

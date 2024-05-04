@@ -42,7 +42,7 @@ export class WorkingDirectory {
 		gitSnapshotsEnabled?: boolean;
 		gitRemoteUrl?: string;
 	}) {
-		if (env.IS_GLOBAL_SPACE) throw new Error('Global space cannot use WorkingDirectory');
+		if (env.GLOBAL_HOST) throw new Error('Global space cannot use WorkingDirectory');
 
 		this.dirPath = dirPath;
 		this.gitSnapshotsEnabled = gitSnapshotsEnabled;
@@ -52,7 +52,7 @@ export class WorkingDirectory {
 	}
 
 	static get current() {
-		if (env.IS_GLOBAL_SPACE) throw new Error('Global space cannot use WorkingDirectory');
+		if (env.GLOBAL_HOST) throw new Error('Global space cannot use WorkingDirectory');
 		const rootSettings = RootSettings.get();
 		const dirPath = rootSettings.testWorkingDirectory
 			? testWorkingDirectoryPath

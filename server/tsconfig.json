@@ -2,7 +2,6 @@
 	"ts-node": {
 		"files": true,
 	},
-	"files": ["src/global.d.ts"],
 	"compilerOptions": {
 		"target": "es6",
 		"module": "commonjs",
@@ -10,7 +9,12 @@
 		"rootDir": "./src",
 		"strict": true,
 		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"noImplicitAny": false,
 	},
-	"include": ["src/**/*.ts", "drizzle.config.ts"],
-	"exclude": ["node_modules"],
+	"typeAcquisition": {
+		"exclude": ["@vite/vitejs"],
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules/**"],
 }

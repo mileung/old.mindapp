@@ -1,5 +1,5 @@
 const env = {
-	HOST: process.env.HOST,
+	GLOBAL_HOST: process.env.GLOBAL_HOST,
 	SPACE_NAME: process.env.SPACE_NAME,
 	HUB_ADDRESS: process.env.HUB_ADDRESS,
 	FAUCET_ADDRESS: process.env.FAUCET_ADDRESS,
@@ -9,7 +9,6 @@ const env = {
 	TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL,
 	TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN,
 	LOCALLY_TESTING: 'true' === process.env.LOCALLY_TESTING,
-	IS_GLOBAL_SPACE: 'true' === process.env.IS_GLOBAL_SPACE,
 	ANYONE_CAN_JOIN: 'true' === process.env.ANYONE_CAN_JOIN,
 	ANYONE_CAN_ADD: 'true' === process.env.ANYONE_CAN_ADD,
 };

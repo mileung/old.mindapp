@@ -83,28 +83,3 @@ export function verifyItem(item: Item, publicKey: string, signature?: string) {
 export function hashString(str: string) {
 	return base58.encode(bufferItem(str));
 }
-
-export async function inGroup(personaId?: string) {
-	if (!personaId) {
-		return undefined;
-	}
-	const result = await drizzleClient
-		.select()
-		.from(personasTable)
-		.where(eq(personasTable.id, personaId))
-		.limit(1);
-
-	return result[0]
-		? {
-				id: result[0].id || undefined,
-				name: result[0].name || undefined,
-				frozen: result[0].frozen || undefined,
-				walletAddress: result[0].walletAddress || undefined,
-				writeDate: result[0].writeDate || undefined,
-				signature: result[0].signature || undefined,
-
-				addDate: result[0].addDate,
-				addedById: result[0].addedById || undefined,
-			}
-		: undefined;
-}

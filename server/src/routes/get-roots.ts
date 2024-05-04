@@ -4,7 +4,7 @@ import { Personas } from '../types/Personas';
 import { drizzleClient } from '../db';
 import { thoughtsTable } from '../db/schema';
 import { and, asc, desc, eq, gte, like, isNull, lte, or } from 'drizzle-orm';
-import { inGroup } from '../utils/security';
+import { inGroup } from '../db';
 import env from '../utils/env';
 
 export type ResultsQuery = {
@@ -35,7 +35,7 @@ const getRoots: RequestHandler = async (req, res) => {
 	} = req.body as { message: { from: string; query: ResultsQuery } };
 
 	const fromExistingMember = await inGroup(from);
-	if (env.IS_GLOBAL_SPACE && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
+	if (env.GLOBAL_HOST && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');

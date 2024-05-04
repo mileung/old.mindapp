@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
-import { inGroup, verifyItem } from '../utils/security';
-import { drizzleClient } from '../db';
+import { verifyItem } from '../utils/security';
+import { drizzleClient, inGroup } from '../db';
 import { SelectPersona, personasTable } from '../db/schema';
 import env from '../utils/env';
 import { and, eq, lt } from 'drizzle-orm';

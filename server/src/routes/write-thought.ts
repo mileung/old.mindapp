@@ -3,7 +3,7 @@ import { Thought } from '../types/Thought';
 import { debouncedSnapshot } from '../utils/git';
 import { Personas } from '../types/Personas';
 import env from '../utils/env';
-import { inGroup } from '../utils/security';
+import { inGroup } from '../db';
 
 const writeThought: RequestHandler = async (req, res) => {
 	// return res.send({});
@@ -13,14 +13,14 @@ const writeThought: RequestHandler = async (req, res) => {
 	};
 	// console.log('message:', message);
 	// console.log('thought:', message.thought);
-	if (env.IS_GLOBAL_SPACE && !message.from) throw new Error('Anon cannot write in global spaces');
+	if (env.GLOBAL_HOST && !message.from) throw new Error('Anon cannot write in global spaces');
 	if ((message.from || '') !== (message.thought.authorId || '')) {
 		throw new Error('message sender and thought author do not match');
 	}
 
 	const fromExistingMember = await inGroup(message.from);
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
-	if (env.IS_GLOBAL_SPACE && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
+	if (env.GLOBAL_HOST && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
 
@@ -36,7 +36,7 @@ const writeThought: RequestHandler = async (req, res) => {
 	);
 	// console.log('oldThought:', oldThought);
 	if (oldThought) {
-		if (env.IS_GLOBAL_SPACE && (await oldThought.hasUserInteraction())) {
+		if (env.GLOBAL_HOST && (await oldThought.hasUserInteraction())) {
 			// TODO: make this atomic with the overwrite
 			throw new Error('Global thoughts with user interaction cannot be edited');
 		}
@@ -59,7 +59,7 @@ const writeThought: RequestHandler = async (req, res) => {
 		if (thought) {
 			mentionedThoughts[id] = thought;
 			const { authorId, spaceHost } = mentionedThoughts[id];
-			if (!env.IS_GLOBAL_SPACE && authorId) {
+			if (!env.GLOBAL_HOST && authorId) {
 				const name = await Personas.getDefaultName(authorId);
 				name && (names[authorId] = name);
 			}

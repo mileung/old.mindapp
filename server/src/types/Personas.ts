@@ -1,11 +1,12 @@
 import Ajv from 'ajv';
 import { WorkingDirectory } from './WorkingDirectory';
 import { parseFile, writeObjectFile } from '../utils/files';
-import { Item, createKeyPair, decrypt, encrypt, inGroup, signItem } from '../utils/security';
+import { Item, createKeyPair, decrypt, encrypt, signItem } from '../utils/security';
 import { validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { wallet } from '@vite/vitejs';
+import { wallet } from '@vite/vitejs/es5';
 import env from '../utils/env';
+import { inGroup } from '../db';
 
 const ajv = new Ajv();
 
@@ -60,7 +61,7 @@ export class Personas {
 	public list: Persona[];
 
 	constructor({ list = [{ id: '', spaceHosts: [''] }] }: { list?: Persona[] }) {
-		if (env.IS_GLOBAL_SPACE) throw new Error('Global space cannot use Personas');
+		if (env.GLOBAL_HOST) throw new Error('Global space cannot use Personas');
 		this.list = list;
 		// console.log("this:", this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Personas: ' + JSON.stringify(this));
@@ -272,7 +273,7 @@ export class Personas {
 	}
 
 	static async getDefaultName(personaId: string, spaceHost?: string) {
-		if (!env.IS_GLOBAL_SPACE && !spaceHost) {
+		if (!env.GLOBAL_HOST && !spaceHost) {
 			const persona = Personas.get().find(personaId);
 			if (persona) return persona.name;
 		}

@@ -7,22 +7,16 @@ import { WorkingDirectory } from '../types/WorkingDirectory';
 import { isDirectory, isFile } from '../utils/files';
 import * as schema from './schema';
 import env from '../utils/env';
+import { eq } from 'drizzle-orm';
 
-// const globalTursoClient = createClient({
-// 	url: env.tursoDatabaseUrl!,
-// 	authToken: env.tursoAuthToken!,
-// 	// encryptionKey: env.encryptionKey,
-// });
-
-const useTursoEnvVars = !env.LOCALLY_TESTING && env.IS_GLOBAL_SPACE;
 const tursoClient = createClient({
-	...(useTursoEnvVars
+	...(env.TURSO_DATABASE_URL && env.TURSO_AUTH_TOKEN
 		? {
-				url: env.TURSO_DATABASE_URL!,
-				authToken: env.TURSO_AUTH_TOKEN!,
+				url: env.TURSO_DATABASE_URL,
+				authToken: env.TURSO_AUTH_TOKEN,
 			}
 		: {
-				url: env.IS_GLOBAL_SPACE //
+				url: env.GLOBAL_HOST //
 					? 'file:./src/db/global-test.db'
 					: 'file:./src/db/local.db',
 			}),
@@ -30,24 +24,13 @@ const tursoClient = createClient({
 
 export const drizzleClient = drizzle(tursoClient, { schema });
 
-// const createTableQuery = `
-//   CREATE TABLE IF NOT EXISTS Users (
-//     id INTEGER PRIMARY KEY,
-//     name TEXT NOT NULL,
-//     email TEXT UNIQUE
-//   )
-// `;
-
-// localTursoClient
-// 	.execute(createTableQuery)
-// 	.then(() => console.log('Table created successfully!'))
-// 	.catch((err) => console.error('Error creating table:', err));
-
 export async function setUpLocalDb() {
-	if (env.IS_GLOBAL_SPACE || useTursoEnvVars) throw new Error('Global space cannot setUpLocalDb');
+	if (env.GLOBAL_HOST || env.TURSO_DATABASE_URL || env.TURSO_AUTH_TOKEN) {
+		throw new Error('Global space cannot setUpLocalDb');
+	}
 
 	// deleteAllRows
-	const result = await drizzleClient.delete(schema.thoughtsTable).run();
+	await drizzleClient.delete(schema.thoughtsTable).run();
 
 	const l0DirPath = WorkingDirectory.current.timelinePath;
 	const l1Dirs = fs.readdirSync(l0DirPath).sort((a, b) => +a - +b);
@@ -106,4 +89,29 @@ export async function setUpLocalDb() {
 			}
 		}
 	}
+}
+
+export async function inGroup(personaId?: string) {
+	if (!personaId) {
+		return undefined;
+	}
+	const result = await drizzleClient
+		.select()
+		.from(schema.personasTable)
+		.where(eq(schema.personasTable.id, personaId))
+		.limit(1);
+
+	return result[0]
+		? {
+				id: result[0].id || undefined,
+				name: result[0].name || undefined,
+				frozen: result[0].frozen || undefined,
+				walletAddress: result[0].walletAddress || undefined,
+				writeDate: result[0].writeDate || undefined,
+				signature: result[0].signature || undefined,
+
+				addDate: result[0].addDate,
+				addedById: result[0].addedById || undefined,
+			}
+		: undefined;
 }

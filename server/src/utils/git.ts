@@ -28,7 +28,7 @@ const snapshot = () => {
 
 const _debouncedSnapshot = debounce(snapshot, minute);
 export const debouncedSnapshot = () => {
-	if (env.IS_GLOBAL_SPACE) return; // TODO: allow global spaces to snapshot somehow
+	if (env.GLOBAL_HOST) return; // TODO: allow global spaces to snapshot somehow
 	console.log('debouncedSnapshot');
 	_debouncedSnapshot();
 };

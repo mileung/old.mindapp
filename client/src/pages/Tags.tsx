@@ -9,7 +9,6 @@ import { debounce } from '../utils/performance';
 import { useKeyPress } from '../utils/keyboard';
 import { matchSorter } from 'match-sorter';
 import InputAutoWidth from '../components/InputAutoWidth';
-import { error } from '@vite/vitejs';
 
 export default function Tags() {
 	const navigate = useNavigate();

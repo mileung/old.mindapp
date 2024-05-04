@@ -128,7 +128,7 @@ export class Thought {
 			tags: this.tags.length ? this.tags : undefined,
 			parentId: this.parentId || undefined,
 			children: this.children?.length ? this.children.map((c) => c.clientProps) : undefined,
-			filedSaved: env.IS_GLOBAL_SPACE ? undefined : isFile(this.filePath) || undefined,
+			filedSaved: env.GLOBAL_HOST ? undefined : isFile(this.filePath) || undefined,
 		} as const;
 	}
 
@@ -229,7 +229,7 @@ export class Thought {
 	}
 
 	async write() {
-		if (!env.IS_GLOBAL_SPACE) {
+		if (!env.GLOBAL_HOST) {
 			const successfulTouch = touchIfDne(this.filePath, JSON.stringify(this.savedProps));
 			if (!successfulTouch) throw new Error('filePath taken');
 		}
@@ -239,7 +239,7 @@ export class Thought {
 	}
 
 	async overwrite() {
-		!env.IS_GLOBAL_SPACE && writeObjectFile(this.filePath, this.savedProps);
+		!env.GLOBAL_HOST && writeObjectFile(this.filePath, this.savedProps);
 		return await drizzleClient
 			.update(thoughtsTable)
 			.set(this.dbColumns)

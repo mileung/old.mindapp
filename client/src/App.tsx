@@ -62,16 +62,16 @@ function App() {
 					rootSettingsSet(rootSettings);
 					workingDirectorySet(workingDirectory);
 				})
-				.catch((err) => alert(err));
+				.catch((err) => console.error(err));
 			ping<WorkingDirectory>(makeUrl('get-working-directory'))
 				.then((data) => workingDirectorySet(data))
-				.catch((err) => alert(err));
+				.catch((err) => console.error(err));
 			ping<TagTree>(makeUrl('get-tag-tree'))
 				.then((data) => tagTreeSet(data))
-				.catch((err) => alert(err));
+				.catch((err) => console.error(err));
 			ping<Personas>(makeUrl('get-personas'))
 				.then((p) => personasSet(p))
-				.catch((err) => alert(err));
+				.catch((err) => console.error(err));
 		} else {
 			// TODO: generating personas client side
 		}

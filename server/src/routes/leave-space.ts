@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { drizzleClient } from '../db';
 import { personasTable } from '../db/schema';
-import { inGroup } from '../utils/security';
+import { inGroup } from '../db';
 import { eq } from 'drizzle-orm';
 
 const leaveSpace: RequestHandler = async (req, res) => {

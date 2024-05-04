@@ -1,10 +1,8 @@
 import { RequestHandler } from 'express';
-import { parseFile } from '../utils/files';
-import { WorkingDirectory } from '../types/WorkingDirectory';
 
-const getTagTree: RequestHandler = (req, res) => {
-	const ____ = parseFile<___>(WorkingDirectory.current.___);
-	res.send(____);
+const archivePersona: RequestHandler = (req, res) => {
+	// const ____ = parseFile<___>(WorkingDirectory.current.___);
+	res.send({});
 };
 
-export default getTagTree;
+export default archivePersona;

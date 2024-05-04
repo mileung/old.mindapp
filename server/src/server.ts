@@ -13,7 +13,6 @@ import renameTag from './routes/rename-tag';
 import showWorkingDirectory from './routes/show-working-directory';
 import updateRootSettings from './routes/update-root-settings';
 import updateWorkingDirectory from './routes/update-working-directory';
-import whoami from './routes/whoami';
 import writeThought from './routes/write-thought';
 import { RootSettings } from './types/RootSettings';
 import { WorkingDirectory } from './types/WorkingDirectory';
@@ -39,8 +38,8 @@ import addSpacePersona from './routes/add-space-persona';
 import saveThought from './routes/save-thought';
 
 const app = express();
-const port = env.IS_GLOBAL_SPACE ? 8080 : 2000;
-const host = env.HOST || `localhost${port}`;
+const port = env.GLOBAL_HOST ? 8080 : 2000;
+const host = env.GLOBAL_HOST || `localhost:${port}`;
 
 app.use((req, res, next) => {
 	// logger
@@ -48,7 +47,6 @@ app.use((req, res, next) => {
 	next();
 });
 
-// QUESTION: Why does get-roots need cors but not whoami?
 app.use(cors());
 app.use(express.json());
 
@@ -62,10 +60,11 @@ const tryCatch = (controller: RequestHandler) =>
 		}
 	}) as RequestHandler;
 
-if (!env.IS_GLOBAL_SPACE) {
+// This is the only public root that doesn't require auth
+app.get('/', tryCatch(root));
+
+if (!env.GLOBAL_HOST) {
 	// Local-only routes
-	app.get('/', tryCatch(root));
-	app.get('/whoami', tryCatch(whoami));
 	app.get('/get-working-directory', tryCatch(getWorkingDirectory));
 	app.post('/update-working-directory', tryCatch(updateWorkingDirectory));
 	app.get('/get-root-settings', tryCatch(getRootSettings));
@@ -127,7 +126,7 @@ app.use((req, res, next) => {
 		throw new Error('Invalid public route request body: ' + JSON.stringify(req.body));
 	}
 	const to = new URL(message.to);
-	if (env.IS_GLOBAL_SPACE && (to.host !== host || to.pathname !== req.url))
+	if (env.GLOBAL_HOST && (to.host !== host || to.pathname !== req.url))
 		throw new Error('Wrong recipient');
 	if (message.from) {
 		if (!fromSignature) throw new Error('Missing fromSignature');
@@ -152,7 +151,7 @@ app.use(((err, req, res, next) => {
 }) as ErrorRequestHandler);
 
 app.listen(port, () => {
-	if (!env.IS_GLOBAL_SPACE) {
+	if (!env.GLOBAL_HOST) {
 		touchIfDne(rootSettingsPath, JSON.stringify(new RootSettings({})));
 		WorkingDirectory.current.setUp();
 		const personas = Personas.get();

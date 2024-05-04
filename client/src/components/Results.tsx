@@ -98,7 +98,10 @@ export default function Results({
 					}
 				});
 			})
-			.catch((err) => alert(err))
+			.catch((err) => {
+				// TODO: show error in ui
+				console.error(err);
+			})
 			.finally(() => (pinging.current = false));
 	}, [sendMessage, personas[0], activeSpace, roots, freeForm, oldToNew, urlQuery]);
 
