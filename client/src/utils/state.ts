@@ -18,7 +18,7 @@ export const defaultSpaceHost = hostedLocally ? localApiHost : 'TODO: default gl
 export const getLocalState = () => {
 	const storedLocalState = localStorage.getItem('LocalState');
 	const localState: LocalState = storedLocalState ? JSON.parse(storedLocalState) : {};
-	const validLocalState = true; // use ajv
+	const validLocalState = !true; // use ajv
 	// const validLocalState = // TODO: make a nicer way of normalizing the local state
 	// 	['System', 'Light', 'Dark'].includes(localState.theme) &&
 	// 	Array.isArray(localState.personas) &&
