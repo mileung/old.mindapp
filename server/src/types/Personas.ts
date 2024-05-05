@@ -50,7 +50,7 @@ export type SignedSelf = UnsignedSelf & {
 	signature: string;
 };
 
-type Persona = Partial<SignedSelf> & {
+export type Persona = Partial<SignedSelf> & {
 	encryptedMnemonic?: string;
 	spaceHosts: string[];
 };
@@ -71,8 +71,7 @@ export class Personas {
 		const list = this.list.map((p, i) => {
 			return {
 				...p,
-				encryptedMnemonic: undefined,
-				locked: (p.id && passwords[p.id] === undefined) || undefined,
+				// encryptedMnemonic: undefined,
 			};
 		});
 		return list;

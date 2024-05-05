@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import TextInput, { useTextInputRef } from '../components/TextInput';
-import { makeUrl, ping, post } from '../utils/api';
-import { Button } from '../components/Button';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useLocalState, usePersonas } from '../utils/state';
-import { Personas } from '../utils/settings';
-import DeterministicVisualId from '../components/DeterministicVisualId';
 import { LockClosedIcon } from '@heroicons/react/16/solid';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button } from '../components/Button';
+import DeterministicVisualId from '../components/DeterministicVisualId';
+import TextInput, { useTextInputRef } from '../components/TextInput';
+import { useLocalState, usePersonas } from '../utils/state';
+import { decrypt } from '../utils/security';
+import { validateMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
 
 export default function UnlockPersona({ manage }: { manage?: boolean }) {
 	const [localState, localStateSet] = useLocalState();
@@ -20,29 +21,19 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 	}, [personas]);
 
 	const unlockPersona = useCallback(() => {
-		ping<{ arr: null | Personas }>(
-			makeUrl('unlock-persona'),
-			post({
-				personaId,
-				password: passwordIpt.value,
-			}),
-		)
-			.then(({ arr }) => {
-				if (arr) {
-					personasSet(arr);
-					if (!manage) {
-						navigate('/');
-						localStateSet({ ...localState, activePersonaId: personaId! });
-						ping<Personas>(makeUrl('prioritize-persona-or-space'), post({ personaId }))
-							.then((p) => personasSet(p))
-							.catch((err) => alert(err));
-					}
-				} else {
-					passwordIpt.tag?.focus();
-					passwordIpt.error = 'Incorrect password';
-				}
-			})
-			.catch((err) => alert(err));
+		personasSet((old) => {
+			const personaIndex = old.findIndex((p) => p.id === personaId);
+			if (personaIndex === -1) return [...old];
+			const persona = old[personaIndex];
+			const decryptedMnemonic = decrypt(persona.encryptedMnemonic!, passwordIpt.value);
+			if (!validateMnemonic(decryptedMnemonic, wordlist)) {
+				passwordIpt.tag?.focus();
+				passwordIpt.error = 'Incorrect password';
+				return [...old];
+			}
+			old[personaIndex] = { ...persona, mnemonic: decryptedMnemonic };
+			return [...old];
+		});
 	}, [personaId, manage]);
 
 	useEffect(() => passwordIpt.tag?.focus(), [personaId]);

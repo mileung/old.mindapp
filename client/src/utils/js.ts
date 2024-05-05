@@ -2,6 +2,19 @@ export function isRecord(value: unknown) {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function sortKeysRecursively(thing: Record<string, any> | any[]): any[] {
+	return Array.isArray(thing)
+		? thing.map((e) => {
+				return typeof e === 'object' && e !== null ? sortKeysRecursively(e) : e;
+			})
+		: Object.entries(thing)
+				.filter(([key, val]) => !!val)
+				.sort(([a], [b]) => a.localeCompare(b))
+				.map(([key, val]) => [key, isRecord(val) ? sortKeysRecursively(val) : val]);
+}
+
+// const isCenterOnLeft = () => window.screenX + window.innerWidth / 2 <= window.screen.width / 2;
+
 export function isStringifiedRecord(value?: string) {
 	if (!value) return false;
 	try {
@@ -17,12 +30,6 @@ export const shortenString = (str: string, startCount = 5, endCount = 5) => {
 	}
 	return str.slice(0, startCount) + '~' + str.slice(-endCount);
 };
-
-export function sortRecursiveEntries(obj: Record<string, any>): [string, any][] {
-	return Object.entries(obj)
-		.sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
-		.map(([key, val]) => [key, isRecord(val) ? sortRecursiveEntries(val) : val]);
-}
 
 export const copyToClipboardAsync = (str = '') => {
 	if (navigator && navigator.clipboard && navigator.clipboard.writeText)

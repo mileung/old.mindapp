@@ -1,32 +1,32 @@
-import logo from '/mindapp-logo.svg';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-	MagnifyingGlassIcon,
-	UserGroupIcon,
-	TagIcon,
-	Square2StackIcon,
-	LockClosedIcon,
 	CheckIcon,
 	EllipsisHorizontalIcon,
+	LockClosedIcon,
+	MagnifyingGlassIcon,
+	Square2StackIcon,
+	TagIcon,
+	UserGroupIcon,
 } from '@heroicons/react/16/solid';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CogIcon } from '@heroicons/react/24/outline';
+import { matchSorter } from 'match-sorter';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { hostedLocally, localApiHost } from '../utils/api';
+import { shortenString } from '../utils/js';
+import { useKeyPress } from '../utils/keyboard';
+import { Space } from '../utils/settings';
 import {
 	useActiveSpace,
+	useFetchedSpaces,
 	useLastUsedTags,
-	useLocalState,
 	usePersonas,
 	useRootSettings,
-	useFetchedSpaces,
 	useTagTree,
 } from '../utils/state';
-import { matchSorter } from 'match-sorter';
-import { useKeyPress } from '../utils/keyboard';
 import { bracketRegex, getNodes, getNodesArr, getTags } from '../utils/tags';
 import DeterministicVisualId from './DeterministicVisualId';
-import { hostedLocally, localApiHost, makeUrl, ping, post } from '../utils/api';
-import { shortenString } from '../utils/js';
-import { Personas, Space } from '../utils/settings';
+import logo from '/mindapp-logo.svg';
+import { Persona } from '../types/PersonasPolyfill';
 
 const setGlobalCssVariable = (variableName: string, value: string) => {
 	document.documentElement.style.setProperty(`--${variableName}`, value);
@@ -297,7 +297,7 @@ export default function Header() {
 								{(
 									((switchingSpaces
 										? personas[0].spaceHosts.map((host) => fetchedSpaces[host] || { host })
-										: personas) || []) as (Space & Personas[number])[]
+										: personas) || []) as (Space & Persona)[]
 								).map((thing, i) => {
 									const thingKey = switchingSpaces ? thing.host : thing.id;
 									const showCheck = !i;
@@ -309,44 +309,29 @@ export default function Header() {
 												onClick={() => {
 													switchingSpacesSet(false);
 													switchingPersonasSet(false);
-													if (thing.locked) {
-														return navigate(`/unlock/${thingKey}`);
-													}
-													if (hostedLocally) {
-														ping<Personas>(
-															makeUrl('prioritize-persona-or-space'),
-															post(
-																switchingSpaces
-																	? { personaId: personas[0].id, spaceHost: thing.host }
-																	: { personaId: thing.id },
-															),
-														)
-															.then((p) => personasSet(p))
-															.catch((err) => alert(err));
-													} else {
-														personasSet((old) => {
-															if (switchingSpaces) {
+													if (!thing.mnemonic) return navigate(`/unlock/${thingKey}`);
+													personasSet((old) => {
+														if (switchingSpaces) {
+															old[0].spaceHosts.splice(
+																0,
+																0,
 																old[0].spaceHosts.splice(
-																	0,
-																	0,
-																	old[0].spaceHosts.splice(
-																		old[0].spaceHosts.findIndex((h) => h === thing.host),
-																		1,
-																	)[0],
-																);
-															} else {
+																	old[0].spaceHosts.findIndex((h) => h === thing.host),
+																	1,
+																)[0],
+															);
+														} else {
+															old.splice(
+																0,
+																0,
 																old.splice(
-																	0,
-																	0,
-																	old.splice(
-																		old.findIndex((p) => p.id === thing.id),
-																		1,
-																	)[0],
-																);
-															}
-															return [...old];
-														});
-													}
+																	old.findIndex((p) => p.id === thing.id),
+																	1,
+																)[0],
+															);
+														}
+														return [...old];
+													});
 												}}
 											>
 												<DeterministicVisualId
@@ -361,7 +346,7 @@ export default function Header() {
 															(thingKey ? 'No name' : switchingSpaces ? 'Local space' : 'Anon')}
 													</p>
 													<p className="text-left font-mono text-fg2 leading-5 truncate">
-														{switchingSpaces ? thingKey || localApiHost : shortenString(thingKey)}
+														{switchingSpaces ? thingKey || localApiHost : shortenString(thingKey!)}
 													</p>
 												</div>
 											</button>
@@ -383,7 +368,7 @@ export default function Header() {
 													{showCheck ? (
 														<CheckIcon className="h-5 w-5" />
 													) : (
-														thing.locked && <LockClosedIcon className="h-4 w-4 text-fg2" />
+														!thing.mnemonic && <LockClosedIcon className="h-4 w-4 text-fg2" />
 													)}
 													<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
 														<EllipsisHorizontalIcon className="h-5 w-5" />
@@ -421,31 +406,21 @@ export default function Header() {
 									onClick={() => {
 										switchingSpacesSet(false);
 										switchingPersonasSet(false);
-										if (hostedLocally) {
-											ping<Personas>(makeUrl('lock-all-personas'))
-												.then((p) => {
-													personasSet(p);
-													navigate('/');
-												})
-												.catch((err) => alert(err));
-										} else {
-											const newPersonas: typeof personas = JSON.parse(JSON.stringify(personas));
-											newPersonas.forEach((p) => {
-												if (!!p.id) {
-													p.locked = true;
-												}
+										personasSet((old) => {
+											old.forEach((p) => {
+												if (!!p.id) p.mnemonic = undefined;
 											});
-											newPersonas.splice(
+											old.splice(
 												0,
 												0,
-												newPersonas.splice(
-													newPersonas.findIndex((p) => !p.id),
+												old.splice(
+													old.findIndex((p) => !p.id),
 													1,
 												)[0],
 											);
-											personasSet(newPersonas);
-											navigate('/');
-										}
+											return [...old];
+										});
+										navigate('/');
 									}}
 								>
 									<div className="h-6 w-6 xy">

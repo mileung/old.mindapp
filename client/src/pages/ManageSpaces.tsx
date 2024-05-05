@@ -7,7 +7,7 @@ import TextInput, { useTextInputRef } from '../components/TextInput';
 import { buildUrl, hostedLocally, localApiHost, makeUrl, ping, post } from '../utils/api';
 import { useSendMessage, usePersonas, useFetchedSpaces } from '../utils/state';
 import { formatTimestamp } from '../utils/time';
-import { Personas } from '../utils/settings';
+import { LabelVal } from '../components/LabelVal';
 
 export default function ManageSpaces() {
 	const { spaceHost } = useParams();
@@ -33,7 +33,7 @@ export default function ManageSpaces() {
 				<div className="sticky top-12 h-full p-3 flex flex-col max-h-[calc(100vh-3rem)] overflow-scroll">
 					<div className="overflow-scroll border-b border-mg1 mb-1">
 						{personas[0].spaceHosts
-							.filter((h) => !!h)
+							.filter((h) => !!h && h !== localApiHost)
 							.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
 							.map((host) => {
 								return (
@@ -87,22 +87,13 @@ export default function ManageSpaces() {
 								label="Remove space"
 								onClick={() => {
 									navigate(`/manage-spaces/${spaceHost}`);
-									if (hostedLocally) {
-										ping<Personas>(
-											makeUrl('update-local-space'),
-											post({ personaId: personas[0].id, host: spaceHost, remove: true }),
-										)
-											.then((p) => personasSet(p))
-											.catch((err) => alert(JSON.stringify(err)));
-									} else {
-										personasSet((old) => {
-											old[0].spaceHosts.splice(
-												old[0].spaceHosts.findIndex((h) => h === spaceHost),
-												1,
-											);
-											return [...old];
-										});
-									}
+									personasSet((old) => {
+										old[0].spaceHosts.splice(
+											old[0].spaceHosts.findIndex((h) => h === spaceHost),
+											1,
+										);
+										return [...old];
+									});
 								}}
 							/>
 						</div>
@@ -123,8 +114,8 @@ export default function ManageSpaces() {
 								</div>
 							</div>
 							<p className="text-2xl font-semibold">Space info</p>
-							<LabelValue label="Hub address" value={fetchedSpace.hubAddress} />
-							<LabelValue label="Faucet address" value={fetchedSpace.faucetAddress} />
+							<LabelVal label="Hub address" value={fetchedSpace.hubAddress} />
+							<LabelVal label="Faucet address" value={fetchedSpace.faucetAddress} />
 							<div className="">
 								<p className="text-xl font-semibold text-fg2">Owner</p>
 								<NameTag id={fetchedSpace.owner?.id} name={fetchedSpace.owner?.name} />
@@ -135,7 +126,7 @@ export default function ManageSpaces() {
 							</div>
 							{fetchedSpace.fetchedSelf && (
 								<>
-									<LabelValue
+									<LabelVal
 										label="Add date"
 										value={formatTimestamp(fetchedSpace.fetchedSelf.addDate)}
 									/>
@@ -148,14 +139,11 @@ export default function ManageSpaces() {
 											/>
 										</div>
 									)}
-									<LabelValue
+									<LabelVal
 										label="Frozen"
 										value={fetchedSpace.fetchedSelf.frozen ? 'True' : 'False'}
 									/>
-									<LabelValue
-										label="Wallet address"
-										value={fetchedSpace.fetchedSelf.walletAddress}
-									/>
+									<LabelVal label="Wallet address" value={fetchedSpace.fetchedSelf.walletAddress} />
 									<p className="text-2xl font-semibold mb-1">Danger zone</p>
 									<Button
 										label="Leave space"
@@ -164,20 +152,6 @@ export default function ManageSpaces() {
 												from: personas[0].id,
 												to: buildUrl({ host: spaceHost, path: 'leave-space' }),
 											});
-											if (hostedLocally) {
-												await ping(
-													buildUrl({
-														host: localApiHost,
-														path: 'update-local-space',
-													}),
-													post({
-														personaId: personas[0].id,
-														host: spaceHost,
-														remove: true,
-													}),
-												);
-											}
-
 											personasSet((old) => {
 												old[0].spaceHosts.splice(
 													old[0].spaceHosts.findIndex((h) => h === spaceHost),
@@ -205,63 +179,47 @@ export default function ManageSpaces() {
 									A global space is an online thought repository that users can contribute to
 								</p>
 							</div>
-							<TextInput
-								required
-								autoFocus
-								defaultValue="localhost:8080"
-								_ref={hostIpt}
-								label="Host"
-							/>
-							<Button
-								label="Join space"
-								onClick={() => {
-									const newSpaceHost = hostIpt.value.trim().toLowerCase();
-									if (
-										newSpaceHost === localApiHost ||
-										personas[0].spaceHosts.find((h) => h == newSpaceHost)
-									) {
-										return alert('Host already added');
-									}
-
-									if (hostedLocally) {
-										ping<Personas>(
-											makeUrl('update-local-space'),
-											post({ personaId: personas[0].id, host: newSpaceHost }),
-										)
-											.then((p) => {
-												personasSet(p);
-												navigate(`/manage-spaces/${newSpaceHost}`);
-											})
-											.catch((err) => alert(JSON.stringify(err)));
-									} else {
-										personasSet((old) => {
-											old[0]?.spaceHosts.unshift(newSpaceHost);
-											return [...old];
-										});
-										setTimeout(() => navigate(`/manage-spaces/${newSpaceHost}`), 0);
-									}
-								}}
-							/>
-							<Link
-								target="_blank"
-								className="inline-block font-semibold leading-4 text-fg2 transition hover:text-fg1"
-								to="TODO"
-							>
-								Create a new space
-							</Link>
+							{personas[0].frozen ? (
+								<p className="font-semibold text-fg2 text-xl">Persona frozen</p>
+							) : (
+								<>
+									<TextInput
+										required
+										autoFocus
+										defaultValue="localhost:8080"
+										_ref={hostIpt}
+										label="Host"
+									/>
+									<Button
+										label="Join space"
+										onClick={() => {
+											const newSpaceHost = hostIpt.value.trim().toLowerCase();
+											if (
+												newSpaceHost === localApiHost ||
+												personas[0].spaceHosts.find((h) => h == newSpaceHost)
+											) {
+												return alert('Host already added');
+											}
+											personasSet((old) => {
+												old[0]?.spaceHosts.unshift(newSpaceHost);
+												return [...old];
+											});
+											setTimeout(() => navigate(`/manage-spaces/${newSpaceHost}`), 0);
+										}}
+									/>
+									<Link
+										target="_blank"
+										className="inline-block font-semibold leading-4 text-fg2 transition hover:text-fg1"
+										to="TODO"
+									>
+										Create a new space
+									</Link>
+								</>
+							)}
 						</>
 					)
 				)}
 			</div>
-		</div>
-	);
-}
-
-function LabelValue({ label, value }: { label: string; value?: string }) {
-	return (
-		<div>
-			<p className="text-xl font-semibold text-fg2 leading-5">{label}</p>
-			<p className="text-xl font-medium">{value}</p>
 		</div>
 	);
 }

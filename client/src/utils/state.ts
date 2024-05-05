@@ -1,48 +1,45 @@
-import { useCallback } from 'react';
 import { atom, useAtom } from 'jotai';
-import { TagTree } from './tags';
-import { Personas, RootSettings, Space, WorkingDirectory } from './settings';
+import { useCallback } from 'react';
+import { Persona } from '../types/PersonasPolyfill';
 import { Thought } from './ClientThought';
-import { hostedLocally, localApiHost, makeUrl, ping, post } from './api';
-import { isRecord } from './js';
+import { hostedLocally, localApiHost, ping, post } from './api';
+import { createKeyPair, signItem } from './security';
+import { RootSettings, Space, WorkingDirectory } from './settings';
+import { TagTree } from './tags';
 
-type LocalState = {
+export type LocalState = {
 	theme: 'System' | 'Light' | 'Dark';
-	personas: Personas;
+	personas: Persona[];
 	fetchedSpaces: Record<string, Space>;
 };
 
-const defaultSpaceHost = hostedLocally ? localApiHost : 'TODO: default global space';
+export const defaultSpaceHost = hostedLocally ? localApiHost : 'TODO: default global space';
 
 export const getLocalState = () => {
 	const storedLocalState = localStorage.getItem('LocalState');
 	const localState: LocalState = storedLocalState ? JSON.parse(storedLocalState) : {};
-	const validLocalState = // TODO: make a nicer way of normalizing the local state
-		['System', 'Light', 'Dark'].includes(localState.theme) &&
-		Array.isArray(localState.personas) &&
-		localState.personas.every((p) => {
-			return (
-				typeof p.id === 'string' &&
-				['string', 'undefined'].includes(typeof p.name) &&
-				(typeof p.locked === 'undefined' || p.locked === true) &&
-				Array.isArray(p.spaceHosts) &&
-				p.spaceHosts.length &&
-				p.spaceHosts.every((id) => typeof id === 'string')
-			);
-		}) &&
-		isRecord(localState.fetchedSpaces);
+	const validLocalState = true; // use ajv
+	// const validLocalState = // TODO: make a nicer way of normalizing the local state
+	// 	['System', 'Light', 'Dark'].includes(localState.theme) &&
+	// 	Array.isArray(localState.personas) &&
+	// 	localState.personas.every((p) => {
+	// 		return (
+	// 			typeof p.id === 'string' &&
+	// 			['string', 'undefined'].includes(typeof p.name) &&
+	// 			(typeof p.locked === 'undefined' || p.locked === true) &&
+	// 			Array.isArray(p.spaceHosts) &&
+	// 			p.spaceHosts.length &&
+	// 			p.spaceHosts.every((id) => typeof id === 'string')
+	// 		);
+	// 	}) &&
+	// 	isRecord(localState.fetchedSpaces);
 	// TODO: validate localState.fetchedSpaces. I may need to use ajv client side but prefer not to...
 
 	return validLocalState
 		? localState
 		: ({
 				theme: 'System',
-				personas: [
-					{
-						id: '', //
-						spaceHosts: [defaultSpaceHost],
-					},
-				],
+				personas: [{ id: '', spaceHosts: [defaultSpaceHost] }],
 				fetchedSpaces: {},
 			} as LocalState);
 };
@@ -60,7 +57,7 @@ export const createAtom = <T>(initialValue: T) => {
 };
 
 const currentLocalState = getLocalState();
-export const usePersonas = createAtom<Personas>(currentLocalState.personas);
+export const usePersonas = createAtom<Persona[]>(currentLocalState.personas);
 export const useFetchedSpaces = createAtom<Record<string, Space>>(currentLocalState.fetchedSpaces);
 export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
 export const useNames = createAtom<Record<string, string>>({});
@@ -82,19 +79,18 @@ type Item = string | Record<string, any> | any[];
 export function useGetSignature() {
 	const [personas] = usePersonas();
 	return useCallback(
-		async (item: Item, personaId?: string) => {
+		(item: Item, personaId?: string) => {
 			// console.log(item, personaId);
 			if (!personaId) return;
-			if (hostedLocally) {
-				const { signature } = await ping<{ signature?: string }>(
-					makeUrl('get-signature'),
-					post({ item, personaId }),
-				);
-				return signature;
-			} else {
-				// TODO: sign on client
-				return 'signature';
+			const persona = personas.find((p) => p.id === personaId);
+			if (!persona) throw new Error('Persona not found');
+			const locked = !persona.mnemonic;
+			if (locked) throw new Error('Persona locked');
+			const { publicKey, privateKey } = createKeyPair(persona.mnemonic);
+			if (publicKey !== personaId) {
+				throw new Error('Mnemonic on file does not correspond to personaId');
 			}
+			return signItem(item, privateKey);
 		},
 		[personas],
 	);
@@ -111,7 +107,7 @@ export function useSendMessage() {
 		async <T>(message: Message) => {
 			return await ping<T>(
 				message.to,
-				post({ message, fromSignature: await getSignature(message, message.from) }),
+				post({ message, fromSignature: getSignature(message, message.from) }),
 			);
 		},
 		[getSignature],

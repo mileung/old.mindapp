@@ -1,3 +1,5 @@
+import { SignedSelf } from '../types/PersonasPolyfill';
+
 export type RootSettings = {
 	testWorkingDirectory: boolean;
 };
@@ -7,24 +9,6 @@ export type WorkingDirectory = {
 	gitRemoteUrl?: string;
 	dirPath: string;
 };
-
-export type UnsignedSelf = {
-	writeDate?: number;
-	id: string;
-	name?: string;
-	frozen?: true;
-	walletAddress?: string;
-};
-
-export type SignedSelf = UnsignedSelf & {
-	signature?: string;
-};
-
-export type Personas = (SignedSelf & {
-	locked?: true;
-	spaceHosts: string[];
-	encryptedMnemonic?: string; // this is only for clients not hosted locally
-})[];
 
 export type Space = {
 	host: string;

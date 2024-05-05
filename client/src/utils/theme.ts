@@ -1,9 +1,8 @@
-import { RootSettings } from './settings';
-import { getLocalState, updateLocalState } from './state';
+import { LocalState, getLocalState, updateLocalState } from './state';
 
 export const isDarkMode = () => document.documentElement.classList.contains('dark');
 
-export const setTheme = (theme: RootSettings['theme']) => {
+export const setTheme = (theme: LocalState['theme']) => {
 	updateLocalState({ theme });
 	const systemTheme = theme === 'System';
 	const systemThemeIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

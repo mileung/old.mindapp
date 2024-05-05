@@ -11,6 +11,7 @@ import { buildUrl } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
 	useActiveSpace,
+	useFetchedSpaces,
 	useMentionedThoughts,
 	useNames,
 	usePersonas,
@@ -52,7 +53,10 @@ export default function Results({
 		queriedThoughtId && roots[0] && queriedThoughtRootSet(roots[0]);
 	}, [roots]);
 
+	const pluggedIn = useMemo(() => !!activeSpace.fetchedSelf || !activeSpace.host, [activeSpace]);
+
 	const loadMoreThoughts = useCallback(async () => {
+		if (!pluggedIn) return null;
 		const lastRoot = roots.slice(-1)[0];
 		if (lastRoot === null || !activeSpace) return;
 		const ignoreRootIds = freeForm
@@ -98,12 +102,9 @@ export default function Results({
 					}
 				});
 			})
-			.catch((err) => {
-				// TODO: show error in ui
-				console.error(err);
-			})
+			.catch((err) => console.error(err))
 			.finally(() => (pinging.current = false));
-	}, [sendMessage, personas[0], activeSpace, roots, freeForm, oldToNew, urlQuery]);
+	}, [pluggedIn, activeSpace, sendMessage, personas[0], roots, freeForm, oldToNew, urlQuery]);
 
 	useEffect(() => {
 		let rootsLengthLastLoad: number;
@@ -124,19 +125,21 @@ export default function Results({
 	}, [roots, loadMoreThoughts]);
 
 	useEffect(() => {
-		if (!roots.length && !pinging.current) {
+		if (!roots.length && !pinging.current && pluggedIn) {
 			mentionedThoughtsSet({});
 			thoughtsBeyond.current = oldToNew ? 0 : Number.MAX_SAFE_INTEGER;
 			loadMoreThoughts();
 		}
-	}, [oldToNew, roots, loadMoreThoughts]);
+	}, [oldToNew, roots, pluggedIn, loadMoreThoughts]);
 
 	useEffect(() => {
 		queriedThoughtRootSet(null);
 		rootsSet([]);
 	}, [location, personas[0].spaceHosts[0]]);
 
-	return (
+	return !pluggedIn ? (
+		<p className="text-xl text-fg2 text-center font-semibold">Couldn't join space </p>
+	) : (
 		<div className={`space-y-1.5 relative`}>
 			{queriedThoughtRoot && (
 				<ThoughtBlock

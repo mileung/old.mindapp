@@ -36,6 +36,7 @@ import leaveSpace from './routes/leave-space';
 import updateLocalSpaces from './routes/update-local-space';
 import addSpacePersona from './routes/add-space-persona';
 import saveThought from './routes/save-thought';
+import savePersonas from './routes/save-personas';
 
 const app = express();
 const port = env.GLOBAL_HOST ? 8080 : 2000;
@@ -88,6 +89,7 @@ if (!env.GLOBAL_HOST) {
 	app.get('/show-working-directory', tryCatch(showWorkingDirectory));
 	app.post('/get-signature', tryCatch(getSignature));
 	app.post('/save-thought', tryCatch(saveThought));
+	app.post('/save-personas', tryCatch(savePersonas));
 }
 
 const ajv = new Ajv({ verbose: true });
@@ -156,9 +158,7 @@ app.listen(port, () => {
 		WorkingDirectory.current.setUp();
 		const personas = Personas.get();
 		personas.list.forEach((p) => {
-			if (p.id) {
-				personas.unlockPersona(p.id, '');
-			}
+			if (p.id) personas.unlockPersona(p.id, '');
 		});
 	}
 	console.log(`Server is running at ${host}`);

@@ -7,8 +7,8 @@ import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
 import ThoughtId from './pages/ThoughtId';
-import { buildUrl, hostedLocally, localApiHost, makeUrl, ping } from './utils/api';
-import { Personas, RootSettings, Space, WorkingDirectory } from './utils/settings';
+import { buildUrl, hostedLocally, localApiHost, makeUrl, ping, post } from './utils/api';
+import { RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
 	useNames,
 	useLocalState,
@@ -24,8 +24,10 @@ import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
 import UnlockPersona from './pages/UnlockPersona';
 import ManageSpaces from './pages/ManageSpaces';
-
-// const isCenterOnLeft = () => window.screenX + window.innerWidth / 2 <= window.screen.width / 2;
+import { Persona } from './types/PersonasPolyfill';
+import { decrypt } from './utils/security';
+import { validateMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -69,13 +71,22 @@ function App() {
 			ping<TagTree>(makeUrl('get-tag-tree'))
 				.then((data) => tagTreeSet(data))
 				.catch((err) => console.error(err));
-			ping<Personas>(makeUrl('get-personas'))
-				.then((p) => personasSet(p))
+			ping<Persona[]>(makeUrl('get-personas'))
+				.then((p) => {
+					p.forEach((p) => {
+						if (p.id) {
+							const decryptedMnemonic = decrypt(p.encryptedMnemonic!, '');
+							if (!validateMnemonic(decryptedMnemonic, wordlist)) return;
+							p.mnemonic = decryptedMnemonic;
+						}
+					});
+					personasSet(p);
+				})
 				.catch((err) => console.error(err));
 		} else {
 			// TODO: generating personas client side
 		}
-	}, [rootSettings?.testWorkingDirectory]);
+	}, [!!rootSettings?.testWorkingDirectory]);
 
 	useEffect(() => {
 		if (personas) {
@@ -85,6 +96,13 @@ function App() {
 				return { ...oldDefaultNames, ...newDefaultNames };
 			});
 			localStateSet((old) => ({ ...old, personas }));
+
+			ping(
+				makeUrl('save-personas'),
+				post({
+					personas: personas.map((p) => ({ ...p, mnemonic: undefined })),
+				}),
+			).catch((err) => console.error(err));
 		}
 	}, [personas]);
 
@@ -93,7 +111,7 @@ function App() {
 			Object.entries(old).forEach(([key, val]) => {
 				old[key] = { ...val, fetchedSelf: undefined };
 			});
-			return old;
+			return { ...old };
 		});
 	}, [personas[0].id]);
 
@@ -134,7 +152,7 @@ function App() {
 					console.log('error:', error);
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, fetchedSelf: null } }));
 				} finally {
-					pinging.current[host] = false;
+					setTimeout(() => (pinging.current[host] = false), 0);
 				}
 			}
 		});
