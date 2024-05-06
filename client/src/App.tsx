@@ -87,14 +87,16 @@ function App() {
 
 	useEffect(() => {
 		if (personas) {
+			if (hostedLocally) {
+				ping(makeUrl('update-personas'), post({ personas })) //
+					.catch((err) => console.error(err));
+			}
 			namesSet((oldDefaultNames) => {
 				const newDefaultNames = { ...oldDefaultNames };
 				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
 				return { ...oldDefaultNames, ...newDefaultNames };
 			});
 			localStateSet((old) => ({ ...old, personas }));
-			ping(makeUrl('update-personas'), post({ personas })) //
-				.catch((err) => console.error(err));
 		}
 	}, [JSON.stringify(personas)]);
 
