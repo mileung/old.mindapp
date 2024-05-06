@@ -1,6 +1,6 @@
 import { atom, useAtom } from 'jotai';
 import { useCallback } from 'react';
-import { Persona, passwords } from '../types/PersonasPolyfill';
+import { Persona, SignedSelf, UnsignedSelf, passwords } from '../types/PersonasPolyfill';
 import { Thought } from './ClientThought';
 import { hostedLocally, makeUrl, ping, post } from './api';
 import { createKeyPair, decrypt, signItem } from './security';
@@ -128,6 +128,20 @@ export function useGetSignature() {
 			}
 		},
 		[personas],
+	);
+}
+
+export function useGetSignedSelf() {
+	const getSignature = useGetSignature();
+	return useCallback(
+		async (unsignedSelf: UnsignedSelf) => {
+			const signedSelf: SignedSelf = {
+				...unsignedSelf,
+				signature: (await getSignature(unsignedSelf, unsignedSelf.id))!,
+			};
+			return signedSelf;
+		},
+		[getSignature],
 	);
 }
 

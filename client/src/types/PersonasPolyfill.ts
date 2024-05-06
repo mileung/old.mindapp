@@ -1,3 +1,5 @@
+import { signItem } from '../utils/security';
+
 export let passwords: Record<string, string> = {};
 
 export type UnsignedSelf = {
@@ -18,3 +20,14 @@ export type Persona = Partial<SignedSelf> & {
 	spaceHosts: string[];
 	locked?: boolean;
 };
+
+export function getUnsignedSelf(persona: { id: string } & Partial<Persona>) {
+	const unsignedSelf: UnsignedSelf = {
+		writeDate: Date.now(),
+		id: persona.id,
+		name: persona.name,
+		frozen: persona.frozen,
+		walletAddress: persona.walletAddress,
+	};
+	return unsignedSelf;
+}

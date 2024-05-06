@@ -16,6 +16,7 @@ import {
 	defaultSpaceHost,
 	useFetchedSpaces,
 	useGetSignature,
+	useGetSignedSelf,
 	usePersonas,
 	useSendMessage,
 } from '../utils/state';
@@ -23,7 +24,13 @@ import UnlockPersona from './UnlockPersona';
 import { generateMnemonic, validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { createKeyPair, decrypt, encrypt, signItem } from '../utils/security';
-import { Persona, SignedSelf, UnsignedSelf, passwords } from '../types/PersonasPolyfill';
+import {
+	Persona,
+	SignedSelf,
+	UnsignedSelf,
+	getUnsignedSelf,
+	passwords,
+} from '../types/PersonasPolyfill';
 import { LabelVal } from '../components/LabelVal';
 
 export default function ManagePersonas() {
@@ -32,6 +39,7 @@ export default function ManagePersonas() {
 	const sendMessage = useSendMessage();
 	const getSignature = useGetSignature();
 	const [, fetchedSpacesSet] = useFetchedSpaces();
+	const getSignedSelf = useGetSignedSelf();
 	const navigate = useNavigate();
 	const [secrets, secretsSet] = useState('');
 	const [changingPw, changingPwSet] = useState(false);
@@ -74,16 +82,12 @@ export default function ManagePersonas() {
 				return (mnemonicIpt.error = 'Invalid mnemonic');
 			}
 			const kp = createKeyPair(mnemonic);
-			const unsignedSelf: UnsignedSelf = {
-				writeDate: Date.now(),
+			const unsignedSelf = getUnsignedSelf({
 				id: kp.publicKey,
 				name: nameIpt.value.trim(),
 				walletAddress: wallet.deriveAddress({ mnemonics: mnemonic, index: 0 }).address,
-			};
-			const signedSelf: SignedSelf = {
-				...unsignedSelf,
-				signature: signItem(unsignedSelf, kp.privateKey),
-			};
+			});
+			const signedSelf = { ...unsignedSelf, signature: signItem(unsignedSelf, kp.privateKey) };
 			passwords[kp.publicKey] = passwordIpt.value;
 			newPersona = {
 				...signedSelf,
@@ -187,9 +191,11 @@ export default function ManagePersonas() {
 											label="Name"
 											placeholder="No name"
 											maxLength={100}
-											onSubmit={(name) => {
+											onSubmit={async (name) => {
+												const unsignedSelf = getUnsignedSelf({ ...persona, name });
+												const signedSelf = await getSignedSelf(unsignedSelf);
 												personasSet((old) => {
-													old[personaIndex] = { ...old[personaIndex], name };
+													old[personaIndex] = { ...old[personaIndex], ...signedSelf };
 													return [...old];
 												});
 											}}
@@ -353,8 +359,10 @@ export default function ManagePersonas() {
 															);
 												}
 												if (!frozen) return alert('Invalid mnemonic');
+												const unsignedSelf = getUnsignedSelf({ ...persona, frozen });
+												const signedSelf = await getSignedSelf(unsignedSelf);
 												personasSet((old) => {
-													old[personaIndex] = { ...old[personaIndex], frozen };
+													old[personaIndex] = { ...old[personaIndex], ...signedSelf };
 													return [...old];
 												});
 											}}

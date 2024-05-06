@@ -88,9 +88,15 @@ function App() {
 	useEffect(() => {
 		if (personas) {
 			if (hostedLocally) {
-				ping(makeUrl('update-personas'), post({ personas })) //
+				ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
 					.catch((err) => console.error(err));
 			}
+			fetchedSpacesSet((old) => {
+				Object.entries(old).forEach(([key, val]) => {
+					old[key] = { ...val, fetchedSelf: undefined };
+				});
+				return { ...old };
+			});
 			namesSet((oldDefaultNames) => {
 				const newDefaultNames = { ...oldDefaultNames };
 				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
@@ -99,15 +105,6 @@ function App() {
 			localStateSet((old) => ({ ...old, personas }));
 		}
 	}, [JSON.stringify(personas)]);
-
-	useEffect(() => {
-		fetchedSpacesSet((old) => {
-			Object.entries(old).forEach(([key, val]) => {
-				old[key] = { ...val, fetchedSelf: undefined };
-			});
-			return { ...old };
-		});
-	}, [personas[0].id]);
 
 	useEffect(() => {
 		updateLocalState(localState);
@@ -124,7 +121,6 @@ function App() {
 				pinging.current[host] = true;
 				try {
 					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
-					console.log('host:', host);
 					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
 						from: id,
 						to: buildUrl({ host, path: 'update-space-persona' }),
@@ -141,7 +137,7 @@ function App() {
 									signature,
 								},
 					});
-					console.log('space:', space);
+					// console.log('space:', space);
 					if (!id) {
 						space.fetchedSelf = { id: '', writeDate: 0, addDate: 0, signature: `` };
 					}
@@ -154,7 +150,7 @@ function App() {
 				}
 			}
 		});
-	}, [personas, fetchedSpaces, sendMessage]);
+	}, [JSON.stringify(personas), fetchedSpaces, sendMessage]);
 
 	return (
 		<main>

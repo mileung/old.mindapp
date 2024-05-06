@@ -87,7 +87,6 @@ export class Personas {
 	}
 
 	getOrderedArr(order: string[] = []): Persona[] {
-		console.log('passwords:', passwords);
 		// const set = new Set(order);
 		const arr = [
 			...order.map((id) => ({
@@ -131,32 +130,25 @@ export class Personas {
 	update(personas: Persona[]) {
 		personas.forEach((p) => {
 			if (p.id === undefined) throw new Error('Persona is missing id');
+			let signedSelf: undefined | SignedSelf;
+			if (p.id) {
+				if (passwords[p.id] === undefined) throw new Error('Persona locked');
+				const unsignedSelf = getUnsignedSelf({ ...p, id: p.id });
+				const decryptedMnemonic = decrypt(this.registry[p.id].encryptedMnemonic!, passwords[p.id]);
+				const { publicKey, privateKey } = createKeyPair(decryptedMnemonic);
+				if (publicKey !== p.id) throw new Error('publicKey !== p.id');
+				signedSelf = getSignedSelf(unsignedSelf, privateKey);
+			}
 			this.registry[p.id] = {
 				...this.registry[p.id],
 				...p,
+				...(signedSelf || {}),
 				id: undefined,
 				name: p.name || undefined,
 			};
 		});
 		this.overwrite();
 	}
-
-	// prioritizePersona(personaId: string, index = 0) {
-	// 	const personaIndex = this.findIndex(personaId);
-	// 	if (personaIndex === -1) throw new Error('Persona not found');
-	// 	this.registry.splice(index, 0, this.registry.splice(personaIndex, 1)[0]);
-	// 	this.overwrite();
-	// }
-
-	// prioritizeSpace(personaId: string, spaceHost: string, index = 0) {
-	// 	const personaIndex = this.findIndex(personaId);
-	// 	if (personaIndex === -1) throw new Error('persona Persona not found');
-	// 	const persona = this.registry[personaId];
-	// 	const spaceIndex = persona.spaceHosts.findIndex((id) => id === spaceHost);
-	// 	if (spaceIndex === -1) throw new Error('space persona not found');
-	// 	persona.spaceHosts.splice(index, 0, persona.spaceHosts.splice(spaceIndex, 1)[0]);
-	// 	this.overwrite();
-	// }
 
 	addSpace(personaId: string, spaceHost: string) {
 		const persona = this.registry[personaId];
@@ -187,19 +179,14 @@ export class Personas {
 	}) {
 		const { publicKey, privateKey } = createKeyPair(mnemonic);
 		if (this.registry[publicKey]) throw new Error('publicKey already used');
-		const writeDate = Date.now();
-		const unsignedSelf: UnsignedSelf = {
-			writeDate,
+		const unsignedSelf = getUnsignedSelf({
 			id: publicKey,
 			name,
 			frozen,
 			walletAddress:
 				walletAddress || wallet.deriveAddress({ mnemonics: mnemonic, index: 0 }).address,
-		};
-		const signedSelf: SignedSelf = {
-			...unsignedSelf,
-			signature: signItem(unsignedSelf, privateKey),
-		};
+		});
+		const signedSelf = getSignedSelf(unsignedSelf, privateKey);
 		this.registry[publicKey] = {
 			...signedSelf,
 			encryptedMnemonic: encrypt(mnemonic, password),
@@ -270,14 +257,6 @@ export class Personas {
 		return valid;
 	}
 
-	// find(personaId: string) {
-	// 	return this.registry.find((p) => p.id === personaId);
-	// }
-
-	// findIndex(personaId: string) {
-	// 	return this.registry.findIndex((p) => p.id === personaId);
-	// }
-
 	getSignature(item: Item, personaId: string) {
 		if (!personaId) throw new Error('Anon cannot sign items');
 		const locked = passwords[personaId] === undefined;
@@ -303,4 +282,23 @@ export class Personas {
 		}
 		return (await inGroup(personaId))?.name;
 	}
+}
+
+function getUnsignedSelf(persona: { id: string } & Partial<Persona>) {
+	const unsignedSelf: UnsignedSelf = {
+		writeDate: Date.now(),
+		id: persona.id,
+		name: persona.name,
+		frozen: persona.frozen,
+		walletAddress: persona.walletAddress,
+	};
+	return unsignedSelf;
+}
+
+function getSignedSelf(unsignedSelf: UnsignedSelf, privateKey: string) {
+	const signedSelf: SignedSelf = {
+		...unsignedSelf,
+		signature: signItem(unsignedSelf, privateKey),
+	};
+	return signedSelf;
 }
