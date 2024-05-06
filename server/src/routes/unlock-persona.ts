@@ -8,7 +8,7 @@ const unlockPersona: RequestHandler = (req, res) => {
 	};
 	const personas = Personas.get();
 	const valid = personas.unlockPersona(personaId, password);
-	res.send({ arr: valid ? personas.clientArr : null });
+	res.send({ locked: !valid });
 };
 
 export default unlockPersona;

@@ -186,7 +186,7 @@ export default function ManageSpaces() {
 									<TextInput
 										required
 										autoFocus
-										defaultValue="localhost:8080"
+										defaultValue={hostedLocally ? 'localhost:8080' : ''}
 										_ref={hostIpt}
 										label="Host"
 									/>
@@ -195,6 +195,7 @@ export default function ManageSpaces() {
 										onClick={() => {
 											const newSpaceHost = hostIpt.value.trim().toLowerCase();
 											if (
+												!newSpaceHost ||
 												newSpaceHost === localApiHost ||
 												personas[0].spaceHosts.find((h) => h == newSpaceHost)
 											) {

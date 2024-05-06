@@ -22,8 +22,7 @@ import addPersona from './routes/add-persona';
 import prioritizePersonaOrSpace from './routes/prioritize-persona-or-space';
 import unlockPersona from './routes/unlock-persona';
 import getPersonaMnemonic from './routes/get-persona-mnemonic';
-import updateLocalPersona from './routes/update-local-persona';
-import deletePersona from './routes/delete-persona';
+import validatePersonaMnemonic from './routes/validate-persona-mnemonic';
 import updatePersonaPassword from './routes/update-persona-password';
 import lockAllPersonas from './routes/lock-all-personas';
 import { Personas } from './types/Personas';
@@ -36,7 +35,7 @@ import leaveSpace from './routes/leave-space';
 import updateLocalSpaces from './routes/update-local-space';
 import addSpacePersona from './routes/add-space-persona';
 import saveThought from './routes/save-thought';
-import savePersonas from './routes/save-personas';
+import updatePersonas from './routes/update-personas';
 
 const app = express();
 const port = env.GLOBAL_HOST ? 8080 : 2000;
@@ -74,22 +73,21 @@ if (!env.GLOBAL_HOST) {
 	app.post('/add-tag', tryCatch(addTag));
 	app.post('/remove-tag', tryCatch(removeTag));
 	app.post('/rename-tag', tryCatch(renameTag));
-	app.get('/get-personas', tryCatch(getPersonas));
+	app.post('/get-personas', tryCatch(getPersonas));
 	app.post('/prioritize-persona-or-space', tryCatch(prioritizePersonaOrSpace));
 	app.post('/update-local-space', tryCatch(updateLocalSpaces));
 	app.post('/add-persona', tryCatch(addPersona));
 	app.post('/unlock-persona', tryCatch(unlockPersona));
-	app.post('/get-persona-mnemonics', tryCatch(getPersonaMnemonic));
-	app.post('/update-local-persona', tryCatch(updateLocalPersona));
+	app.post('/get-persona-mnemonic', tryCatch(getPersonaMnemonic));
 	app.post('/update-persona-password', tryCatch(updatePersonaPassword));
-	app.post('/delete-persona', tryCatch(deletePersona));
+	app.post('/validate-persona-mnemonic', tryCatch(validatePersonaMnemonic));
 	app.get('/lock-all-personas', tryCatch(lockAllPersonas));
 	// app.post('/archive-persona', tryCatch(archivePersona));
 	app.get('/file/:fileName', tryCatch(getFile));
 	app.get('/show-working-directory', tryCatch(showWorkingDirectory));
 	app.post('/get-signature', tryCatch(getSignature));
 	app.post('/save-thought', tryCatch(saveThought));
-	app.post('/save-personas', tryCatch(savePersonas));
+	app.post('/update-personas', tryCatch(updatePersonas));
 }
 
 const ajv = new Ajv({ verbose: true });
@@ -128,6 +126,7 @@ app.use((req, res, next) => {
 		throw new Error('Invalid public route request body: ' + JSON.stringify(req.body));
 	}
 	const to = new URL(message.to);
+
 	if (env.GLOBAL_HOST && (to.host !== host || to.pathname !== req.url))
 		throw new Error('Wrong recipient');
 	if (message.from) {
@@ -157,8 +156,8 @@ app.listen(port, () => {
 		touchIfDne(rootSettingsPath, JSON.stringify(new RootSettings({})));
 		WorkingDirectory.current.setUp();
 		const personas = Personas.get();
-		personas.list.forEach((p) => {
-			if (p.id) personas.unlockPersona(p.id, '');
+		Object.keys(personas.registry).forEach((key) => {
+			if (key) personas.unlockPersona(key, '');
 		});
 	}
 	console.log(`Server is running at ${host}`);

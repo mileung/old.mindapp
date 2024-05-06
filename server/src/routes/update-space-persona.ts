@@ -33,7 +33,6 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 			signedSelf?: SignedSelf;
 		};
 	};
-	// console.log('message:', message);
 
 	if (message.signedSelf) {
 		if (!ajv.validate(schema, message.signedSelf)) {
@@ -93,7 +92,6 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 
 		if (fromExistingMember) {
 			if (fromExistingMember.signature !== message.signedSelf.signature) {
-				console.log('message:', message);
 				row = (
 					await drizzleClient
 						.update(personasTable)

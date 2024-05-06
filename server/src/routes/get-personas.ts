@@ -1,12 +1,9 @@
 import { RequestHandler } from 'express';
-import { Persona, Personas } from '../types/Personas';
-import { parseFile } from '../utils/files';
-import { WorkingDirectory } from '../types/WorkingDirectory';
+import { Personas } from '../types/Personas';
 
 const getPersonas: RequestHandler = (req, res) => {
-	// res.send(Personas.get().clientArr);
-	const arr = parseFile<Persona[]>(WorkingDirectory.current.personasPath);
-	// console.log('arr:', arr);
+	const { order } = req.body as { order?: string[] };
+	const arr = Personas.get().getOrderedArr(order);
 	res.send(arr);
 };
 

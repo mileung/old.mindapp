@@ -3,8 +3,7 @@ import { Personas } from '../types/Personas';
 
 const lockAllPersonas: RequestHandler = (req, res) => {
 	Personas.lockAllPersonas();
-	Personas.get().prioritizePersona('');
-	res.send(Personas.get().clientArr);
+	res.send({});
 };
 
 export default lockAllPersonas;

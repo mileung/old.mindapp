@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { localApiHost } from '../utils/api';
 
 const DeterministicVisualId = ({
 	className,
@@ -8,7 +7,7 @@ const DeterministicVisualId = ({
 	className?: string;
 	input?: string;
 }) => {
-	const isThing = useMemo(() => !!input && input !== localApiHost, [input]);
+	const isThing = useMemo(() => !!input, [input]);
 	const aaa = useMemo(() => stringToNumber(input, -35, -15), [input]);
 	const bbb = useMemo(() => stringToNumber(input.slice(4), 20, 40), [input]);
 

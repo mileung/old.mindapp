@@ -8,39 +8,57 @@ import { useLocalState, usePersonas } from '../utils/state';
 import { decrypt } from '../utils/security';
 import { validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
+import { hostedLocally, makeUrl, ping, post } from '../utils/api';
+import { passwords } from '../types/PersonasPolyfill';
 
 export default function UnlockPersona({ manage }: { manage?: boolean }) {
-	const [localState, localStateSet] = useLocalState();
 	const [personas, personasSet] = usePersonas();
 	const { personaId } = useParams();
 	const navigate = useNavigate();
 	const passwordIpt = useTextInputRef();
+	const [localState, localStateSet] = useLocalState();
 
-	const personaToUnlock = useMemo(() => {
+	const persona = useMemo(() => {
 		return !personas ? null : personas.find((p) => p.id === personaId) || null;
 	}, [personas]);
 
-	const unlockPersona = useCallback(() => {
-		personasSet((old) => {
-			const personaIndex = old.findIndex((p) => p.id === personaId);
-			if (personaIndex === -1) return [...old];
-			const persona = old[personaIndex];
+	const unlockPersona = useCallback(async () => {
+		if (!persona) return;
+		let locked = true;
+		if (hostedLocally) {
+			locked = (
+				await ping<{ locked: boolean }>(
+					makeUrl('unlock-persona'),
+					post({ personaId, password: passwordIpt.value }),
+				)
+			).locked;
+		} else {
 			const decryptedMnemonic = decrypt(persona.encryptedMnemonic!, passwordIpt.value);
-			if (!validateMnemonic(decryptedMnemonic, wordlist)) {
-				passwordIpt.tag?.focus();
-				passwordIpt.error = 'Incorrect password';
-				return [...old];
+			if (validateMnemonic(decryptedMnemonic, wordlist)) {
+				locked = false;
 			}
-			old[personaIndex] = { ...persona, mnemonic: decryptedMnemonic };
-			return [...old];
+		}
+		if (locked) {
+			passwordIpt.tag?.focus();
+			passwordIpt.error = 'Incorrect password';
+			return;
+		}
+		personasSet((old) => {
+			passwords[persona.id] = passwordIpt.value;
+			old.splice(
+				old.findIndex((p) => p.id === persona.id),
+				1,
+			);
+			!manage && navigate('/');
+			return [{ ...persona, locked }, ...old];
 		});
-	}, [personaId, manage]);
+	}, [persona, personaId, manage]);
 
 	useEffect(() => passwordIpt.tag?.focus(), [personaId]);
 
 	return (
 		<div className={`space-y-3 ${!manage && 'p-3'}`}>
-			{personas && !personaToUnlock ? (
+			{personas && !persona ? (
 				<>
 					<p className="font-bold text-2xl">Persona not found</p>
 					<Button label="Manage personas" to="/manage-personas" />
@@ -54,7 +72,7 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 						/>
 						<div>
 							<div className="fx gap-1">
-								<p className="font-bold text-2xl">{personaToUnlock?.name || 'No name'}</p>
+								<p className="font-bold text-2xl">{persona?.name || 'No name'}</p>
 								<LockClosedIcon className="h-6 w-6" />
 							</div>
 							<p className="text-lg text-fg2 font-semibold break-all">{personaId}</p>

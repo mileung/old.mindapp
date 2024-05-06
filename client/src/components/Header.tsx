@@ -11,7 +11,7 @@ import { CogIcon } from '@heroicons/react/24/outline';
 import { matchSorter } from 'match-sorter';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { hostedLocally, localApiHost } from '../utils/api';
+import { hostedLocally, localApiHost, makeUrl, ping } from '../utils/api';
 import { shortenString } from '../utils/js';
 import { useKeyPress } from '../utils/keyboard';
 import { Space } from '../utils/settings';
@@ -309,7 +309,9 @@ export default function Header() {
 												onClick={() => {
 													switchingSpacesSet(false);
 													switchingPersonasSet(false);
-													if (!thing.mnemonic) return navigate(`/unlock/${thingKey}`);
+													if (switchingPersonas && thing.id && thing.locked) {
+														return navigate(`/unlock/${thingKey}`);
+													}
 													personasSet((old) => {
 														if (switchingSpaces) {
 															old[0].spaceHosts.splice(
@@ -368,7 +370,8 @@ export default function Header() {
 													{showCheck ? (
 														<CheckIcon className="h-5 w-5" />
 													) : (
-														!thing.mnemonic && <LockClosedIcon className="h-4 w-4 text-fg2" />
+														thing.locked &&
+														switchingPersonas && <LockClosedIcon className="h-4 w-4 text-fg2" />
 													)}
 													<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
 														<EllipsisHorizontalIcon className="h-5 w-5" />
@@ -406,9 +409,12 @@ export default function Header() {
 									onClick={() => {
 										switchingSpacesSet(false);
 										switchingPersonasSet(false);
+										if (hostedLocally) {
+											ping(makeUrl('lock-all-personas')).catch((err) => alert(err));
+										}
 										personasSet((old) => {
 											old.forEach((p) => {
-												if (!!p.id) p.mnemonic = undefined;
+												if (!!p.id) p.locked = true;
 											});
 											old.splice(
 												0,

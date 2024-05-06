@@ -1,14 +1,13 @@
 import { RequestHandler } from 'express';
 import { Personas } from '../types/Personas';
 
-const deletePersona: RequestHandler = (req, res) => {
+const validatePersonaMnemonic: RequestHandler = (req, res) => {
 	const { personaId, mnemonic } = req.body as {
 		personaId: string;
 		mnemonic: string;
 	};
 	const personas = Personas.get();
-	const deleted = personas.deletePersona(personaId, mnemonic);
-	res.send({ arr: deleted ? personas.clientArr : null });
+	res.send({ valid: personas.validateMnemonic(personaId, mnemonic) });
 };
 
-export default deletePersona;
+export default validatePersonaMnemonic;

@@ -19,6 +19,7 @@ import {
 	updateLocalState,
 	useSendMessage,
 	useFetchedSpaces,
+	getLocalState,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
@@ -56,36 +57,32 @@ function App() {
 	}, [localState?.theme]);
 
 	useEffect(() => {
-		if (hostedLocally) {
-			ping<{ rootSettings: RootSettings; workingDirectory: WorkingDirectory }>(
-				makeUrl('get-root-settings'),
-			)
-				.then(({ rootSettings, workingDirectory }) => {
-					rootSettingsSet(rootSettings);
-					workingDirectorySet(workingDirectory);
-				})
-				.catch((err) => console.error(err));
-			ping<WorkingDirectory>(makeUrl('get-working-directory'))
-				.then((data) => workingDirectorySet(data))
-				.catch((err) => console.error(err));
-			ping<TagTree>(makeUrl('get-tag-tree'))
-				.then((data) => tagTreeSet(data))
-				.catch((err) => console.error(err));
-			ping<Persona[]>(makeUrl('get-personas'))
-				.then((p) => {
-					p.forEach((p) => {
-						if (p.id) {
-							const decryptedMnemonic = decrypt(p.encryptedMnemonic!, '');
-							if (!validateMnemonic(decryptedMnemonic, wordlist)) return;
-							p.mnemonic = decryptedMnemonic;
-						}
-					});
-					personasSet(p);
-				})
-				.catch((err) => console.error(err));
-		} else {
-			// TODO: generating personas client side
-		}
+		if (!hostedLocally) return;
+		ping<{ rootSettings: RootSettings; workingDirectory: WorkingDirectory }>(
+			makeUrl('get-root-settings'),
+		)
+			.then(({ rootSettings, workingDirectory }) => {
+				rootSettingsSet(rootSettings);
+				workingDirectorySet(workingDirectory);
+			})
+			.catch((err) => console.error(err));
+		ping<WorkingDirectory>(makeUrl('get-working-directory'))
+			.then((data) => workingDirectorySet(data))
+			.catch((err) => console.error(err));
+		ping<TagTree>(makeUrl('get-tag-tree'))
+			.then((data) => tagTreeSet(data))
+			.catch((err) => console.error(err));
+		ping<Persona[]>(
+			makeUrl('get-personas'),
+			post({
+				order: getLocalState().personas.map(({ id }) => id),
+			}),
+		)
+			.then((p) => {
+				// console.log('p:', p);
+				personasSet(p);
+			})
+			.catch((err) => console.error(err));
 	}, [!!rootSettings?.testWorkingDirectory]);
 
 	useEffect(() => {
@@ -96,15 +93,10 @@ function App() {
 				return { ...oldDefaultNames, ...newDefaultNames };
 			});
 			localStateSet((old) => ({ ...old, personas }));
-
-			ping(
-				makeUrl('save-personas'),
-				post({
-					personas: personas.map((p) => ({ ...p, mnemonic: undefined })),
-				}),
-			).catch((err) => console.error(err));
+			ping(makeUrl('update-personas'), post({ personas })) //
+				.catch((err) => console.error(err));
 		}
-	}, [personas]);
+	}, [JSON.stringify(personas)]);
 
 	useEffect(() => {
 		fetchedSpacesSet((old) => {
@@ -122,14 +114,15 @@ function App() {
 	useEffect(() => {
 		personas[0].spaceHosts.forEach(async (host) => {
 			if (
+				//
 				host &&
-				host !== localApiHost &&
 				fetchedSpaces[host]?.fetchedSelf === undefined &&
 				!pinging.current[host]
 			) {
 				pinging.current[host] = true;
 				try {
 					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
+					console.log('host:', host);
 					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
 						from: id,
 						to: buildUrl({ host, path: 'update-space-persona' }),
@@ -146,7 +139,10 @@ function App() {
 									signature,
 								},
 					});
-					// console.log('space:', space);
+					console.log('space:', space);
+					if (!id) {
+						space.fetchedSelf = { id: '', writeDate: 0, addDate: 0, signature: `` };
+					}
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
 				} catch (error) {
 					console.log('error:', error);

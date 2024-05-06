@@ -4,7 +4,7 @@ import {
 	LockClosedIcon,
 	UserIcon,
 } from '@heroicons/react/16/solid';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import DeterministicVisualId from '../components/DeterministicVisualId';
@@ -23,7 +23,7 @@ import UnlockPersona from './UnlockPersona';
 import { generateMnemonic, validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { createKeyPair, decrypt, encrypt, signItem } from '../utils/security';
-import { SignedSelf, UnsignedSelf } from '../types/PersonasPolyfill';
+import { Persona, SignedSelf, UnsignedSelf, passwords } from '../types/PersonasPolyfill';
 import { LabelVal } from '../components/LabelVal';
 
 export default function ManagePersonas() {
@@ -35,12 +35,15 @@ export default function ManagePersonas() {
 	const navigate = useNavigate();
 	const [secrets, secretsSet] = useState('');
 	const [changingPw, changingPwSet] = useState(false);
-	const selectedPersona = useMemo(
-		() => personas.find((p) => p.id === personaId),
+	const personaIndex = useMemo(
+		() => personas.findIndex((p) => p.id === personaId),
 		[personaId, personas],
 	);
-	const locked = useMemo(() => !selectedPersona?.mnemonic, [selectedPersona]);
-	const frozen = useMemo(() => selectedPersona?.frozen, [selectedPersona]);
+	const persona = useMemo(
+		() => (personaIndex === -1 ? undefined : personas[personaIndex]),
+		[personaId, personas],
+	);
+	const frozen = useMemo(() => persona?.frozen, [persona]);
 	const nameIpt = useTextInputRef();
 	const mnemonicIpt = useTextInputRef();
 	const passwordIpt = useTextInputRef();
@@ -48,33 +51,52 @@ export default function ManagePersonas() {
 
 	useEffect(() => {
 		secretsSet('');
-		if (selectedPersona) {
-			nameIpt.value = selectedPersona.name || '';
+		if (persona) {
+			nameIpt.value = persona.name || '';
 			passwordIpt.value = '';
 		}
-	}, [selectedPersona]);
+	}, [persona]);
 
-	// const updateSelectedPersona = useCallback(
-	// 	async (updates: { name?: string; frozen?: true }) => {
-	// 		if (!selectedPersona) return;
-	// 		if (hostedLocally) {
-	// 			// TODO: rn App only informs the spaces about a name change of personas[0] - not the selectedPersona
-	// 			// so... let me just make selectedPersona
-	// 			ping<Personas>(makeUrl('update-local-persona'), post({ personaId, updates }))
-	// 				.then((p) => personasSet(p))
-	// 				.catch((err) => alert(err))
-	// 				.finally(() => fetchedSpacesSet({}));
-	// 		} else {
-	// 			// TODO: get new personas (with signedSelf)
-	// 			// const newUnsignedSelf: UnsignedSelf = {
-	// 			// 	writeDate: Date.now(),
-	// 			// 	id: selectedPersona.id,
-	// 			// 	...updates,
-	// 			// };
-	// 		}
-	// 	},
-	// 	[selectedPersona],
-	// );
+	const addPersona = useCallback(async () => {
+		let newPersona: Persona;
+		if (hostedLocally) {
+			newPersona = await ping<Persona>(
+				makeUrl('add-persona'),
+				post({
+					password: passwordIpt.value,
+					mnemonic: mnemonicIpt.value,
+					name: nameIpt.value.trim(),
+				}),
+			);
+		} else {
+			const mnemonic = mnemonicIpt.value || generateMnemonic(wordlist, 256);
+			if (!validateMnemonic(mnemonic, wordlist)) {
+				return (mnemonicIpt.error = 'Invalid mnemonic');
+			}
+			const kp = createKeyPair(mnemonic);
+			const unsignedSelf: UnsignedSelf = {
+				writeDate: Date.now(),
+				id: kp.publicKey,
+				name: nameIpt.value.trim(),
+				walletAddress: wallet.deriveAddress({ mnemonics: mnemonic, index: 0 }).address,
+			};
+			const signedSelf: SignedSelf = {
+				...unsignedSelf,
+				signature: signItem(unsignedSelf, kp.privateKey),
+			};
+			passwords[kp.publicKey] = passwordIpt.value;
+			newPersona = {
+				...signedSelf,
+				encryptedMnemonic: encrypt(mnemonic, passwordIpt.value),
+				spaceHosts: [defaultSpaceHost],
+			};
+		}
+		personasSet((old) => {
+			old.unshift(newPersona);
+			navigate(`/manage-personas/${newPersona.id}`);
+			return [...old];
+		});
+	}, []);
 
 	return (
 		personas && (
@@ -116,8 +138,7 @@ export default function ManagePersonas() {
 												{persona.id === personas[0].id ? (
 													<CheckIcon className="h-5 w-5" />
 												) : (
-													persona.id &&
-													!persona.mnemonic && <LockClosedIcon className="h-4 w-4 text-fg2" />
+													persona.locked && <LockClosedIcon className="h-4 w-4 text-fg2" />
 												)}
 											</div>
 										</Link>
@@ -136,9 +157,9 @@ export default function ManagePersonas() {
 					</div>
 				</div>
 				<div className="flex-1 space-y-3 p-3">
-					{selectedPersona ? (
+					{persona ? (
 						<>
-							{locked ? (
+							{persona?.locked ? (
 								<>
 									<UnlockPersona manage />
 								</>
@@ -146,40 +167,36 @@ export default function ManagePersonas() {
 								<>
 									<div className="flex gap-3">
 										<DeterministicVisualId
-											input={selectedPersona.id}
+											input={persona.id}
 											className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-full"
 										/>
 										<div>
-											<p
-												className={`leading-7 font-bold text-2xl ${!selectedPersona.name && 'text-fg2'} `}
-											>
-												{selectedPersona.name || 'No name'}
+											<p className={`leading-7 font-bold text-2xl ${!persona.name && 'text-fg2'} `}>
+												{persona.name || 'No name'}
 											</p>
 											<p className="text-lg text-fg2 font-semibold break-all">{personaId}</p>
 										</div>
 									</div>
 									<p className="text-2xl font-semibold mb-1">Public info</p>
 									{frozen ? (
-										<LabelVal label="Name" value={selectedPersona.name} />
+										<LabelVal label="Name" value={persona.name} />
 									) : (
 										<TextInput
 											_ref={nameIpt}
-											defaultValue={selectedPersona.name}
+											defaultValue={persona.name}
 											label="Name"
 											placeholder="No name"
 											maxLength={100}
-											onSubmit={(v) => {
+											onSubmit={(name) => {
 												personasSet((old) => {
-													const personaIndex = old.findIndex((p) => p.id === personaId);
-													if (personaIndex === -1) return [...old];
-													old[personaIndex].name = v;
+													old[personaIndex] = { ...old[personaIndex], name };
 													return [...old];
 												});
 											}}
 										/>
 									)}
-									<LabelVal label="Frozen" value={selectedPersona.frozen ? 'True' : 'False'} />
-									<LabelVal label="Wallet address" value={selectedPersona.walletAddress} />
+									<LabelVal label="Frozen" value={frozen ? 'True' : 'False'} />
+									<LabelVal label="Wallet address" value={persona.walletAddress} />
 									<p className="text-2xl font-semibold mb-1">Security</p>
 									<Button
 										label={changingPw ? 'Keep password' : 'Change password'}
@@ -192,21 +209,38 @@ export default function ManagePersonas() {
 												password
 												showCheckX
 												label="New password"
-												onSubmit={(newPassword) => {
-													personasSet((old) => {
-														const personaIndex = old.findIndex((p) => p.id === personaId);
-														if (personaIndex === -1) return [...old];
-														const persona = old[personaIndex];
+												onSubmit={async (newPassword) => {
+													if (!personaId) return;
+													let changed = false;
+													if (hostedLocally) {
+														changed = (
+															await ping<{ changed: boolean }>(
+																makeUrl('update-persona-password'),
+																post({
+																	personaId,
+																	oldPassword: oldPasswordIpt.value,
+																	newPassword,
+																}),
+															)
+														).changed;
+													} else {
 														const decryptedMnemonic = decrypt(
 															persona.encryptedMnemonic!,
 															oldPasswordIpt.value,
 														);
-														if (!validateMnemonic(decryptedMnemonic, wordlist)) {
-															oldPasswordIpt.error = 'Incorrect password';
-															return [...old];
+														if (validateMnemonic(decryptedMnemonic, wordlist)) {
+															persona.encryptedMnemonic = encrypt(decryptedMnemonic, newPassword);
+															passwords[personaId] = newPassword;
+															changed = true;
 														}
-														persona.encryptedMnemonic = encrypt(decryptedMnemonic, newPassword);
-														changingPwSet(false);
+													}
+													if (!changed) {
+														return (oldPasswordIpt.error = 'Incorrect password');
+													}
+
+													changingPwSet(false);
+
+													personasSet((old) => {
 														return [...old];
 													});
 												}}
@@ -218,13 +252,22 @@ export default function ManagePersonas() {
 										onClick={async () => {
 											if (secrets) return secretsSet('');
 											const pw = prompt(
-												`Enter password to show mnemonic for ${selectedPersona.name || 'No name'}`,
+												`Enter password to show mnemonic for ${persona.name || 'No name'}`,
 											);
 											if (pw === null) return false;
-											const personaIndex = personas.findIndex((p) => p.id === personaId);
-											if (personaIndex === -1) return personas;
-											const persona = personas[personaIndex];
-											const mnemonic = decrypt(persona.encryptedMnemonic!, pw);
+											let mnemonic = '';
+											if (hostedLocally) {
+												mnemonic = (
+													await ping<{ mnemonic: string }>(
+														makeUrl('get-persona-mnemonic'),
+														post({ personaId, password: pw }),
+													)
+												).mnemonic;
+											} else {
+												const persona = personas[personaIndex];
+												mnemonic = decrypt(persona.encryptedMnemonic!, pw);
+											}
+
 											if (!validateMnemonic(mnemonic, wordlist)) {
 												return alert('Incorrect password');
 											}
@@ -255,20 +298,29 @@ export default function ManagePersonas() {
 									<Button
 										label="Remove persona"
 										onClick={async () => {
+											let deleted = false;
+											const mnemonic = prompt(
+												`Enter mnemonic to remove ${persona.name || 'No name'}\n\nThe only way to restore this persona is to re-enter its mnemonic`,
+											);
+											if (mnemonic === null) return;
+											if (hostedLocally) {
+												deleted = (
+													await ping<{ valid: boolean }>(
+														makeUrl('validate-persona-mnemonic'),
+														post({ personaId, mnemonic }),
+													)
+												).valid;
+											} else {
+												deleted =
+													!validateMnemonic(mnemonic, wordlist) &&
+													mnemonic ===
+														decrypt(
+															personas[personaIndex].encryptedMnemonic!,
+															passwords[personaId!],
+														);
+											}
+											if (!deleted) return alert('Invalid mnemonic');
 											personasSet((old) => {
-												const personaIndex = old.findIndex((p) => p.id === personaId);
-												if (personaIndex === -1) return [...old];
-												const mnemonic = prompt(
-													`Enter mnemonic to remove ${selectedPersona.name || 'No name'}\n\nThe only way to restore this persona is to re-enter its mnemonic`,
-												);
-												if (mnemonic === null) return old;
-												if (
-													!validateMnemonic(mnemonic, wordlist) ||
-													mnemonic !== old[personaIndex].mnemonic
-												) {
-													alert('Invalid mnemonic');
-													return old;
-												}
 												old.splice(personaIndex, 1);
 												return [...old];
 											});
@@ -278,23 +330,31 @@ export default function ManagePersonas() {
 										<Button
 											label="Mark as frozen"
 											onClick={async () => {
+												let frozen = false;
+												const hosts = persona.spaceHosts.filter((h) => !!h).join(', ');
+												const mnemonic = prompt(
+													`Enter mnemonic to inform the following hosts that this persona (${persona.name || 'No name'}) has been frozen: ${hosts}\n\nThis will block all read and write activity from this persona\n\nYou may want to do this for archival or security reasons`,
+												);
+												if (mnemonic === null) return;
+												if (hostedLocally) {
+													frozen = (
+														await ping<{ valid: boolean }>(
+															makeUrl('validate-persona-mnemonic'),
+															post({ personaId, mnemonic }),
+														)
+													).valid;
+												} else {
+													frozen =
+														!validateMnemonic(mnemonic, wordlist) &&
+														mnemonic ===
+															decrypt(
+																personas[personaIndex].encryptedMnemonic!,
+																passwords[personaId!],
+															);
+												}
+												if (!frozen) return alert('Invalid mnemonic');
 												personasSet((old) => {
-													const personaIndex = old.findIndex((p) => p.id === personaId);
-													if (personaIndex === -1) return [...old];
-
-													const hosts = selectedPersona.spaceHosts.filter((h) => !!h).join(', ');
-													const mnemonic = prompt(
-														`Enter mnemonic to inform the following hosts that this persona (${selectedPersona.name || 'No name'}) has been frozen: ${hosts}\n\nThis will block all read and write activity from this persona\n\nYou may want to do this for archival or security reasons`,
-													);
-													if (mnemonic === null) return old;
-													if (
-														!validateMnemonic(mnemonic, wordlist) ||
-														mnemonic !== old[personaIndex].mnemonic
-													) {
-														alert('Invalid mnemonic');
-														return old;
-													}
-													old[personaIndex].frozen = true;
+													old[personaIndex] = { ...old[personaIndex], frozen };
 													return [...old];
 												});
 											}}
@@ -303,6 +363,10 @@ export default function ManagePersonas() {
 								</>
 							)}
 						</>
+					) : personaIndex === -1 && personaId ? (
+						<div className="">
+							<p className="font-bold text-2xl">Persona not found</p>
+						</div>
 					) : (
 						<>
 							<div className="">
@@ -311,42 +375,16 @@ export default function ManagePersonas() {
 									A persona is a digital identity other Mindapp users will recognize you by
 								</p>
 							</div>
-							<TextInput autoFocus _ref={nameIpt} label="Name" placeholder="No name" />
-							<TextInput password _ref={mnemonicIpt} label="Mnemonic" />
-							<TextInput password _ref={passwordIpt} label="Password" />
-							<Button
-								label="Add persona"
-								onClick={() => {
-									personasSet((old) => {
-										const mnemonic = mnemonicIpt.value || generateMnemonic(wordlist, 256);
-										if (!validateMnemonic(mnemonic, wordlist)) {
-											mnemonicIpt.error = 'Invalid mnemonic';
-											return [...old];
-										}
-										const kp = createKeyPair(mnemonic);
-										const unsignedSelf: UnsignedSelf = {
-											writeDate: Date.now(),
-											id: kp.publicKey,
-											name: nameIpt.value.trim(),
-											walletAddress: wallet.deriveAddress({ mnemonics: mnemonic, index: 0 })
-												.address,
-										};
-										const signedSelf: SignedSelf = {
-											...unsignedSelf,
-											signature: signItem(unsignedSelf, kp.privateKey),
-										};
-										old.unshift({
-											...signedSelf,
-											mnemonic,
-											encryptedMnemonic: encrypt(mnemonic, passwordIpt.value),
-											spaceHosts: [defaultSpaceHost],
-										});
-										console.log('old:', old);
-										navigate(`/manage-personas/${old[0].id}`);
-										return [...old];
-									});
-								}}
+							<TextInput
+								autoFocus
+								_ref={nameIpt}
+								label="Name"
+								placeholder="No name"
+								onSubmit={addPersona}
 							/>
+							<TextInput password _ref={mnemonicIpt} label="Mnemonic" onSubmit={addPersona} />
+							<TextInput password _ref={passwordIpt} label="Password" onSubmit={addPersona} />
+							<Button label="Add persona" onClick={addPersona} />
 						</>
 					)}
 				</div>

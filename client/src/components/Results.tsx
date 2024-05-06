@@ -10,6 +10,7 @@ import ThoughtBlock from '../components/ThoughtBlock';
 import { buildUrl } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
+	defaultSpaceHost,
 	useActiveSpace,
 	useFetchedSpaces,
 	useMentionedThoughts,
@@ -53,7 +54,10 @@ export default function Results({
 		queriedThoughtId && roots[0] && queriedThoughtRootSet(roots[0]);
 	}, [roots]);
 
-	const pluggedIn = useMemo(() => !!activeSpace.fetchedSelf || !activeSpace.host, [activeSpace]);
+	const pluggedIn = useMemo(
+		() => !!activeSpace.fetchedSelf || activeSpace.host === defaultSpaceHost,
+		[activeSpace],
+	);
 
 	const loadMoreThoughts = useCallback(async () => {
 		if (!pluggedIn) return null;

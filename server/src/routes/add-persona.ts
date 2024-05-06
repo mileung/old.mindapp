@@ -12,8 +12,7 @@ const addPersona: RequestHandler = (req, res) => {
 	const personas = Personas.get();
 	mnemonic = mnemonic || bip39.generateMnemonic(wordlist, 256);
 	if (!bip39.validateMnemonic(mnemonic, wordlist)) throw new Error('Invalid mnemonic');
-	personas.addPersona({ mnemonic, password, name });
-	res.send(personas.clientArr);
+	res.send(personas.addPersona({ mnemonic, password, name }));
 };
 
 export default addPersona;

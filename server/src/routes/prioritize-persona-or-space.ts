@@ -8,9 +8,9 @@ const prioritizePersonaOrSpace: RequestHandler = (req, res) => {
 		spaceHost?: string;
 	};
 
-	spaceHost !== undefined
-		? personas.prioritizeSpace(personaId, spaceHost)
-		: personas.prioritizePersona(personaId);
+	// spaceHost !== undefined
+	// 	? personas.prioritizeSpace(personaId, spaceHost)
+	// 	: personas.prioritizePersona(personaId);
 	res.send(personas.clientArr);
 };
 
