@@ -66,7 +66,7 @@ export default function ThoughtBlockHeader({
 				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
-					input={thought.spaceHost}
+					input={fetchedSpaces[thought.spaceHost || '']}
 					className="rounded-sm overflow-hidden h-3 w-3 mr-1"
 				/>
 				{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
