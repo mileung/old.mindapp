@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom';
 import ThoughtBlock from '../components/ThoughtBlock';
 import { Thought, getThoughtId } from '../utils/ClientThought';
-import { buildUrl } from '../utils/api';
+import { buildUrl, localApiHost } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
 	defaultSpaceHost,
@@ -76,7 +76,7 @@ export default function Results({
 			moreRoots: Thought[];
 		}>({
 			from: personas[0].id,
-			to: buildUrl({ host: activeSpace.host, path: 'get-roots' }),
+			to: buildUrl({ host: activeSpace.host || localApiHost, path: 'get-roots' }),
 			query: {
 				...urlQuery,
 				ignoreRootIds,

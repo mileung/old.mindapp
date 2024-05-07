@@ -13,7 +13,7 @@ export function formatTimestamp(timestamp: number, ago = true): string {
 		const now = dayjs();
 		const timeDiff = now.diff(timestamp);
 		if (timeDiff < minute) {
-			return timeDiff.toString();
+			return '<1m';
 		} else if (timeDiff < hour) {
 			const minutesAgo = Math.floor(timeDiff / minute);
 			return `${minutesAgo}m`;

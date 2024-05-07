@@ -318,7 +318,7 @@ export default function Header() {
 																0,
 																0,
 																old[0].spaceHosts.splice(
-																	old[0].spaceHosts.findIndex((h) => h === thing.host),
+																	old[0].spaceHosts.findIndex((h) => h === (thing?.host || '')),
 																	1,
 																)[0],
 															);

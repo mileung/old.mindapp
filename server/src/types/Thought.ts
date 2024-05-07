@@ -135,7 +135,7 @@ export class Thought {
 	async getRootThought(): Promise<Thought> {
 		if (!this.parentId) return this;
 		const parentThought = await Thought.query(this.parentId);
-		if (!parentThought) throw new Error('Parent thought does not exist');
+		if (!parentThought) return this; // TODO: show missing parent on UI
 		return parentThought.getRootThought();
 	}
 
