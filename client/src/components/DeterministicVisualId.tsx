@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
+import { Space } from '../utils/settings';
 
 const DeterministicVisualId = ({
 	className,
 	input = '',
 }: {
 	className?: string;
-	input?: string;
+	input?: Space | string;
 }) => {
-	const isThing = useMemo(() => !!input, [input]);
+	input = typeof input === 'string' ? input : input?.host + (input.owner?.id || '');
+	const inputExists = useMemo(() => !!input, [input]);
 	const aaa = useMemo(() => stringToNumber(input, -35, -15), [input]);
 	const bbb = useMemo(() => stringToNumber(input.slice(4), 20, 40), [input]);
 
@@ -15,10 +17,10 @@ const DeterministicVisualId = ({
 		<div
 			className={className}
 			style={{
-				backgroundColor: isThing ? stringToColor(input) : '#ccc',
+				backgroundColor: inputExists ? stringToColor(input) : '#ccc',
 			}}
 		>
-			{isThing && (
+			{inputExists && (
 				<div
 					className="mt-[50%] ml-[50%] h-full w-full"
 					style={{

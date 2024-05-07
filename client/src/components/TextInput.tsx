@@ -91,7 +91,10 @@ export default function TextInput({
 	);
 
 	const showCheckX = useMemo(
-		() => _showCheckX || (defaultValue !== undefined && defaultValue !== internalValue),
+		() =>
+			typeof _showCheckX === 'boolean'
+				? _showCheckX
+				: defaultValue !== undefined && defaultValue !== internalValue,
 		[_showCheckX, defaultValue, internalValue],
 	);
 

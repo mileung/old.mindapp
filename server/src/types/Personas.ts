@@ -86,21 +86,24 @@ export class Personas {
 		// return registry;
 	}
 
-	getOrderedArr(order: string[] = []): Persona[] {
-		// const set = new Set(order);
+	getOrderedArr(order: string[] = [], includeAll = false): Persona[] {
+		// console.log('order:', order);
+		const set = new Set(order);
 		const arr = [
 			...order.map((id) => ({
 				id,
 				...this.registry[id],
 				encryptedMnemonic: undefined,
 			})),
-			// ...Object.keys(this.registry) // idk whether to include personas client didn't ask for
-			// 	.filter((key) => !set.has(key))
-			// 	.map((id) => ({
-			// 		id,
-			// 		...this.registry[id],
-			// 		encryptedMnemonic: undefined,
-			// 	})),
+			...(includeAll
+				? Object.keys(this.registry) // idk whether to include personas client didn't ask for
+						.filter((key) => !set.has(key))
+						.map((id) => ({
+							id,
+							...this.registry[id],
+							encryptedMnemonic: undefined,
+						}))
+				: []),
 		].map((p) => ({ ...p, locked: (p.id && passwords[p.id] === undefined) || undefined }));
 		if (arr[0].locked) {
 			arr.unshift(

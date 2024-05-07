@@ -166,7 +166,7 @@ export default function Header() {
 							alt="logo"
 							className={`h-7 ${hostedLocally && rootSettings?.testWorkingDirectory && 'grayscale'}`}
 						/>
-						<p className="ml-2 text-2xl font-black">Mindapp</p>
+						<p className="ml-2 text-2xl font-black hidden sm:block">Mindapp</p>
 					</Link>
 					<div className="relative mx-2 w-full max-w-3xl">
 						<div className="flex h-full">
@@ -264,7 +264,7 @@ export default function Header() {
 							}}
 						>
 							<DeterministicVisualId
-								input={activeSpace?.host}
+								input={activeSpace.owner ? activeSpace : undefined}
 								className="rounded overflow-hidden h-7 w-7"
 							/>
 						</button>
@@ -296,13 +296,13 @@ export default function Header() {
 							<div className="max-h-48 overflow-scroll">
 								{(
 									((switchingSpaces
-										? personas[0].spaceHosts.map((host) => fetchedSpaces[host] || { host })
+										? personas[0].spaceHosts.map((host) => fetchedSpaces[host])
 										: personas) || []) as (Space & Persona)[]
 								).map((thing, i) => {
-									const thingKey = switchingSpaces ? thing.host : thing.id;
+									const thingKey = switchingSpaces ? thing?.host : thing.id;
 									const showCheck = !i;
 									return (
-										<div className="flex transition hover:bg-mg2" key={thingKey}>
+										<div className="flex transition hover:bg-mg2" key={thingKey || i}>
 											<button
 												onMouseDown={(e) => e.preventDefault()}
 												className="w-44 pl-2 h-11 fx"
@@ -337,7 +337,7 @@ export default function Header() {
 												}}
 											>
 												<DeterministicVisualId
-													input={thingKey}
+													input={switchingSpaces ? thing : thingKey}
 													className={`h-6 w-6 overflow-hidden ${switchingSpaces ? 'rounded' : 'rounded-full'}`}
 												/>
 												<div className="flex-1 ml-1.5 truncate">

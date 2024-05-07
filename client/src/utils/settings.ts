@@ -15,7 +15,7 @@ export type Space = {
 	name?: string;
 	hubAddress?: string;
 	faucetAddress?: string;
-	owner?: {
+	owner?: null | {
 		id: string;
 		name?: string;
 	};

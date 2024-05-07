@@ -55,7 +55,9 @@ const updateSpacePersona: RequestHandler = async (req, res) => {
 				name: env.SPACE_NAME,
 				hubAddress: env.HUB_ADDRESS,
 				faucetAddress: env.FAUCET_ADDRESS,
-				owner: { id: env.OWNER_ID, name: (await inGroup(env.OWNER_ID))?.name },
+				owner: !env.OWNER_ID
+					? null
+					: { id: env.OWNER_ID, name: (await inGroup(env.OWNER_ID))?.name },
 				fetchedSelf:
 					(fromExistingMember as SignedSelf & {
 						addDate: number;

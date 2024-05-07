@@ -1,5 +1,5 @@
 import { GlobeAltIcon } from '@heroicons/react/24/outline';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import DeterministicVisualId from '../components/DeterministicVisualId';
@@ -20,6 +20,22 @@ export default function ManageSpaces() {
 		() => (spaceHost ? fetchedSpaces[spaceHost] : undefined),
 		[fetchedSpaces, spaceHost],
 	);
+
+	const joinSpace = useCallback(() => {
+		const newSpaceHost = hostIpt.value.trim().toLowerCase();
+		if (
+			!newSpaceHost ||
+			newSpaceHost === localApiHost ||
+			personas[0].spaceHosts.find((h) => h == newSpaceHost)
+		) {
+			return alert('Host already added');
+		}
+		personasSet((old) => {
+			old[0]?.spaceHosts.unshift(newSpaceHost);
+			return [...old];
+		});
+		setTimeout(() => navigate(`/manage-spaces/${newSpaceHost}`), 0);
+	}, [personas]);
 
 	useEffect(() => {
 		if (spaceHost && !personas[0].spaceHosts.includes(spaceHost)) {
@@ -43,7 +59,7 @@ export default function ManageSpaces() {
 										className={`rounded h-14 fx transition hover:bg-mg1 pl-2 py-1 ${host === spaceHost ? 'bg-mg1' : 'bg-bg1'}`}
 									>
 										<DeterministicVisualId
-											input={host}
+											input={fetchedSpaces[host]}
 											className="h-6 w-6 overflow-hidden rounded"
 										/>
 										<div className="flex-1 mx-2 truncate">
@@ -101,7 +117,7 @@ export default function ManageSpaces() {
 						<>
 							<div className="flex gap-3">
 								<DeterministicVisualId
-									input={fetchedSpace.host}
+									input={fetchedSpace}
 									className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg"
 								/>
 								<div>
@@ -186,28 +202,13 @@ export default function ManageSpaces() {
 									<TextInput
 										required
 										autoFocus
+										showCheckX={false}
 										defaultValue={hostedLocally ? 'localhost:8080' : ''}
 										_ref={hostIpt}
 										label="Host"
+										onSubmit={joinSpace}
 									/>
-									<Button
-										label="Join space"
-										onClick={() => {
-											const newSpaceHost = hostIpt.value.trim().toLowerCase();
-											if (
-												!newSpaceHost ||
-												newSpaceHost === localApiHost ||
-												personas[0].spaceHosts.find((h) => h == newSpaceHost)
-											) {
-												return alert('Host already added');
-											}
-											personasSet((old) => {
-												old[0]?.spaceHosts.unshift(newSpaceHost);
-												return [...old];
-											});
-											setTimeout(() => navigate(`/manage-spaces/${newSpaceHost}`), 0);
-										}}
-									/>
+									<Button label="Join space" onClick={joinSpace} />
 									<Link
 										target="_blank"
 										className="inline-block font-semibold leading-4 text-fg2 transition hover:text-fg1"

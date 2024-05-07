@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home';
@@ -26,9 +26,6 @@ import { setTheme } from './utils/theme';
 import UnlockPersona from './pages/UnlockPersona';
 import ManageSpaces from './pages/ManageSpaces';
 import { Persona } from './types/PersonasPolyfill';
-import { decrypt } from './utils/security';
-import { validateMnemonic } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -41,6 +38,43 @@ function App() {
 	const [, workingDirectorySet] = useWorkingDirectory();
 	const themeRef = useRef(localState.theme);
 	const pinging = useRef<Record<string, boolean>>({});
+
+	const updateFetchedSpaces = useCallback(() => {
+		personas[0].spaceHosts.forEach(async (host) => {
+			if (host && !pinging.current[host]) {
+				pinging.current[host] = true;
+				try {
+					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
+					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
+						from: id,
+						to: buildUrl({ host, path: 'update-space-persona' }),
+						joinIfNotInSpace: !!id,
+						getSpaceInfo: true,
+						signedSelf: !id
+							? undefined
+							: {
+									id,
+									name,
+									frozen,
+									walletAddress,
+									writeDate,
+									signature,
+								},
+					});
+					// console.log('space:', space);
+					if (!id) {
+						space.fetchedSelf = { id: '', writeDate: 0, addDate: 0, signature: `` };
+					}
+					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
+				} catch (error) {
+					console.log('error:', error);
+					fetchedSpacesSet((old) => ({ ...old, [host]: { host, fetchedSelf: null } }));
+				} finally {
+					setTimeout(() => (pinging.current[host] = false), 0);
+				}
+			}
+		});
+	}, [personas, sendMessage]);
 
 	useEffect(() => {
 		// does not exist on older browsers
@@ -87,16 +121,11 @@ function App() {
 
 	useEffect(() => {
 		if (personas) {
+			updateFetchedSpaces();
 			if (hostedLocally) {
 				ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
 					.catch((err) => console.error(err));
 			}
-			fetchedSpacesSet((old) => {
-				Object.entries(old).forEach(([key, val]) => {
-					old[key] = { ...val, fetchedSelf: undefined };
-				});
-				return { ...old };
-			});
 			namesSet((oldDefaultNames) => {
 				const newDefaultNames = { ...oldDefaultNames };
 				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
@@ -104,53 +133,19 @@ function App() {
 			});
 			localStateSet((old) => ({ ...old, personas }));
 		}
-	}, [JSON.stringify(personas)]);
+	}, [JSON.stringify(personas), updateFetchedSpaces]);
+
+	useEffect(() => {
+		localStateSet((old) => ({ ...old, fetchedSpaces }));
+	}, [fetchedSpaces]);
 
 	useEffect(() => {
 		updateLocalState(localState);
 	}, [localState]);
 
 	useEffect(() => {
-		personas[0].spaceHosts.forEach(async (host) => {
-			if (
-				//
-				host &&
-				fetchedSpaces[host]?.fetchedSelf === undefined &&
-				!pinging.current[host]
-			) {
-				pinging.current[host] = true;
-				try {
-					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
-					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
-						from: id,
-						to: buildUrl({ host, path: 'update-space-persona' }),
-						joinIfNotInSpace: !!id,
-						getSpaceInfo: true,
-						signedSelf: !id
-							? undefined
-							: {
-									id,
-									name,
-									frozen,
-									walletAddress,
-									writeDate,
-									signature,
-								},
-					});
-					// console.log('space:', space);
-					if (!id) {
-						space.fetchedSelf = { id: '', writeDate: 0, addDate: 0, signature: `` };
-					}
-					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
-				} catch (error) {
-					console.log('error:', error);
-					fetchedSpacesSet((old) => ({ ...old, [host]: { host, fetchedSelf: null } }));
-				} finally {
-					setTimeout(() => (pinging.current[host] = false), 0);
-				}
-			}
-		});
-	}, [JSON.stringify(personas), fetchedSpaces, sendMessage]);
+		updateFetchedSpaces();
+	}, []);
 
 	return (
 		<main>
