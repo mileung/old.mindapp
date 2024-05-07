@@ -15,6 +15,7 @@
 		"local-space": "concurrently \"npm run local\" \"npm run client\" \"npm run dk-studio\"",
 		"start": "concurrently \"npm run local\" \"npm run client\"",
 		"deploy-server": "cd server && npm run deploy",
+		"deploy": "git push && cd server && npm run deploy",
 		"format": "prettier . --write"
 	},
 	"prettier": {

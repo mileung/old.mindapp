@@ -1,5 +1,3 @@
-import { signItem } from '../utils/security';
-
 export let passwords: Record<string, string> = {};
 
 export type UnsignedSelf = {

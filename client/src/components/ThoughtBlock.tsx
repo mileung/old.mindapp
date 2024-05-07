@@ -9,10 +9,10 @@ import {
 } from '@heroicons/react/16/solid';
 import { ReactNode, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { buildUrl, ping, post } from '../utils/api';
-import { isStringifiedRecord } from '../utils/js';
-import { useActiveSpace, useSendMessage, usePersonas } from '../utils/state';
 import { Thought, getThoughtId } from '../utils/ClientThought';
+import { buildUrl } from '../utils/api';
+import { isStringifiedRecord } from '../utils/js';
+import { useActiveSpace, usePersonas, useSendMessage } from '../utils/state';
 import { minute } from '../utils/time';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';

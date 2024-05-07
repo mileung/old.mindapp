@@ -1,10 +1,9 @@
+import { and, asc, desc, gte, like, lte, or } from 'drizzle-orm';
 import { RequestHandler } from 'express';
-import { Thought } from '../types/Thought';
-import { Personas } from '../types/Personas';
-import { drizzleClient } from '../db';
+import { drizzleClient, inGroup } from '../db';
 import { thoughtsTable } from '../db/schema';
-import { and, asc, desc, eq, gte, like, isNull, lte, or } from 'drizzle-orm';
-import { inGroup } from '../db';
+import { Personas } from '../types/Personas';
+import { Thought } from '../types/Thought';
 import env from '../utils/env';
 
 export type ResultsQuery = {

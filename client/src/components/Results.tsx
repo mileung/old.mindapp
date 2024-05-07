@@ -7,18 +7,17 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import ThoughtBlock from '../components/ThoughtBlock';
+import { Thought, getThoughtId } from '../utils/ClientThought';
 import { buildUrl } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
 	defaultSpaceHost,
 	useActiveSpace,
-	useFetchedSpaces,
 	useMentionedThoughts,
 	useNames,
 	usePersonas,
 	useSendMessage,
 } from '../utils/state';
-import { Thought, getThoughtId } from '../utils/ClientThought';
 import { ThoughtWriter } from './ThoughtWriter';
 
 const defaultColumnLabels = ['createDate', 'authorId', 'spaceHost', 'content', 'tags', 'parentId'];

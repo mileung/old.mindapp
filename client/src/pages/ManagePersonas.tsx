@@ -4,41 +4,25 @@ import {
 	LockClosedIcon,
 	UserIcon,
 } from '@heroicons/react/16/solid';
+import { generateMnemonic, validateMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
+import { wallet } from '@vite/vitejs/es5';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import DeterministicVisualId from '../components/DeterministicVisualId';
+import { LabelVal } from '../components/LabelVal';
 import TextInput, { useTextInputRef } from '../components/TextInput';
+import { Persona, getUnsignedSelf, passwords } from '../types/PersonasPolyfill';
 import { hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { copyToClipboardAsync, shortenString } from '../utils/js';
-import { wallet } from '@vite/vitejs/es5';
-import {
-	defaultSpaceHost,
-	useFetchedSpaces,
-	useGetSignature,
-	useGetSignedSelf,
-	usePersonas,
-	useSendMessage,
-} from '../utils/state';
-import UnlockPersona from './UnlockPersona';
-import { generateMnemonic, validateMnemonic } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english';
 import { createKeyPair, decrypt, encrypt, signItem } from '../utils/security';
-import {
-	Persona,
-	SignedSelf,
-	UnsignedSelf,
-	getUnsignedSelf,
-	passwords,
-} from '../types/PersonasPolyfill';
-import { LabelVal } from '../components/LabelVal';
+import { defaultSpaceHost, useGetSignedSelf, usePersonas } from '../utils/state';
+import UnlockPersona from './UnlockPersona';
 
 export default function ManagePersonas() {
 	const { personaId } = useParams();
 	const [personas, personasSet] = usePersonas();
-	const sendMessage = useSendMessage();
-	const getSignature = useGetSignature();
-	const [, fetchedSpacesSet] = useFetchedSpaces();
 	const getSignedSelf = useGetSignedSelf();
 	const navigate = useNavigate();
 	const [secrets, secretsSet] = useState('');

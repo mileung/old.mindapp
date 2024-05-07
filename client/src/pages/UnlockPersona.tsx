@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import DeterministicVisualId from '../components/DeterministicVisualId';
 import TextInput, { useTextInputRef } from '../components/TextInput';
-import { useLocalState, usePersonas } from '../utils/state';
+import { usePersonas } from '../utils/state';
 import { decrypt } from '../utils/security';
 import { validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
@@ -16,7 +16,6 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 	const { personaId } = useParams();
 	const navigate = useNavigate();
 	const passwordIpt = useTextInputRef();
-	const [localState, localStateSet] = useLocalState();
 
 	const persona = useMemo(() => {
 		return !personas ? null : personas.find((p) => p.id === personaId) || null;

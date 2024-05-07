@@ -3,11 +3,11 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import DeterministicVisualId from '../components/DeterministicVisualId';
-import TextInput, { useTextInputRef } from '../components/TextInput';
-import { buildUrl, hostedLocally, localApiHost, makeUrl, ping, post } from '../utils/api';
-import { useSendMessage, usePersonas, useFetchedSpaces } from '../utils/state';
-import { formatTimestamp } from '../utils/time';
 import { LabelVal } from '../components/LabelVal';
+import TextInput, { useTextInputRef } from '../components/TextInput';
+import { buildUrl, hostedLocally, localApiHost } from '../utils/api';
+import { useFetchedSpaces, usePersonas, useSendMessage } from '../utils/state';
+import { formatTimestamp } from '../utils/time';
 
 export default function ManageSpaces() {
 	const { spaceHost } = useParams();

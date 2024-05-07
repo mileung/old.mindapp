@@ -3,29 +3,29 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home';
 import ManagePersonas from './pages/ManagePersonas';
+import ManageSpaces from './pages/ManageSpaces';
 import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
 import ThoughtId from './pages/ThoughtId';
-import { buildUrl, hostedLocally, localApiHost, makeUrl, ping, post } from './utils/api';
+import UnlockPersona from './pages/UnlockPersona';
+import { Persona } from './types/PersonasPolyfill';
+import { buildUrl, hostedLocally, makeUrl, ping, post } from './utils/api';
 import { RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
-	useNames,
+	getLocalState,
+	updateLocalState,
+	useFetchedSpaces,
 	useLocalState,
+	useNames,
 	usePersonas,
 	useRootSettings,
+	useSendMessage,
 	useTagTree,
 	useWorkingDirectory,
-	updateLocalState,
-	useSendMessage,
-	useFetchedSpaces,
-	getLocalState,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
-import UnlockPersona from './pages/UnlockPersona';
-import ManageSpaces from './pages/ManageSpaces';
-import { Persona } from './types/PersonasPolyfill';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
