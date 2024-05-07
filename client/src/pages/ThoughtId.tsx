@@ -8,7 +8,7 @@ export default function ThoughtId() {
 	const validThoughtId = useMemo(() => thoughtId && isThoughtId(thoughtId), [thoughtId]);
 
 	return (
-		<div className="p-3">
+		<div className="p-1.5 sm:p-3">
 			{validThoughtId ? (
 				<Results urlQuery={{ thoughtId }} />
 			) : (

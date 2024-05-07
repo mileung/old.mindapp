@@ -140,7 +140,7 @@ export default function ManageSpaces() {
 								<p className="text-2xl font-semibold">Self info</p>
 								<NameTag id={fetchedSpace.fetchedSelf?.id} name={fetchedSpace.fetchedSelf?.name} />
 							</div>
-							{fetchedSpace.fetchedSelf && (
+							{fetchedSpace.fetchedSelf && fetchedSpace.fetchedSelf?.id && (
 								<>
 									<LabelVal
 										label="Add date"

@@ -156,7 +156,7 @@ export default function Header() {
 			<div className="h-12" />
 			{personas && (
 				<header
-					className="z-50 fixed top-0 w-full px-3 flex justify-between py-1 h-12 transition-opacity bg-bg1"
+					className="z-50 fixed top-0 w-full px-2 sm:px-3 flex justify-between py-1 h-12 transition-opacity bg-bg1"
 					style={{ opacity: 'var(--header-opacity)' }}
 					onMouseMove={() => setGlobalCssVariable('header-opacity', '1')}
 				>
@@ -291,7 +291,7 @@ export default function Header() {
 					</div>
 					{(switchingSpaces || switchingPersonas) && (
 						<div
-							className={`absolute shadow rounded h-fit overflow-hidden top-12 bg-mg1 ${switchingSpaces ? 'right-12' : 'right-2'} mr-1`}
+							className={`absolute shadow rounded h-fit overflow-hidden top-12 bg-mg1 ${switchingSpaces ? 'right-12' : 'right-2'} mr-0 sm:mr-1`}
 						>
 							<div className="max-h-48 overflow-scroll">
 								{(

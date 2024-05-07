@@ -1,18 +1,11 @@
-import {
-	CubeIcon,
-	ArrowDownTrayIcon,
-	CubeTransparentIcon,
-	DocumentCheckIcon,
-	FingerPrintIcon,
-} from '@heroicons/react/16/solid';
+import { CubeIcon, CubeTransparentIcon, FingerPrintIcon } from '@heroicons/react/16/solid';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Thought, getThoughtId } from '../utils/ClientThought';
+import { copyToClipboardAsync } from '../utils/js';
+import { useFetchedSpaces, useNames, useSavedFileThoughtIds } from '../utils/state';
 import { formatTimestamp } from '../utils/time';
 import DeterministicVisualId from './DeterministicVisualId';
-import { useFetchedSpaces, useNames, useSavedFileThoughtIds } from '../utils/state';
-import { makeUrl, ping, post } from '../utils/api';
-import { copyToClipboardAsync } from '../utils/js';
 
 export default function ThoughtBlockHeader({
 	thought,
@@ -41,7 +34,7 @@ export default function ThoughtBlockHeader({
 	}, []);
 
 	return (
-		<div className="mr-1 fx gap-2 text-fg2">
+		<div className="mr-1 fx gap-2 text-fg2 max-w-full">
 			<Link
 				target="_blank"
 				to={`/thought/${thoughtId}`}
@@ -58,7 +51,9 @@ export default function ThoughtBlockHeader({
 					input={thought.authorId}
 					className="rounded-full overflow-hidden h-3 w-3 mr-1"
 				/>
-				{thought.authorId ? names[thought.authorId] || 'No name' : 'Anon'}
+				<p className="whitespace-nowrap">
+					{thought.authorId ? names[thought.authorId] || 'No name' : 'Anon'}
+				</p>
 			</Link>
 			<Link
 				target="_blank"
@@ -69,7 +64,9 @@ export default function ThoughtBlockHeader({
 					input={fetchedSpaces[thought.spaceHost || '']}
 					className="rounded-sm overflow-hidden h-3 w-3 mr-1"
 				/>
-				{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
+				<p className="whitespace-nowrap">
+					{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
+				</p>
 			</Link>
 			<button
 				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
