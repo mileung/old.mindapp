@@ -24,6 +24,10 @@ const writeThought: RequestHandler = async (req, res) => {
 		throw new Error('Access denied');
 	}
 
+	if ((message.thought.authorId || '') !== (message.from || '')) {
+		throw new Error('message.from is not message.thought.authorId');
+	}
+
 	let newThought: Thought;
 
 	const oldThought = await Thought.query(
@@ -48,6 +52,10 @@ const writeThought: RequestHandler = async (req, res) => {
 		});
 		newThought.overwrite();
 	} else {
+		const now = Date.now();
+		if (now < message.thought.createDate || now - message.thought.createDate > 10000) {
+			throw new Error('createDate out of sync');
+		}
 		newThought = new Thought(message.thought, true);
 	}
 
