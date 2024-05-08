@@ -23,7 +23,12 @@ const writeThought: RequestHandler = async (req, res) => {
 	if (env.GLOBAL_HOST && !env.ANYONE_CAN_JOIN && !fromExistingMember) {
 		throw new Error('Access denied');
 	}
-
+	if (!message.thought.content) {
+		throw new Error('No message.thought.content');
+	}
+	if ((message.thought.content || '').length > 1000000) {
+		throw new Error('message.thought.content exceeds limit');
+	}
 	if ((message.thought.authorId || '') !== (message.from || '')) {
 		throw new Error('message.from is not message.thought.authorId');
 	}
