@@ -26,7 +26,7 @@ const writeThought: RequestHandler = async (req, res) => {
 	if (!message.thought.content) {
 		throw new Error('No message.thought.content');
 	}
-	if ((message.thought.content || '').length > 1000000) {
+	if ((message.thought.content || '').length > 12345) {
 		throw new Error('message.thought.content exceeds limit');
 	}
 	if ((message.thought.authorId || '') !== (message.from || '')) {

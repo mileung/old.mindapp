@@ -1,54 +1,55 @@
+import Ajv from 'ajv';
 import cors from 'cors';
 import express, { ErrorRequestHandler, RequestHandler } from 'express';
+import rateLimit from 'express-rate-limit';
 import root from './routes/_root';
+import addPersona from './routes/add-persona';
+import addSpacePersona from './routes/add-space-persona';
 import addTag from './routes/add-tag';
 import deleteThought from './routes/delete-thought';
 import { getFile } from './routes/get-file';
+import getPersonaMnemonic from './routes/get-persona-mnemonic';
+import getPersonas from './routes/get-personas';
 import getRootSettings from './routes/get-root-settings';
 import getRoots from './routes/get-roots';
+import getSignature from './routes/get-signature';
 import getTagTree from './routes/get-tag-tree';
 import getWorkingDirectory from './routes/get-working-directory';
+import leaveSpace from './routes/leave-space';
+import lockAllPersonas from './routes/lock-all-personas';
+import prioritizePersonaOrSpace from './routes/prioritize-persona-or-space';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
+import saveThought from './routes/save-thought';
 import showWorkingDirectory from './routes/show-working-directory';
+import unlockPersona from './routes/unlock-persona';
+import updateLocalSpaces from './routes/update-local-space';
+import updatePersonaPassword from './routes/update-persona-password';
+import updatePersonas from './routes/update-personas';
 import updateRootSettings from './routes/update-root-settings';
+import updateSpacePersona from './routes/update-space-persona';
 import updateWorkingDirectory from './routes/update-working-directory';
+import validatePersonaMnemonic from './routes/validate-persona-mnemonic';
 import writeThought from './routes/write-thought';
+import { Personas } from './types/Personas';
 import { RootSettings } from './types/RootSettings';
 import { WorkingDirectory } from './types/WorkingDirectory';
-import { rootSettingsPath, touchIfDne } from './utils/files';
-import getPersonas from './routes/get-personas';
-import addPersona from './routes/add-persona';
-import prioritizePersonaOrSpace from './routes/prioritize-persona-or-space';
-import unlockPersona from './routes/unlock-persona';
-import getPersonaMnemonic from './routes/get-persona-mnemonic';
-import validatePersonaMnemonic from './routes/validate-persona-mnemonic';
-import updatePersonaPassword from './routes/update-persona-password';
-import lockAllPersonas from './routes/lock-all-personas';
-import { Personas } from './types/Personas';
-import updateSpacePersona from './routes/update-space-persona';
-import { verifyItem } from './utils/security';
-import Ajv from 'ajv';
-import getSignature from './routes/get-signature';
 import env from './utils/env';
-import leaveSpace from './routes/leave-space';
-import updateLocalSpaces from './routes/update-local-space';
-import addSpacePersona from './routes/add-space-persona';
-import saveThought from './routes/save-thought';
-import updatePersonas from './routes/update-personas';
+import { rootSettingsPath, touchIfDne } from './utils/files';
+import { verifyItem } from './utils/security';
+import { minute } from './utils/time';
 
 const app = express();
 const port = env.GLOBAL_HOST ? 8080 : 2000;
 const host = env.GLOBAL_HOST || `localhost:${port}`;
 
+app.use(cors());
+app.use(express.json());
 app.use((req, res, next) => {
 	// logger
 	// console.log(`${req.url} ${req.body}`);
 	next();
 });
-
-app.use(cors());
-app.use(express.json());
 
 const tryCatch = (controller: RequestHandler) =>
 	(async (req, res, next) => {
@@ -60,7 +61,7 @@ const tryCatch = (controller: RequestHandler) =>
 		}
 	}) as RequestHandler;
 
-// This is the only public root that doesn't require auth
+// This is the only public root that doesn't require auth and isn't rate limited
 app.get('/', tryCatch(root));
 
 if (!env.GLOBAL_HOST) {
@@ -138,13 +139,25 @@ app.use((req, res, next) => {
 	next();
 });
 
+const writeLimiter = rateLimit({
+	windowMs: 10 * minute,
+	max: 20,
+	message: JSON.stringify({ error: 'Too many requests from this IP' }),
+});
+
+const standardLimiter = rateLimit({
+	windowMs: 10 * minute,
+	max: 100,
+	message: JSON.stringify({ error: 'Too many requests from this IP' }),
+});
+
 // Public routes
-app.post('/write-thought', tryCatch(writeThought));
-app.post('/delete-thought', tryCatch(deleteThought));
-app.post('/get-roots', tryCatch(getRoots));
-app.post('/update-space-persona', tryCatch(updateSpacePersona));
-app.post('/add-space-persona', tryCatch(addSpacePersona));
-app.post('/leave-space', tryCatch(leaveSpace));
+app.post('/write-thought', writeLimiter, tryCatch(writeThought));
+app.post('/delete-thought', standardLimiter, tryCatch(deleteThought));
+app.post('/get-roots', standardLimiter, tryCatch(getRoots));
+app.post('/update-space-persona', standardLimiter, tryCatch(updateSpacePersona));
+app.post('/add-space-persona', standardLimiter, tryCatch(addSpacePersona));
+app.post('/leave-space', standardLimiter, tryCatch(leaveSpace));
 
 app.use(((err, req, res, next) => {
 	// console.log('err:', err);
