@@ -4,7 +4,7 @@ import express, { ErrorRequestHandler, RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
 import root from './routes/_root';
 import addPersona from './routes/add-persona';
-import addSpacePersona from './routes/add-space-persona';
+import addSpaceAuthor from './routes/add-space-author';
 import addTag from './routes/add-tag';
 import deleteThought from './routes/delete-thought';
 import { getFile } from './routes/get-file';
@@ -17,17 +17,15 @@ import getTagTree from './routes/get-tag-tree';
 import getWorkingDirectory from './routes/get-working-directory';
 import leaveSpace from './routes/leave-space';
 import lockAllPersonas from './routes/lock-all-personas';
-import prioritizePersonaOrSpace from './routes/prioritize-persona-or-space';
 import removeTag from './routes/remove-tag';
 import renameTag from './routes/rename-tag';
 import saveThought from './routes/save-thought';
 import showWorkingDirectory from './routes/show-working-directory';
 import unlockPersona from './routes/unlock-persona';
-import updateLocalSpaces from './routes/update-local-space';
 import updatePersonaPassword from './routes/update-persona-password';
 import updatePersonas from './routes/update-personas';
 import updateRootSettings from './routes/update-root-settings';
-import updateSpacePersona from './routes/update-space-persona';
+import updateSpaceAuthor from './routes/update-space-author';
 import updateWorkingDirectory from './routes/update-working-directory';
 import validatePersonaMnemonic from './routes/validate-persona-mnemonic';
 import writeThought from './routes/write-thought';
@@ -38,6 +36,12 @@ import env from './utils/env';
 import { rootSettingsPath, touchIfDne } from './utils/files';
 import { verifyItem } from './utils/security';
 import { minute } from './utils/time';
+import voteOnThought from './routes/vote-on-thought';
+import del from './routes/vote-on-thought';
+import deleteVote from './routes/delete-vote';
+import sendTokenAmount from './routes/send-token-amount';
+import receiveBlocks from './routes/receive-blocks';
+import getVotes from './routes/get-votes';
 
 const app = express();
 const port = env.GLOBAL_HOST ? 8080 : 2000;
@@ -75,8 +79,6 @@ if (!env.GLOBAL_HOST) {
 	app.post('/remove-tag', tryCatch(removeTag));
 	app.post('/rename-tag', tryCatch(renameTag));
 	app.post('/get-personas', tryCatch(getPersonas));
-	app.post('/prioritize-persona-or-space', tryCatch(prioritizePersonaOrSpace));
-	app.post('/update-local-space', tryCatch(updateLocalSpaces));
 	app.post('/add-persona', tryCatch(addPersona));
 	app.post('/unlock-persona', tryCatch(unlockPersona));
 	app.post('/get-persona-mnemonic', tryCatch(getPersonaMnemonic));
@@ -89,6 +91,8 @@ if (!env.GLOBAL_HOST) {
 	app.post('/get-signature', tryCatch(getSignature));
 	app.post('/save-thought', tryCatch(saveThought));
 	app.post('/update-personas', tryCatch(updatePersonas));
+	app.post('/send-token-amount', tryCatch(sendTokenAmount));
+	app.post('/receive-blocks', tryCatch(receiveBlocks));
 }
 
 const ajv = new Ajv({ verbose: true });
@@ -155,8 +159,11 @@ const standardLimiter = rateLimit({
 app.post('/write-thought', writeLimiter, tryCatch(writeThought));
 app.post('/delete-thought', standardLimiter, tryCatch(deleteThought));
 app.post('/get-roots', standardLimiter, tryCatch(getRoots));
-app.post('/update-space-persona', standardLimiter, tryCatch(updateSpacePersona));
-app.post('/add-space-persona', standardLimiter, tryCatch(addSpacePersona));
+app.post('/get-votes', standardLimiter, tryCatch(getVotes));
+app.post('/update-space-author', standardLimiter, tryCatch(updateSpaceAuthor));
+app.post('/add-space-author', standardLimiter, tryCatch(addSpaceAuthor));
+app.post('/vote-on-thought', standardLimiter, tryCatch(voteOnThought));
+app.post('/delete-vote', standardLimiter, tryCatch(deleteVote));
 app.post('/leave-space', standardLimiter, tryCatch(leaveSpace));
 
 app.use(((err, req, res, next) => {

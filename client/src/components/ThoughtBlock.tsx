@@ -1,5 +1,7 @@
 import {
 	ArrowTopRightOnSquareIcon,
+	ChevronDoubleDownIcon,
+	ChevronDoubleUpIcon,
 	EllipsisHorizontalIcon,
 	MinusIcon,
 	PencilIcon,
@@ -7,46 +9,28 @@ import {
 	TrashIcon,
 	XMarkIcon,
 } from '@heroicons/react/16/solid';
-import { ReactNode, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Thought, getThoughtId } from '../utils/ClientThought';
-import { buildUrl } from '../utils/api';
-import { isStringifiedRecord } from '../utils/js';
-import { useActiveSpace, usePersonas, useSendMessage } from '../utils/state';
-import { minute } from '../utils/time';
+import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
+import { isStringifiedRecord, makeReadable } from '../utils/js';
+import {
+	useActiveSpace,
+	useGetSignature,
+	useAuthors,
+	usePersonas,
+	useSendMessage,
+	useGetMnemonic,
+} from '../utils/state';
+import { minute, second } from '../utils/time';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
 import { ThoughtWriter } from './ThoughtWriter';
-
-function Highlight({
-	shadow,
-	on,
-	children,
-}: {
-	shadow: boolean;
-	on: boolean;
-	children: ReactNode;
-}) {
-	const scrolledTo = useRef(false);
-	return on ? (
-		<div
-			ref={(r) => {
-				!scrolledTo.current &&
-					r &&
-					setTimeout(() => {
-						const yOffset = -50; // so header doesn't cover thought block
-						window.scrollTo({ top: r.getBoundingClientRect().top + window.scrollY + yOffset });
-						scrolledTo.current = true;
-					}, 0);
-			}}
-			className={`${shadow && 'shadow'} rounded bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 p-0.5`}
-		>
-			{children}
-		</div>
-	) : (
-		<>{children}</>
-	);
-}
+import DeterministicVisualId from './DeterministicVisualId';
+import Big from 'big.js';
+import { tokenNetwork } from '../types/TokenNetwork';
+import { AccountBlockBlock } from '@vite/vitejs/distSrc/utils/type';
+import Voters from './Voters';
 
 export default function ThoughtBlock({
 	thought,
@@ -67,7 +51,10 @@ export default function ThoughtBlock({
 	initiallyLinking?: boolean;
 	highlightedId?: string;
 }) {
+	const [authors] = useAuthors();
+	const getMnemonic = useGetMnemonic();
 	const activeSpace = useActiveSpace();
+	const getSignature = useGetSignature();
 	const [personas] = usePersonas();
 	const sendMessage = useSendMessage();
 	const [moreOptionsOpen, moreOptionsOpenSet] = useState(false);
@@ -75,10 +62,148 @@ export default function ThoughtBlock({
 	const [open, openSet] = useState(true);
 	const [linking, linkingSet] = useState(!!initiallyLinking);
 	const [parsed, parsedSet] = useState(true);
+	const [showVoters, showVotersSet] = useState(false);
+	const personaId = useMemo(() => personas[0].id, [personas[0].id]);
+	const walletAddress = useMemo(() => personas[0].walletAddress, [personas[0].walletAddress]);
 	const thoughtId = useMemo(() => getThoughtId(thought), [thought]);
 	const highlighted = useMemo(() => highlightedId === thoughtId, [highlightedId, thoughtId]);
 	const linkingThoughtId = useRef('');
 	const linkingDiv = useRef<HTMLDivElement>(null);
+	const xBtn = useRef<HTMLButtonElement>(null);
+	const trashBtn = useRef<HTMLButtonElement>(null);
+	const pencilBtn = useRef<HTMLButtonElement>(null);
+	const votesBtn = useRef<HTMLButtonElement>(null);
+	const votesDv = useRef<HTMLDivElement>(null);
+	const voteTimer = useRef<NodeJS.Timeout>();
+	const [upvoted, upvotedSet] = useState<undefined | boolean>(thought.votes?.own);
+	const currentVote = useRef<undefined | boolean>(upvoted);
+	const [votes, votesSet] = useState<undefined | { up?: true; voterId: string }[]>();
+	const voteCount = useMemo(() => {
+		const votes = { up: thought.votes?.up || 0, down: thought.votes?.down || 0 };
+		if (upvoted !== undefined) upvoted ? votes.up++ : votes.down++;
+		if (thought.votes?.own !== undefined) {
+			thought.votes?.own ? votes.up-- : votes.down--;
+		}
+		return votes;
+	}, [thought.votes, upvoted]);
+	const onShowMoreBlur = useCallback(() => {
+		setTimeout(() => {
+			if (
+				![xBtn.current, trashBtn.current, pencilBtn.current].find(
+					(e) => e === document.activeElement,
+				)
+			) {
+				moreOptionsOpenSet(false);
+			}
+		}, 0);
+	}, []);
+	const onShowVotersBlur = useCallback(() => {
+		setTimeout(() => {
+			if (
+				![xBtn.current, votesBtn.current, votesDv.current].find((e) => e === document.activeElement)
+			) {
+				showVotersSet(false);
+			}
+		}, 0);
+	}, []);
+
+	const debouncedSwitchVote = useCallback(
+		async (up?: true) => {
+			if (!activeSpace.host) return alert('Cannot vote in local space');
+			if (!personaId) return alert('Anon cannot vote');
+			if (activeSpace.host !== thought.spaceHost) {
+				return alert('Cannot vote on thoughts created outside of the current space');
+			}
+			if (activeSpace.host !== thought.spaceHost) {
+				return alert('Cannot vote on thoughts created outside of the current space');
+			}
+			if (!activeSpace.deletableVotes && currentVote.current !== undefined) {
+				// return alert('Votes are finalized 3 seconds after submitting');
+				return alert('Votes cannot be undone');
+			}
+			clearTimeout(voteTimer.current);
+			let newVote: undefined | boolean;
+			if (up) {
+				newVote = upvoted === true ? undefined : true;
+			} else {
+				newVote = upvoted === false ? undefined : false;
+			}
+			upvotedSet(newVote);
+			voteTimer.current = setTimeout(async () => {
+				if (newVote === currentVote.current) return;
+				const lastVote = currentVote.current;
+				currentVote.current = newVote;
+				if (newVote === undefined) {
+					return sendMessage({
+						from: personaId,
+						to: buildUrl({ host: activeSpace.host, path: 'delete-vote' }),
+						thoughtId,
+					});
+				}
+				const unsignedVote: UnsignedVote = {
+					voterId: personaId,
+					up: newVote,
+					thoughtId,
+					voteDate: Date.now(),
+				};
+				if (activeSpace.tokenId) {
+					if (!walletAddress) return alert('Persona missing walletAddress');
+					const toAddress = newVote
+						? authors[thought.authorId || '']?.walletAddress
+						: activeSpace.downvoteAddress;
+					if (!toAddress) {
+						return newVote
+							? alert('author missing walletAddress')
+							: alert('space missing downvoteAddress');
+					}
+					try {
+						if (hostedLocally) {
+							const { block } = await ping<{ block: AccountBlockBlock }>(
+								makeUrl('send-token-amount'),
+								post({
+									personaId,
+									toAddress,
+									tokenId: activeSpace.tokenId,
+									amount: '1',
+								}),
+							);
+							unsignedVote.txHash = block.hash;
+						} else {
+							const privateKey = getMnemonic(personas[0].id);
+							const block = await tokenNetwork.sendToken(
+								walletAddress,
+								privateKey,
+								toAddress,
+								activeSpace.tokenId,
+								'1',
+							);
+							unsignedVote.txHash = block.hash;
+						}
+					} catch (error) {
+						upvotedSet(lastVote);
+						currentVote.current = lastVote;
+						return alert(makeReadable(error));
+					}
+				}
+				const signedVote: SignedVote = {
+					...unsignedVote,
+					signature: (await getSignature(unsignedVote, unsignedVote.voterId))!,
+				};
+				// console.log('signedVote:', signedVote);
+				sendMessage({
+					from: personaId,
+					to: buildUrl({ host: activeSpace.host, path: 'vote-on-thought' }),
+					replace: lastVote !== undefined,
+					signedVote,
+				}).catch((err) => {
+					alert(JSON.stringify(err));
+					upvotedSet(lastVote);
+					currentVote.current = lastVote;
+				});
+			}, 0 * second);
+		},
+		[upvoted, thought, personaId, walletAddress, activeSpace, thoughtId, sendMessage],
+	);
 
 	return (
 		<Highlight on={highlighted} shadow={!depth}>
@@ -90,7 +215,7 @@ export default function ThoughtBlock({
 					onClick={() => openSet(!open)}
 				>
 					<div className="my-0.5">
-						{open ? <MinusIcon className="h-5 w-5" /> : <PlusIcon className="h-5 w-5" />}
+						{open ? <MinusIcon className="h-4 w-5" /> : <PlusIcon className="h-4 w-5" />}
 					</div>
 				</button>
 				<div className="mt-0.5 flex-1">
@@ -152,75 +277,135 @@ export default function ThoughtBlock({
 								)}
 							</>
 						)}
-						<div className="mt-2 fx gap-2 text-fg2">
+						<div className="mt-2 flex gap-2 text-fg2 max-w-full justify-between">
+							{(true || activeSpace.host) && (
+								<div className="fx relative">
+									<button
+										className={`fx h-4 transition hover:text-orange-500 ${upvoted ? 'text-orange-500' : ''}`}
+										onClick={() => debouncedSwitchVote(true)}
+									>
+										<ChevronDoubleUpIcon className="-ml-1 mr-1 w-5" />
+									</button>
+									<button
+										className="fx"
+										ref={votesBtn}
+										onClick={() => showVotersSet(!showVoters)}
+										onBlur={onShowVotersBlur}
+										onKeyDown={(e) => e.key === 'Escape' && showVotersSet(false)}
+									>
+										<p className="leading-4 text-sm font-bold font-mono transition hover:text-fg1">
+											{voteCount.up}-{voteCount.down}
+										</p>
+									</button>
+									<button
+										className={`fx h-4 transition hover:text-blue-400 ${upvoted === false ? 'text-blue-400' : ''}`}
+										onClick={() => debouncedSwitchVote()}
+									>
+										<ChevronDoubleDownIcon className="-mr-1 ml-1 w-5" />
+									</button>
+									{showVoters && (
+										<div
+											ref={votesDv}
+											tabIndex={0}
+											onBlur={onShowVotersBlur}
+											onKeyDown={(e) => e.key === 'Escape' && showVotersSet(false)}
+											className="z-20 absolute top-4 mt-0.5 left-0 w-48 rounded bg-mg1 shadow"
+										>
+											<div className="fx justify-between pl-1">
+												<p className="font-semibold">Voters</p>
+												<button
+													ref={xBtn}
+													className="h-5 w-5 hover:text-fg1 transition"
+													onClick={() => showVotersSet(false)}
+												>
+													<XMarkIcon />
+												</button>
+											</div>
+											<Voters thoughtId={thoughtId} />
+										</div>
+									)}
+								</div>
+							)}
 							<button
-								className="w-full h-4 fx hover:text-fg1 transition"
+								className="flex-1 min-w-4 h-4 fx hover:text-fg1 transition"
 								onClick={() => linkingSet(!linking)}
 							>
-								<ArrowTopRightOnSquareIcon className="absolute rotate-90 h-5 w-5" />
+								<ArrowTopRightOnSquareIcon className="absolute rotate-90 w-5" />
 							</button>
-							{moreOptionsOpen ? (
-								<>
-									<button
-										className="h-4 w-4 xy hover:text-fg1 transition"
-										onClick={() => moreOptionsOpenSet(false)}
-									>
-										<XMarkIcon className="absolute h-6 w-6" />
-									</button>
-									<button
-										className="h-4 w-4 xy hover:text-fg1 transition"
-										onClick={async () => {
-											const ok = !thought.spaceHost
-												? Date.now() - thought.createDate < minute ||
+							<div className="fx gap-1 flex-wrap">{/*  */}</div>
+							{(!personas[0].spaceHosts[0] ||
+								(thought.authorId === personas[0].id &&
+									(thought.spaceHost || !!thought.content))) &&
+								(moreOptionsOpen ? (
+									<div className="fx gap-2">
+										<button
+											ref={xBtn}
+											className="h-4 w-4 xy hover:text-fg1 transition"
+											onClick={() => moreOptionsOpenSet(false)}
+											onKeyDown={(e) => e.key === 'Escape' && moreOptionsOpenSet(false)}
+											onBlur={onShowMoreBlur}
+										>
+											<XMarkIcon className="absolute h-6 w-6" />
+										</button>
+										<button
+											ref={trashBtn}
+											className="h-4 w-4 xy hover:text-fg1 transition"
+											onClick={async () => {
+												const ok =
+													!!thought.spaceHost ||
+													Date.now() - thought.createDate < minute ||
 													confirm(
 														'This thought has already been archived in the Git snapshot history; delete it anyways?',
-													)
-												: confirm('Are you sure you want to delete this thought?');
-											if (!ok) return;
-											const newRoots = [...roots] as Thought[];
-											let pointer = newRoots;
-											for (let i = 0; i < rootsIndices.length - 1; i++) {
-												pointer = pointer[rootsIndices[i]].children!;
-											}
-											const deletedThought = pointer[rootsIndices.slice(-1)[0]];
-											sendMessage<{ softDelete: true }>({
-												from: personas[0]!.id,
-												to: buildUrl({ host: activeSpace!.host, path: 'delete-thought' }),
-												thoughtId,
-											})
-												.then(({ softDelete }) => {
-													if (softDelete) {
-														deletedThought.content = '';
-														deletedThought.tags = [];
-													} else {
-														pointer.splice(rootsIndices.slice(-1)[0], 1);
-													}
-													onRootsChange(newRoots);
+													);
+												if (!ok) return;
+												const newRoots = [...roots] as Thought[];
+												let pointer = newRoots;
+												for (let i = 0; i < rootsIndices.length - 1; i++) {
+													pointer = pointer[rootsIndices[i]].children!;
+												}
+												const deletedThought = pointer[rootsIndices.slice(-1)[0]];
+												sendMessage<{ softDelete: true }>({
+													from: personas[0]!.id,
+													to: buildUrl({ host: activeSpace!.host, path: 'delete-thought' }),
+													thoughtId,
 												})
-												.catch((err) => alert(err));
+													.then(({ softDelete }) => {
+														if (softDelete) {
+															deletedThought.content = '';
+															deletedThought.tags = [];
+														} else {
+															pointer.splice(rootsIndices.slice(-1)[0], 1);
+														}
+														onRootsChange(newRoots);
+													})
+													.catch((err) => alert(err));
+											}}
+											onKeyDown={(e) => e.key === 'Escape' && moreOptionsOpenSet(false)}
+											onBlur={onShowMoreBlur}
+										>
+											<TrashIcon className="absolute h-4 w-4" />
+										</button>
+										<button
+											ref={pencilBtn}
+											className="h-4 w-4 xy hover:text-fg1 transition"
+											onClick={() => editingSet(!editing)}
+											onKeyDown={(e) => e.key === 'Escape' && moreOptionsOpenSet(false)}
+											onBlur={onShowMoreBlur}
+										>
+											<PencilIcon className="absolute h-4 w-4" />
+										</button>
+									</div>
+								) : (
+									<button
+										className="h-4 w-4 xy hover:text-fg1 transition"
+										onClick={() => {
+											moreOptionsOpenSet(true);
+											setTimeout(() => xBtn.current?.focus(), 0);
 										}}
 									>
-										<TrashIcon className="absolute h-4 w-4" />
+										<EllipsisHorizontalIcon className="absolute h-4 w-5" />
 									</button>
-									<button
-										className="h-4 w-4 xy hover:text-fg1 transition"
-										onClick={() => editingSet(!editing)}
-									>
-										<PencilIcon className="absolute h-4 w-4" />
-									</button>
-								</>
-							) : (
-								(!personas[0].spaceHosts[0] ||
-									(thought.authorId === personas[0].id &&
-										(thought.spaceHost || !!thought.content))) && (
-									<button
-										className="h-4 w-4 xy hover:text-fg1 transition"
-										onClick={() => moreOptionsOpenSet(true)}
-									>
-										<EllipsisHorizontalIcon className="absolute h-5 w-5" />
-									</button>
-								)
-							)}
+								))}
 						</div>
 						{linking && (
 							<div ref={linkingDiv} className="bg-bg1 p-1 rounded mt-1">
@@ -229,7 +414,7 @@ export default function ThoughtBlock({
 									onContentBlur={() => linkingSet(false)}
 									onWrite={({ thought }, ctrlKey, altKey) => {
 										altKey ? onNewRoot() : linkingSet(false);
-										ctrlKey && (linkingThoughtId.current = getThoughtId(thought));
+										ctrlKey && (linkingThoughtId.current = thoughtId);
 										const newRoots = [...roots] as Thought[];
 										let pointer = newRoots;
 										for (let i = 0; i < rootsIndices.length; i++) {
@@ -269,3 +454,44 @@ export default function ThoughtBlock({
 		</Highlight>
 	);
 }
+
+function Highlight({
+	shadow,
+	on,
+	children,
+}: {
+	shadow: boolean;
+	on: boolean;
+	children: ReactNode;
+}) {
+	const scrolledTo = useRef(false);
+	return on ? (
+		<div
+			ref={(r) => {
+				!scrolledTo.current &&
+					r &&
+					setTimeout(() => {
+						const yOffset = -50; // so header doesn't cover thought block
+						window.scrollTo({ top: r.getBoundingClientRect().top + window.scrollY + yOffset });
+						scrolledTo.current = true;
+					}, 0);
+			}}
+			className={`${shadow && 'shadow'} rounded bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 p-0.5`}
+		>
+			{children}
+		</div>
+	) : (
+		<>{children}</>
+	);
+}
+type UnsignedVote = {
+	voterId: string;
+	up: boolean;
+	thoughtId: string;
+	voteDate: number;
+	txHash?: string;
+};
+
+type SignedVote = UnsignedVote & {
+	signature: string;
+};

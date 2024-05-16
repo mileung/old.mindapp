@@ -7,6 +7,8 @@ import { wordlist } from '@scure/bip39/wordlists/english';
 import { wallet } from '@vite/vitejs/es5';
 import env from '../utils/env';
 import { inGroup } from '../db';
+import { tokenNetwork } from './TokenNetwork';
+import { Author, SignedAuthor } from './Author';
 
 const ajv = new Ajv();
 
@@ -39,19 +41,7 @@ const schema = {
 	additionalProperties: false,
 };
 
-export type UnsignedSelf = {
-	writeDate: number;
-	id: string;
-	name?: string;
-	frozen?: true;
-	walletAddress?: string;
-};
-
-export type SignedSelf = UnsignedSelf & {
-	signature: string;
-};
-
-export type Persona = Partial<SignedSelf> & {
+export type Persona = Partial<SignedAuthor> & {
 	encryptedMnemonic?: string;
 	spaceHosts: string[];
 };
@@ -61,29 +51,11 @@ let passwords: Record<string, string> = {};
 export class Personas {
 	public registry: Record<string, Persona>;
 
-	constructor({
-		registry = { '': { id: '', spaceHosts: [''] } },
-	}: {
-		registry?: Record<string, Persona>;
-	}) {
+	constructor({ registry = { '': { spaceHosts: [''] } } }: { registry?: Record<string, Persona> }) {
 		if (env.GLOBAL_HOST) throw new Error('Global space cannot use Personas');
 		this.registry = registry;
 		// console.log("this:", this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Personas: ' + JSON.stringify(this));
-	}
-
-	get clientArr() {
-		// Object.entries(this.registry).forEach(([key,val])={
-
-		// })
-		return [];
-		// const registry = this.registry.map((p, i) => {
-		// 	return {
-		// 		...p,
-		// 		// encryptedMnemonic: undefined,
-		// 	};
-		// });
-		// return registry;
 	}
 
 	getOrderedArr(order: string[] = [], includeAll = false): Persona[] {
@@ -130,43 +102,6 @@ export class Personas {
 		writeObjectFile(WorkingDirectory.current.personasPath, this.savedProps);
 	}
 
-	update(personas: Persona[]) {
-		personas.forEach((p) => {
-			if (p.id === undefined) throw new Error('Persona is missing id');
-			let signedSelf: undefined | SignedSelf;
-			if (p.id) {
-				if (passwords[p.id] === undefined) throw new Error('Persona locked');
-				const unsignedSelf = getUnsignedSelf({ ...p, id: p.id });
-				const decryptedMnemonic = decrypt(this.registry[p.id].encryptedMnemonic!, passwords[p.id]);
-				const { publicKey, privateKey } = createKeyPair(decryptedMnemonic);
-				if (publicKey !== p.id) throw new Error('publicKey !== p.id');
-				signedSelf = getSignedSelf(unsignedSelf, privateKey);
-			}
-			this.registry[p.id] = {
-				...this.registry[p.id],
-				...p,
-				...(signedSelf || {}),
-				id: undefined,
-				name: p.name || undefined,
-			};
-		});
-		this.overwrite();
-	}
-
-	addSpace(personaId: string, spaceHost: string) {
-		const persona = this.registry[personaId];
-		if (!persona) throw new Error('Persona not found');
-		persona.spaceHosts.unshift(spaceHost);
-		this.overwrite();
-	}
-
-	removeSpace(personaId: string, spaceHost: string) {
-		const persona = this.registry[personaId];
-		if (!persona) throw new Error('Persona not found');
-		persona.spaceHosts.splice(persona.spaceHosts.indexOf(spaceHost), 1);
-		this.overwrite();
-	}
-
 	addPersona({
 		mnemonic,
 		password,
@@ -182,22 +117,23 @@ export class Personas {
 	}) {
 		const { publicKey, privateKey } = createKeyPair(mnemonic);
 		if (this.registry[publicKey]) throw new Error('publicKey already used');
-		const unsignedSelf = getUnsignedSelf({
+		const author = new Author({
 			id: publicKey,
 			name,
 			frozen,
 			walletAddress:
 				walletAddress || wallet.deriveAddress({ mnemonics: mnemonic, index: 0 }).address,
 		});
-		const signedSelf = getSignedSelf(unsignedSelf, privateKey);
+		author.sign(privateKey);
 		this.registry[publicKey] = {
-			...signedSelf,
+			...author.signed,
+			id: undefined,
 			encryptedMnemonic: encrypt(mnemonic, password),
 			spaceHosts: [''],
 		};
 		passwords[publicKey] = password;
 		this.overwrite();
-		return this.registry[publicKey];
+		return { ...this.registry[publicKey], id: publicKey };
 	}
 
 	deletePersona(personaId: string, mnemonic: string) {
@@ -221,6 +157,45 @@ export class Personas {
 		const valid = validateMnemonic(decryptedMnemonic, wordlist);
 		if (valid) passwords[personaId] = password;
 		return valid;
+	}
+
+	update(personas: Persona[]) {
+		personas.forEach((p) => {
+			if (p.id === undefined) throw new Error('Persona is missing id');
+			let author: undefined | Author;
+			if (p.id) {
+				if (passwords[p.id] === undefined) throw new Error('Persona locked');
+				author = new Author({ ...p, id: p.id });
+				const decryptedMnemonic = decrypt(this.registry[p.id].encryptedMnemonic!, passwords[p.id]);
+				const { publicKey, privateKey } = createKeyPair(decryptedMnemonic);
+				author.sign(privateKey);
+				if (publicKey !== p.id) throw new Error('publicKey !== p.id');
+			}
+			this.registry[p.id] = {
+				...this.registry[p.id],
+				...author?.clientProps,
+				id: undefined,
+			};
+		});
+		this.overwrite();
+	}
+
+	sendToken(personaId: string, toAddress: string, tokenId: string, amount: string) {
+		if (!personaId) throw new Error("Anon can't send tokens");
+		const persona = this.registry[personaId];
+		if (!persona) throw new Error('Persona not found');
+		if (passwords[personaId] === undefined) throw new Error('Persona locked');
+		const mnemonic = decrypt(persona.encryptedMnemonic!, passwords[personaId]);
+		return tokenNetwork.sendToken(persona.walletAddress, mnemonic, toAddress, tokenId, amount);
+	}
+
+	async receiveBlocks(personaId: string) {
+		if (!personaId) throw new Error("Anon can't receive blocks");
+		const persona = this.registry[personaId];
+		if (!persona) throw new Error('Persona not found');
+		if (passwords[personaId] === undefined) throw new Error('Persona locked');
+		const mnemonic = decrypt(persona.encryptedMnemonic!, passwords[personaId]);
+		tokenNetwork.receiveBlocks(persona.walletAddress, mnemonic);
 	}
 
 	validateMnemonic(personaId: string, mnemonic: string) {
@@ -278,30 +253,11 @@ export class Personas {
 		passwords = {};
 	}
 
-	static async getDefaultName(personaId: string, spaceHost?: string) {
+	static async getAuthor(personaId: string, spaceHost?: string) {
 		if (!env.GLOBAL_HOST && !spaceHost) {
 			const persona = Personas.get().registry[personaId];
-			if (persona) return persona.name;
+			if (persona) return new Author({ ...persona, id: personaId }).clientProps;
 		}
-		return (await inGroup(personaId))?.name;
+		return await inGroup(personaId);
 	}
-}
-
-function getUnsignedSelf(persona: { id: string } & Partial<Persona>) {
-	const unsignedSelf: UnsignedSelf = {
-		writeDate: Date.now(),
-		id: persona.id,
-		name: persona.name,
-		frozen: persona.frozen,
-		walletAddress: persona.walletAddress,
-	};
-	return unsignedSelf;
-}
-
-function getSignedSelf(unsignedSelf: UnsignedSelf, privateKey: string) {
-	const signedSelf: SignedSelf = {
-		...unsignedSelf,
-		signature: signItem(unsignedSelf, privateKey),
-	};
-	return signedSelf;
 }

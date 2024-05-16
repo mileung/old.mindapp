@@ -36,3 +36,6 @@ export const copyToClipboardAsync = (str = '') => {
 		return navigator.clipboard.writeText(str);
 	return window.alert('The Clipboard API is not available.');
 };
+
+export const makeReadable = (err: any) =>
+	err.toString() === '[object Object]' ? JSON.stringify(err) : err.toString();

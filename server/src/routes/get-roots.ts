@@ -5,8 +5,9 @@ import { thoughtsTable } from '../db/schema';
 import { Personas } from '../types/Personas';
 import { Thought } from '../types/Thought';
 import env from '../utils/env';
+import { Author } from '../types/Author';
 
-export type ResultsQuery = {
+type ResultsQuery = {
 	thoughtId?: string;
 	tags?: string[];
 	other?: string[];
@@ -41,20 +42,20 @@ const getRoots: RequestHandler = async (req, res) => {
 
 	const excludeIds = new Set(ignoreRootIds);
 	const roots: Thought['clientProps'][] = [];
-	const mentionedIds = new Set<string>();
+	const mentionedThoughIds = new Set<string>();
 	const authorIds = new Set<string>();
-	const moreMentions: Record<string, Thought> = {};
-	const moreDefaultNames: Record<string, string> = {};
+	const mentionedThoughts: Record<string, Thought> = {};
+	const authors: Record<string, Author['clientProps']> = {};
 	let latestCreateDate = oldToNew ? 0 : Number.MAX_SAFE_INTEGER;
 	const rootsPerLoad = freeForm ? 8 : 40;
 
 	if (thoughtId) {
 		const thought = await Thought.query(thoughtId);
-		if (!thought) return res.send({ moreMentions: {}, moreRoots: [] });
+		if (!thought) return res.send({ mentionedThoughts: {}, moreRoots: [] });
 
 		const rootThought = await thought.getRootThought();
-		const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand();
-		allMentionedIds.forEach((id) => mentionedIds.add(id));
+		const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand(from);
+		allMentionedIds.forEach((id) => mentionedThoughIds.add(id));
 		allAuthorIds.forEach((id) => authorIds.add(id));
 		roots.push(clientProps);
 	}
@@ -87,8 +88,8 @@ const getRoots: RequestHandler = async (req, res) => {
 				!excludeIds.has(rootThought.id) &&
 				!roots.find((root) => new Thought(root).id === rootThought.id)
 			) {
-				const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand();
-				allMentionedIds.forEach((id) => mentionedIds.add(id));
+				const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand(from);
+				allMentionedIds.forEach((id) => mentionedThoughIds.add(id));
 				allAuthorIds.forEach((id) => authorIds.add(id));
 				roots.push(clientProps);
 			}
@@ -102,22 +103,24 @@ const getRoots: RequestHandler = async (req, res) => {
 		}
 	}
 
-	const mentionedIdsArr = [...mentionedIds];
-	for (let i = 0; i < mentionedIdsArr.length; i++) {
-		const id = mentionedIdsArr[i];
-		const mentionedThought = await Thought.query(id);
-		if (mentionedThought) moreMentions[id] = mentionedThought;
-	}
+	await Promise.all(
+		[...mentionedThoughIds].map((id) => {
+			return Thought.query(id).then((thought) => {
+				if (thought) {
+					mentionedThoughts[id] = thought;
+					authorIds.add(mentionedThoughts[id].authorId);
+				}
+			});
+		}),
+	);
 
 	authorIds.delete('');
 	await Promise.all(
-		[...authorIds].map((id) =>
-			Personas.getDefaultName(id).then((name) => {
-				name && (moreDefaultNames[id] = name);
-			}),
-		),
+		[...authorIds].map((id) => {
+			if (id) return Personas.getAuthor(id).then((a) => a && (authors[id] = a));
+		}),
 	);
-	res.send({ latestCreateDate, moreDefaultNames, moreMentions, moreRoots: roots });
+	res.send({ latestCreateDate, authors, mentionedThoughts, roots });
 	console.timeEnd('query time');
 };
 

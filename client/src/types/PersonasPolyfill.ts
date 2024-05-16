@@ -1,31 +1,21 @@
+import { SignedAuthor, UnsignedAuthor } from './Author';
+
 export let passwords: Record<string, string> = {};
 
-export type UnsignedSelf = {
-	writeDate: number;
-	id: string;
-	name?: string;
-	frozen?: true;
-	walletAddress?: string;
-};
-
-export type SignedSelf = UnsignedSelf & {
-	signature: string;
-};
-
-export type Persona = Partial<SignedSelf> & {
+export type Persona = Partial<SignedAuthor> & {
 	id: string;
 	encryptedMnemonic?: string;
 	spaceHosts: string[];
 	locked?: boolean;
 };
 
-export function getUnsignedSelf(persona: { id: string } & Partial<Persona>) {
-	const unsignedSelf: UnsignedSelf = {
+export function getUnsignedAuthor(persona: { id: string } & Partial<Persona>) {
+	const unsignedAuthor: UnsignedAuthor = {
 		writeDate: Date.now(),
 		id: persona.id,
-		name: persona.name,
-		frozen: persona.frozen,
-		walletAddress: persona.walletAddress,
+		name: persona.name || '',
+		frozen: persona.frozen || false,
+		walletAddress: persona.walletAddress || '',
 	};
-	return unsignedSelf;
+	return unsignedAuthor;
 }

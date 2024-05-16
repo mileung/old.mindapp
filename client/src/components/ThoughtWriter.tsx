@@ -11,7 +11,7 @@ import {
 	usePersonas,
 	useLastUsedTags,
 	useMentionedThoughts,
-	useNames,
+	useAuthors,
 	useSendMessage,
 	useActiveSpace,
 	useGetSignature,
@@ -24,6 +24,7 @@ import { useKeyPress } from '../utils/keyboard';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextareaAutoHeight from './TextareaAutoHeight';
 import { isStringifiedRecord } from '../utils/js';
+import { SignedAuthor } from '../types/Author';
 
 export const ThoughtWriter = ({
 	parentRef,
@@ -41,7 +42,7 @@ export const ThoughtWriter = ({
 	parentId?: string;
 	onWrite?: (
 		res: {
-			names: Record<string, string>;
+			authors: Record<string, SignedAuthor>;
 			mentionedThoughts: Record<string, Thought>;
 			thought: Thought;
 		},
@@ -65,7 +66,7 @@ export const ThoughtWriter = ({
 	const { pathname } = useLocation();
 	const sendMessage = useSendMessage();
 	const getSignature = useGetSignature();
-	const [names, namesSet] = useNames();
+	const [authors, authorsSet] = useAuthors();
 	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [tagTree, tagTreeSet] = useTagTree();
@@ -140,13 +141,13 @@ export const ThoughtWriter = ({
 			message.thought.signature = await getSignature(message.thought, message.thought.authorId);
 
 			await sendMessage<{
-				names: Record<string, string>;
+				authors: Record<string, SignedAuthor>;
 				mentionedThoughts: Record<string, Thought>;
 				thought: Thought;
 			}>(message)
 				.then((res) => {
 					// console.log('res:', res);
-					namesSet((old) => ({ ...old, ...res.names }));
+					authorsSet((old) => ({ ...old, ...res.authors }));
 					mentionedThoughtsSet((old) => ({ ...old, ...res.mentionedThoughts }));
 					onWrite && onWrite(res, !!ctrlKey, !!altKey);
 					contentTextArea.current!.value = '';

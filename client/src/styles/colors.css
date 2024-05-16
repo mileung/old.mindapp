@@ -4,12 +4,12 @@
 
 @layer base {
 	:root {
-		--bg1: #ffffff;
-		--bg2: #efefef;
+		--bg1: #f2f2f2;
+		--bg2: #fdfdfd;
 		--fg1: #000000;
 		--fg2: #787878;
-		--mg1: #f1f1f1;
-		--mg2: #dddddd;
+		--mg1: #e6e6e6;
+		--mg2: #e2e2e2;
 	}
 	.dark {
 		--bg1: #000000;

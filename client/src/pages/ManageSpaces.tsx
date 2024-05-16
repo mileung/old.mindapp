@@ -130,8 +130,7 @@ export default function ManageSpaces() {
 								</div>
 							</div>
 							<p className="text-2xl font-semibold">Space info</p>
-							<LabelVal label="Hub address" value={fetchedSpace.hubAddress} />
-							<LabelVal label="Faucet address" value={fetchedSpace.faucetAddress} />
+							<LabelVal label="Downvote address" value={fetchedSpace.downvoteAddress} />
 							<div className="">
 								<p className="text-xl font-semibold text-fg2">Owner</p>
 								<NameTag id={fetchedSpace.owner?.id} name={fetchedSpace.owner?.name} />
@@ -146,7 +145,7 @@ export default function ManageSpaces() {
 										label="Add date"
 										value={formatTimestamp(fetchedSpace.fetchedSelf.addDate)}
 									/>
-									{fetchedSpace.fetchedSelf.addedBy?.id && (
+									{/* {fetchedSpace.fetchedSelf.addedBy?.id && (
 										<div className="">
 											<p className="text-xl font-semibold text-fg2">Added by</p>
 											<NameTag
@@ -154,7 +153,7 @@ export default function ManageSpaces() {
 												name={fetchedSpace.fetchedSelf.addedBy?.name}
 											/>
 										</div>
-									)}
+									)} */}
 									<LabelVal
 										label="Frozen"
 										value={fetchedSpace.fetchedSelf.frozen ? 'True' : 'False'}

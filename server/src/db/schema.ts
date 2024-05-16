@@ -6,7 +6,7 @@ import { integer, text, sqliteTable, primaryKey, index } from 'drizzle-orm/sqlit
 // SQLite column types
 // https://orm.drizzle.team/docs/column-types/sqlite
 
-export const personasTable = sqliteTable('personas', {
+export const authorsTable = sqliteTable('authors', {
 	id: text('id').primaryKey(),
 	name: text('name'),
 	frozen: integer('frozen', { mode: 'boolean' }),
@@ -17,8 +17,8 @@ export const personasTable = sqliteTable('personas', {
 	addDate: integer('add_date').notNull(),
 	addedById: text('added_by_id'),
 });
-export type InsertPersona = typeof personasTable.$inferInsert;
-export type SelectPersona = typeof personasTable.$inferSelect;
+export type InsertPersona = typeof authorsTable.$inferInsert;
+export type SelectPersona = typeof authorsTable.$inferSelect;
 
 export const thoughtsTable = sqliteTable(
 	'thoughts',
@@ -53,9 +53,32 @@ export const thoughtsTable = sqliteTable(
 export type InsertThought = typeof thoughtsTable.$inferInsert;
 export type SelectThought = typeof thoughtsTable.$inferSelect;
 
-// export const thoughtsTableRelations = relations(thoughtsTable, ({ many }) => ({
-// 	children: many(thoughtsTable),
-// }));
+export const votesTable = sqliteTable(
+	'votes',
+	{
+		up: integer('up', { mode: 'boolean' }),
+		thoughtId: text('thought_id').notNull(),
+		voterId: text('voter_id').notNull(),
+		voteDate: integer('vote_date').notNull(),
+		txHash: text('tx_hash').unique(),
+		signature: text('signature'),
+	},
+	(table) => {
+		return {
+			pkWithCustomName: primaryKey({
+				name: 'id',
+				columns: [table.thoughtId, table.voterId],
+			}),
+			upIdx: index('up_idx').on(table.up),
+			thoughtIdIdx: index('thought_id_idx').on(table.thoughtId),
+			voterIdIdx: index('voter_id_idx').on(table.voterId),
+			voteDateIdx: index('vote_date_idx').on(table.voteDate),
+			txHashIdx: index('tx_hash_idx').on(table.txHash),
+		};
+	},
+);
+export type InsertVote = typeof votesTable.$inferInsert;
+export type SelectVote = typeof votesTable.$inferSelect;
 
 // (async () => {
 // 	// https://orm.drizzle.team/learn/tutorials/drizzle-with-turso#applying-changes-to-the-database

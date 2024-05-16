@@ -7,8 +7,8 @@ import { day } from '../utils/time';
 import { Personas } from './Personas';
 import { verifyItem } from '../utils/security';
 import { drizzleClient } from '../db';
-import { thoughtsTable } from '../db/schema';
-import { and, desc, eq, isNull, like, or } from 'drizzle-orm';
+import { thoughtsTable, votesTable } from '../db/schema';
+import { and, asc, desc, eq, isNull, like, or, sql } from 'drizzle-orm';
 import env from '../utils/env';
 import { localApiHost } from '../utils/api';
 
@@ -40,6 +40,7 @@ export class Thought {
 	public parentId: string;
 	public signature: string;
 	public children?: Thought[];
+	public votes?: { own?: boolean; up?: number; down?: number };
 
 	constructor(
 		{
@@ -116,6 +117,7 @@ export class Thought {
 		content?: string;
 		tags?: string[];
 		parentId?: string;
+		votes?: Thought['votes'];
 		children?: Thought['clientProps'][];
 		filedSaved?: true;
 	} {
@@ -127,6 +129,7 @@ export class Thought {
 			content: this.content || undefined,
 			tags: this.tags.length ? this.tags : undefined,
 			parentId: this.parentId || undefined,
+			votes: this.votes || undefined,
 			children: this.children?.length ? this.children.map((c) => c.clientProps) : undefined,
 			filedSaved: env.GLOBAL_HOST ? undefined : isFile(this.filePath) || undefined,
 		} as const;
@@ -156,32 +159,61 @@ export class Thought {
 		return {};
 	}
 
-	async expand() {
+	async expand(voterId?: string) {
 		const allMentionedIds = [...this.mentionedIds];
 		const allAuthorIds = [this.authorId];
+		this.votes = await this.getVotes(voterId);
 		this.children = await Promise.all(
 			(
 				await drizzleClient
 					.select()
 					.from(thoughtsTable)
 					.where(eq(thoughtsTable.parentId, this.id))
-					.orderBy(desc(thoughtsTable.createDate))
-			) // TODO: make asc an option
-				// .orderBy((oldToNew ? asc : desc)(thoughtsTable.createDate))
-				// .limit(8)
-				// .offset(0)
-				.map(async (row) => {
-					const child = new Thought(row);
-					const expansion = await child.expand();
-					allMentionedIds.push(...child.mentionedIds, ...expansion.allMentionedIds);
-					allAuthorIds.push(...expansion.allAuthorIds);
-					return child;
-				}),
+					// .limit(8)
+					// .offset(0)
+					// TODO: make asc an option
+					.orderBy((!'oldToNew' ? asc : desc)(thoughtsTable.createDate))
+			).map(async (row) => {
+				const child = new Thought(row);
+				const expansion = await child.expand(voterId);
+				allMentionedIds.push(...child.mentionedIds, ...expansion.allMentionedIds);
+				allAuthorIds.push(...expansion.allAuthorIds);
+				return child;
+			}),
 		);
 		return {
 			clientProps: this.clientProps,
 			allMentionedIds,
 			allAuthorIds: [...new Set(allAuthorIds)],
+		};
+	}
+
+	async getVotes(voterId?: string) {
+		const [[own], [voteCount]] = await Promise.all([
+			!voterId
+				? []
+				: drizzleClient
+						.select({ up: votesTable.up })
+						.from(votesTable)
+						.where(
+							and(
+								eq(votesTable.thoughtId, this.id),
+								eq(votesTable.voterId, voterId), //
+							),
+						),
+			drizzleClient
+				.select({
+					up: sql<number>`count(case when up then 1 end)`,
+					down: sql<number>`count(case when not up then 1 end)`,
+				})
+				.from(votesTable)
+				.where(eq(votesTable.thoughtId, this.id)),
+		]);
+
+		return {
+			own: own === undefined ? undefined : !!own.up,
+			up: voteCount.up || undefined,
+			down: voteCount.down || undefined,
 		};
 	}
 
@@ -261,25 +293,21 @@ export class Thought {
 		return res;
 	}
 
-	static async query(thoughtId: string) {
-		const [createDate, authorId, spaceHost] = thoughtId.split('_', 3);
-		// if (authorId) {
-		// 	console.log('createDate, authorId, spaceHost:', createDate, authorId, spaceHost);
-		// }
+	static async query(id: string) {
 		const [row] = await drizzleClient
 			.select()
 			.from(thoughtsTable)
-			.where(Thought.makeIdFilter(+createDate, authorId, spaceHost))
+			.where(Thought.makeIdFilter(id))
 			.limit(1);
 		return row ? new Thought(row) : null;
 	}
 
 	static parseIdFilter(id: string) {
-		const [createDate, authorId, spaceHost] = id.split('_', 3);
-		return Thought.makeIdFilter(+createDate, authorId, spaceHost);
+		return Thought.makeIdFilter(id);
 	}
 
-	static makeIdFilter(createDate: number, authorId: string, spaceHost: string) {
+	static makeIdFilter(id: string) {
+		const [createDate, authorId, spaceHost] = id.split('_', 3);
 		return and(
 			eq(thoughtsTable.createDate, +createDate),
 			authorId //

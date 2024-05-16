@@ -1,4 +1,4 @@
-import { SignedSelf } from '../types/PersonasPolyfill';
+import { Author } from '../types/Author';
 
 export type RootSettings = {
 	testWorkingDirectory: boolean;
@@ -13,19 +13,11 @@ export type WorkingDirectory = {
 export type Space = {
 	host: string;
 	name?: string;
-	hubAddress?: string;
-	faucetAddress?: string;
-	owner?: null | {
-		id: string;
-		name?: string;
-	};
-	fetchedSelf?:
-		| null
-		| (SignedSelf & {
-				addDate: number;
-				addedBy?: {
-					id: string;
-					name?: string;
-				};
-		  });
+	owner?: null | Author;
+	contentLimit?: number;
+	tagLimit?: number;
+	tokenId?: string;
+	downvoteAddress?: string;
+	deletableVotes?: true;
+	fetchedSelf?: null | Author;
 };

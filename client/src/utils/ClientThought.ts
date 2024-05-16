@@ -8,6 +8,11 @@ export type Thought = {
 	parentId?: string;
 	children?: Thought[];
 	filedSaved?: true;
+	votes?: {
+		own?: boolean;
+		up?: number;
+		down?: number;
+	};
 };
 
 export function getThoughtId(thought: Thought) {

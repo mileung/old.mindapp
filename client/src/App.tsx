@@ -17,23 +17,27 @@ import {
 	updateLocalState,
 	useFetchedSpaces,
 	useLocalState,
-	useNames,
+	useAuthors,
 	usePersonas,
 	useRootSettings,
 	useSendMessage,
 	useTagTree,
 	useWorkingDirectory,
+	useGetMnemonic,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
+import { Author } from './types/Author';
+import { tokenNetwork } from './types/TokenNetwork';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
+	const getMnemonic = useGetMnemonic();
 	const [, tagTreeSet] = useTagTree();
 	const [personas, personasSet] = usePersonas();
 	const [fetchedSpaces, fetchedSpacesSet] = useFetchedSpaces();
 	const sendMessage = useSendMessage();
-	const [names, namesSet] = useNames();
+	const [authors, authorsSet] = useAuthors();
 	const [rootSettings, rootSettingsSet] = useRootSettings();
 	const [, workingDirectorySet] = useWorkingDirectory();
 	const themeRef = useRef(localState.theme);
@@ -41,16 +45,17 @@ function App() {
 
 	const updateFetchedSpaces = useCallback(() => {
 		personas[0].spaceHosts.forEach(async (host) => {
+			// console.log('updateFetchedSpaces');
 			if (host && !pinging.current[host]) {
 				pinging.current[host] = true;
 				try {
 					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
 					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
 						from: id,
-						to: buildUrl({ host, path: 'update-space-persona' }),
+						to: buildUrl({ host, path: 'update-space-author' }),
 						joinIfNotInSpace: !!id,
 						getSpaceInfo: true,
-						signedSelf: !id
+						signedAuthor: !id
 							? undefined
 							: {
 									id,
@@ -62,9 +67,7 @@ function App() {
 								},
 					});
 					// console.log('space:', space);
-					if (!id) {
-						space.fetchedSelf = { id: '', writeDate: 0, addDate: 0, signature: `` };
-					}
+					if (!id) space.fetchedSelf = new Author({});
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
 				} catch (error) {
 					console.log('error:', error);
@@ -74,7 +77,23 @@ function App() {
 				}
 			}
 		});
-	}, [personas, sendMessage]);
+	}, [JSON.stringify(personas[0]), sendMessage]);
+
+	useEffect(() => {
+		if (!personas[0].id) return;
+		if (hostedLocally) {
+			ping<TagTree>(
+				makeUrl('receive-blocks'), //
+				post({ personaId: personas[0].id }),
+			).catch((err) => console.error(err));
+		} else {
+			const mnemonic = getMnemonic(personas[0].id);
+			const { walletAddress } = personas[0];
+			if (walletAddress && mnemonic) {
+				tokenNetwork.receiveBlocks(walletAddress, mnemonic);
+			}
+		}
+	}, [personas[0].id]);
 
 	useEffect(() => {
 		// does not exist on older browsers
@@ -115,25 +134,33 @@ function App() {
 			.then((p) => {
 				// console.log('p:', p);
 				personasSet(p);
+				localStateSet((old) => ({ ...old, personas: p }));
 			})
 			.catch((err) => console.error(err));
 	}, [!!rootSettings?.testWorkingDirectory]);
 
+	const runs = useRef(0);
 	useEffect(() => {
 		if (personas) {
+			if (runs.current++ < 0) return;
 			updateFetchedSpaces();
 			if (hostedLocally) {
+				// TODO: Only update the persona that has its name changed?
 				ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
 					.catch((err) => console.error(err));
 			}
-			namesSet((oldDefaultNames) => {
-				const newDefaultNames = { ...oldDefaultNames };
-				personas.forEach((p) => p.id && p.name && (newDefaultNames[p.id] = p.name));
-				return { ...oldDefaultNames, ...newDefaultNames };
-			});
-			localStateSet((old) => ({ ...old, personas }));
 		}
 	}, [JSON.stringify(personas), updateFetchedSpaces]);
+
+	useEffect(() => {
+		authorsSet((old) => {
+			personas.forEach((p) => {
+				if (p.id && p.name) old[p.id] = { ...old[p.id], ...p };
+			});
+			return { ...old };
+		});
+		localStateSet((old) => ({ ...old, personas }));
+	}, [personas]);
 
 	useEffect(() => {
 		localStateSet((old) => ({ ...old, fetchedSpaces }));
@@ -142,10 +169,6 @@ function App() {
 	useEffect(() => {
 		updateLocalState(localState);
 	}, [localState]);
-
-	useEffect(() => {
-		updateFetchedSpaces();
-	}, []);
 
 	return (
 		<main>

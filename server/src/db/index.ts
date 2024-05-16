@@ -8,6 +8,7 @@ import { isDirectory, isFile } from '../utils/files';
 import * as schema from './schema';
 import env from '../utils/env';
 import { eq } from 'drizzle-orm';
+import { Author } from '../types/Author';
 
 const tursoClient = createClient({
 	...(env.TURSO_DATABASE_URL && env.TURSO_AUTH_TOKEN
@@ -92,26 +93,11 @@ export async function setUpLocalDb() {
 }
 
 export async function inGroup(personaId?: string) {
-	if (!personaId) {
-		return undefined;
-	}
+	if (!personaId) return undefined;
 	const result = await drizzleClient
 		.select()
-		.from(schema.personasTable)
-		.where(eq(schema.personasTable.id, personaId))
+		.from(schema.authorsTable)
+		.where(eq(schema.authorsTable.id, personaId))
 		.limit(1);
-
-	return result[0]
-		? {
-				id: result[0].id || undefined,
-				name: result[0].name || undefined,
-				frozen: result[0].frozen || undefined,
-				walletAddress: result[0].walletAddress || undefined,
-				writeDate: result[0].writeDate || undefined,
-				signature: result[0].signature || undefined,
-
-				addDate: result[0].addDate,
-				addedById: result[0].addedById || undefined,
-			}
-		: undefined;
+	return result[0] ? new Author(result[0]).clientProps : undefined;
 }

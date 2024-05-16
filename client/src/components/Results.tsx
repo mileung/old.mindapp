@@ -14,11 +14,12 @@ import {
 	defaultSpaceHost,
 	useActiveSpace,
 	useMentionedThoughts,
-	useNames,
+	useAuthors,
 	usePersonas,
 	useSendMessage,
 } from '../utils/state';
 import { ThoughtWriter } from './ThoughtWriter';
+import { SignedAuthor } from '../types/Author';
 
 const defaultColumnLabels = ['createDate', 'authorId', 'spaceHost', 'content', 'tags', 'parentId'];
 
@@ -36,7 +37,7 @@ export default function Results({
 	const [searchParams, searchParamsSet] = useSearchParams();
 	const sendMessage = useSendMessage();
 	const [personas] = usePersonas();
-	const [names, namesSet] = useNames();
+	const [authors, authorsSet] = useAuthors();
 	const [mentionedThoughts, mentionedThoughtsSet] = useMentionedThoughts();
 	const [queriedThoughtRoot, queriedThoughtRootSet] = useState<null | Thought>(null);
 	const [roots, rootsSet] = useState<(null | Thought)[]>([]);
@@ -70,10 +71,10 @@ export default function Results({
 		pinging.current = true;
 
 		sendMessage<{
-			moreMentions: Record<string, Thought>;
-			moreDefaultNames: Record<string, string>;
+			mentionedThoughts: Record<string, Thought>;
+			authors: Record<string, SignedAuthor>;
 			latestCreateDate: number;
-			moreRoots: Thought[];
+			roots: Thought[];
 		}>({
 			from: personas[0].id,
 			to: buildUrl({ host: activeSpace.host || localApiHost, path: 'get-roots' }),
@@ -87,15 +88,15 @@ export default function Results({
 		})
 			.then((data) => {
 				// console.log('data:', data);
-				namesSet({ ...names, ...data.moreDefaultNames });
-				mentionedThoughtsSet({ ...mentionedThoughts, ...data.moreMentions });
+				authorsSet({ ...authors, ...data.authors });
+				mentionedThoughtsSet({ ...mentionedThoughts, ...data.mentionedThoughts });
 				const rootsPerLoad = freeForm ? 8 : 40;
-				const newRoots = roots.concat(data.moreRoots);
-				data.moreRoots.length < rootsPerLoad && newRoots.push(null);
+				const newRoots = roots.concat(data.roots);
+				data.roots.length < rootsPerLoad && newRoots.push(null);
 				thoughtsBeyond.current = data.latestCreateDate;
 				rootsSet(newRoots);
 
-				data.moreRoots.forEach((root) => {
+				data.roots.forEach((root) => {
 					if (isStringifiedRecord(root.content)) {
 						const newColumnLabels = [...columnLabels];
 						newColumnLabels.unshift(

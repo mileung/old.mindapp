@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Thought, getThoughtId } from '../utils/ClientThought';
 import { copyToClipboardAsync } from '../utils/js';
-import { useFetchedSpaces, useNames, useSavedFileThoughtIds } from '../utils/state';
+import { useFetchedSpaces, useAuthors, useSavedFileThoughtIds } from '../utils/state';
 import { formatTimestamp } from '../utils/time';
 import DeterministicVisualId from './DeterministicVisualId';
 
@@ -16,7 +16,7 @@ export default function ThoughtBlockHeader({
 	parsed: boolean;
 	parsedSet: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-	const [names] = useNames();
+	const [authors] = useAuthors();
 	const [fetchedSpaces] = useFetchedSpaces();
 	const [savedFileThoughtIds, savedFileThoughtIdsSet] = useSavedFileThoughtIds();
 	const thoughtId = useMemo(() => getThoughtId(thought), [thought]);
@@ -45,14 +45,14 @@ export default function ThoughtBlockHeader({
 			<Link
 				target="_blank"
 				to={`/search?${new URLSearchParams({ q: `@${thought.authorId || ''}` }).toString()}`}
-				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${names[thought.authorId || ''] ? '' : 'italic'}`}
+				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={thought.authorId}
 					className="rounded-full overflow-hidden h-3 w-3 mr-1"
 				/>
 				<p className="whitespace-nowrap">
-					{thought.authorId ? names[thought.authorId] || 'No name' : 'Anon'}
+					{thought.authorId ? authors[thought.authorId]?.name || 'No name' : 'Anon'}
 				</p>
 			</Link>
 			<Link

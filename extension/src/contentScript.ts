@@ -1,4 +1,4 @@
-console.log('Mindapp');
+console.log('Mindapp contentScript');
 
 addEventListener('keydown', (e) => {
 	if (

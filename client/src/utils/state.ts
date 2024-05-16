@@ -1,16 +1,21 @@
 import { atom, useAtom } from 'jotai';
 import { useCallback } from 'react';
-import { Persona, SignedSelf, UnsignedSelf, passwords } from '../types/PersonasPolyfill';
+import { Persona, passwords } from '../types/PersonasPolyfill';
 import { Thought } from './ClientThought';
-import { hostedLocally, makeUrl, ping, post } from './api';
+import { hostedLocally, makeUrl, ping, post, testingExternalClientLocally } from './api';
 import { createKeyPair, decrypt, signItem } from './security';
 import { RootSettings, Space, WorkingDirectory } from './settings';
 import { TagTree } from './tags';
 import Ajv from 'ajv';
 import { validateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
+import { SignedAuthor, UnsignedAuthor } from '../types/Author';
 
-export const defaultSpaceHost = hostedLocally ? '' : 'api.mindapp.cc';
+export const defaultSpaceHost = hostedLocally
+	? ''
+	: testingExternalClientLocally
+		? 'localhost:8080'
+		: 'api.mindapp.cc';
 
 export type LocalState = {
 	theme: 'System' | 'Light' | 'Dark';
@@ -44,6 +49,8 @@ if (!ajv.validate(schema, defaultLocalState)) {
 export const getLocalState = () => {
 	const storedLocalState = localStorage.getItem('LocalState');
 	const localState: LocalState = storedLocalState ? JSON.parse(storedLocalState) : {};
+	// console.log('localState:', localState);
+
 	const validLocalState = ajv.validate(schema, localState);
 	// console.log('validLocalState:', validLocalState);
 	// console.log(new Error().stack);
@@ -78,12 +85,21 @@ export const usePersonas = createAtom<Persona[]>(
 				passwords[p.id] = '';
 			}
 		});
-		return arr.map((p) => ({ ...p, locked: passwords[p.id] === undefined }));
+		arr = arr.map((p) => ({ ...p, locked: passwords[p.id] === undefined }));
+		if (arr[0].locked) {
+			arr.unshift(
+				arr.splice(
+					arr.findIndex((p) => !p.id),
+					1,
+				)[0],
+			);
+		}
+		return arr;
 	})(),
 );
 export const useFetchedSpaces = createAtom<Record<string, Space>>(currentLocalState.fetchedSpaces);
 export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
-export const useNames = createAtom<Record<string, string>>({});
+export const useAuthors = createAtom<Record<string, SignedAuthor>>({});
 export const useMentionedThoughts = createAtom<Record<string, Thought>>({});
 export const useRootSettings = createAtom<null | RootSettings>(null);
 export const useWorkingDirectory = createAtom<undefined | null | WorkingDirectory>(undefined);
@@ -131,15 +147,15 @@ export function useGetSignature() {
 	);
 }
 
-export function useGetSignedSelf() {
+export function useGetSignedAuthor() {
 	const getSignature = useGetSignature();
 	return useCallback(
-		async (unsignedSelf: UnsignedSelf) => {
-			const signedSelf: SignedSelf = {
-				...unsignedSelf,
-				signature: (await getSignature(unsignedSelf, unsignedSelf.id))!,
+		async (unsignedAuthor: UnsignedAuthor) => {
+			const signedAuthor: SignedAuthor = {
+				...unsignedAuthor,
+				signature: (await getSignature(unsignedAuthor, unsignedAuthor.id))!,
 			};
-			return signedSelf;
+			return signedAuthor;
 		},
 		[getSignature],
 	);
@@ -167,4 +183,23 @@ export function useActiveSpace() {
 	const [personas] = usePersonas();
 	const [spaces] = useFetchedSpaces();
 	return spaces[personas[0].spaceHosts[0]] || { host: personas[0].spaceHosts[0] };
+}
+
+export function useGetMnemonic() {
+	const [personas] = usePersonas();
+	return useCallback(
+		(personaId: string) => {
+			if (!personaId) return '';
+			if (hostedLocally) throw new Error('Cannot call this');
+			const persona = personas.find((p) => p.id === personaId);
+			if (!persona) throw new Error('Persona not found');
+			if (persona.locked) throw new Error('Persona locked');
+			const decryptedMnemonic = decrypt(persona.encryptedMnemonic!, passwords[persona.id]);
+			if (!validateMnemonic(decryptedMnemonic, wordlist)) {
+				throw new Error('Something went wrong');
+			}
+			return decryptedMnemonic;
+		},
+		[personas],
+	);
 }

@@ -1,9 +1,9 @@
 import { RequestHandler } from 'express';
 import { drizzleClient, inGroup } from '../db';
-import { personasTable } from '../db/schema';
+import { authorsTable } from '../db/schema';
 import env from '../utils/env';
 
-const addSpacePersona: RequestHandler = async (req, res) => {
+const addSpaceAuthor: RequestHandler = async (req, res) => {
 	const { message } = req.body as {
 		message: {
 			from: string;
@@ -18,13 +18,13 @@ const addSpacePersona: RequestHandler = async (req, res) => {
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
-	await drizzleClient.insert(personasTable).values({
+	await drizzleClient.insert(authorsTable).values({
 		id: message.personaId,
-		addedById: message.from,
+		addedById: message.personaId === message.from ? null : message.from,
 		addDate: Date.now(),
 	});
 
 	return res.send({});
 };
 
-export default addSpacePersona;
+export default addSpaceAuthor;

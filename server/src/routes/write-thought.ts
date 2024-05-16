@@ -4,6 +4,8 @@ import { debouncedSnapshot } from '../utils/git';
 import { Personas } from '../types/Personas';
 import env from '../utils/env';
 import { inGroup } from '../db';
+import { second } from '../utils/time';
+import { Author } from '../types/Author';
 
 const writeThought: RequestHandler = async (req, res) => {
 	// return res.send({});
@@ -26,8 +28,11 @@ const writeThought: RequestHandler = async (req, res) => {
 	if (!message.thought.content) {
 		throw new Error('No message.thought.content');
 	}
-	if ((message.thought.content || '').length > 12345) {
+	if (env.CONTENT_LIMIT && (message.thought.content || '').length > env.CONTENT_LIMIT) {
 		throw new Error('message.thought.content exceeds limit');
+	}
+	if (env.TAG_LIMIT && JSON.stringify(message.thought.tags || []).length > env.TAG_LIMIT) {
+		throw new Error('message.thought.tags exceeds limit');
 	}
 	if ((message.thought.authorId || '') !== (message.from || '')) {
 		throw new Error('message.from is not message.thought.authorId');
@@ -58,27 +63,34 @@ const writeThought: RequestHandler = async (req, res) => {
 		newThought.overwrite();
 	} else {
 		const now = Date.now();
-		if (now < message.thought.createDate || now - message.thought.createDate > 10000) {
+		if (now < message.thought.createDate || now - message.thought.createDate > 10 * second) {
 			throw new Error('createDate out of sync');
 		}
 		newThought = new Thought(message.thought, true);
 	}
 
 	const mentionedThoughts: Record<string, Thought> = {};
-	const names: Record<string, string> = {};
-	for (let i = 0; i < newThought.mentionedIds.length; i++) {
-		const id = newThought.mentionedIds[i];
-		const thought = await Thought.query(id);
-		if (thought) {
-			mentionedThoughts[id] = thought;
-			const { authorId, spaceHost } = mentionedThoughts[id];
-			if (!env.GLOBAL_HOST && authorId) {
-				const name = await Personas.getDefaultName(authorId);
-				name && (names[authorId] = name);
-			}
-		}
-	}
-	res.send({ names, mentionedThoughts, thought: newThought.clientProps });
+	const authors: Record<string, Author['clientProps']> = {};
+	const authorIds = new Set<string>();
+	await Promise.all(
+		[...newThought.mentionedIds].map((id) => {
+			return Thought.query(id).then((thought) => {
+				if (thought) {
+					mentionedThoughts[id] = thought;
+					authorIds.add(mentionedThoughts[id].authorId);
+				}
+			});
+		}),
+	);
+
+	authorIds.delete('');
+	await Promise.all(
+		[...authorIds].map((id) => {
+			if (id) return Personas.getAuthor(id).then((a) => a && (authors[id] = a));
+		}),
+	);
+
+	res.send({ authors, mentionedThoughts, thought: newThought.clientProps });
 	debouncedSnapshot();
 };
 
