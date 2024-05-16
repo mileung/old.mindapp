@@ -8,6 +8,8 @@ import TextInput, { useTextInputRef } from '../components/TextInput';
 import { buildUrl, hostedLocally, localApiHost } from '../utils/api';
 import { useFetchedSpaces, usePersonas, useSendMessage } from '../utils/state';
 import { formatTimestamp } from '../utils/time';
+import { Space } from '../utils/settings';
+import { Author } from '../types/Author';
 
 export default function ManageSpaces() {
 	const { spaceHost } = useParams();
@@ -93,10 +95,47 @@ export default function ManageSpaces() {
 							<p className="text-2xl font-semibold">Unable to join {fetchedSpace.host}</p>
 							<Button
 								label="Try again"
-								onClick={() => {
-									const newSpace = { ...fetchedSpaces };
-									delete newSpace[spaceHost!];
-									fetchedSpacesSet(newSpace);
+								onClick={async () => {
+									// TODO: make this and App.tsx simpler
+
+									// fetchedSpacesSet((old) => {
+									// 	delete old[spaceHost!];
+									// 	return { ...old };
+									// });
+
+									if (spaceHost) {
+										try {
+											const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
+											const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
+												from: id,
+												to: buildUrl({ host: spaceHost, path: 'update-space-author' }),
+												joinIfNotInSpace: !!id,
+												getSpaceInfo: true,
+												signedAuthor: !id
+													? undefined
+													: {
+															id,
+															name,
+															frozen,
+															walletAddress,
+															writeDate,
+															signature,
+														},
+											});
+											// console.log('space:', space);
+											if (!id) space.fetchedSelf = new Author({});
+											fetchedSpacesSet((old) => ({
+												...old,
+												[spaceHost]: { host: spaceHost, ...space },
+											}));
+										} catch (error) {
+											console.log('error:', error);
+											fetchedSpacesSet((old) => ({
+												...old,
+												[spaceHost]: { host: spaceHost, fetchedSelf: null },
+											}));
+										}
+									}
 								}}
 							/>
 							<Button
