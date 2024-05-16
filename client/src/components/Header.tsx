@@ -264,7 +264,7 @@ export default function Header() {
 							}}
 						>
 							<DeterministicVisualId
-								input={activeSpace.owner ? activeSpace : undefined}
+								input={activeSpace.owner ? activeSpace : activeSpace.host}
 								className="rounded overflow-hidden h-7 w-7"
 							/>
 						</button>

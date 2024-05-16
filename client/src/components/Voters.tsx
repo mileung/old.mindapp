@@ -75,7 +75,9 @@ export default function Voters({ thoughtId }: { thoughtId: string }) {
 	return (
 		<div className="space-y-1.5 relative">
 			<div className="max-h-60 overflow-scroll" onScroll={handleScroll}>
-				{!votes[0] && <p className="font-semibold mx-1">None</p>}
+				{!votes[0] && (
+					<p className="font-semibold mx-1">{votes[0] === null ? 'None' : 'Loading...'}</p>
+				)}
 				{votes.map((vote, i) => {
 					return (
 						vote && (
