@@ -9,27 +9,25 @@ import {
 	TrashIcon,
 	XMarkIcon,
 } from '@heroicons/react/16/solid';
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccountBlockBlock } from '@vite/vitejs/es5';
+import { ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { tokenNetwork } from '../types/TokenNetwork';
 import { Thought, getThoughtId } from '../utils/ClientThought';
 import { buildUrl, hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { isStringifiedRecord, makeReadable } from '../utils/js';
 import {
 	useActiveSpace,
-	useGetSignature,
 	useAuthors,
+	useGetMnemonic,
+	useGetSignature,
 	usePersonas,
 	useSendMessage,
-	useGetMnemonic,
 } from '../utils/state';
 import { minute, second } from '../utils/time';
 import ContentParser from './ContentParser';
 import ThoughtBlockHeader from './ThoughtBlockHeader';
 import { ThoughtWriter } from './ThoughtWriter';
-import DeterministicVisualId from './DeterministicVisualId';
-import Big from 'big.js';
-import { tokenNetwork } from '../types/TokenNetwork';
-import { AccountBlockBlock } from '@vite/vitejs/distSrc/utils/type';
 import Voters from './Voters';
 
 export default function ThoughtBlock({
@@ -158,7 +156,7 @@ export default function ThoughtBlock({
 					}
 					try {
 						if (hostedLocally) {
-							const { block } = await ping<{ block: AccountBlockBlock }>(
+							const { block } = await ping<{ block: typeof AccountBlockBlock }>(
 								makeUrl('send-token-amount'),
 								post({
 									personaId,

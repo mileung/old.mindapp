@@ -12,12 +12,12 @@ export default {
 	driver: 'turso',
 	dbCredentials: {
 		// @ts-ignore
-		url: process.env.TURSO_DATABASE_URL,
+		// url: process.env.TURSO_DATABASE_URL,
 		// @ts-ignore
-		authToken: process.env.TURSO_AUTH_TOKEN,
+		// authToken: process.env.TURSO_AUTH_TOKEN,
 
 		// url: ':memory:',
-		// url: 'file:./src/db/global-test.db',
+		url: 'file:./src/db/global-test.db',
 		// url: 'file:./src/db/local.db',
 	},
 } satisfies Config;
