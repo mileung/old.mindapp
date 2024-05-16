@@ -55,7 +55,7 @@ export default function Results({
 	}, [roots]);
 
 	const pluggedIn = useMemo(
-		() => !!activeSpace.fetchedSelf || activeSpace.host === defaultSpaceHost,
+		() => activeSpace.fetchedSelf !== null || !activeSpace.host,
 		[activeSpace],
 	);
 
@@ -143,6 +143,10 @@ export default function Results({
 
 	return !pluggedIn ? (
 		<p className="text-xl text-fg2 text-center font-semibold">Couldn't join space </p>
+	) : !roots.length ? (
+		<div className="xy">
+			<p className="text-lg font-semibold">Loading...</p>
+		</div>
 	) : (
 		<div className={`space-y-1.5 relative`}>
 			{queriedThoughtRoot && (

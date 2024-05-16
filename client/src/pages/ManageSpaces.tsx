@@ -143,7 +143,7 @@ export default function ManageSpaces() {
 								<>
 									<LabelVal
 										label="Add date"
-										value={formatTimestamp(fetchedSpace.fetchedSelf.addDate)}
+										value={formatTimestamp(fetchedSpace.fetchedSelf.addDate, false)}
 									/>
 									{/* {fetchedSpace.fetchedSelf.addedBy?.id && (
 										<div className="">
@@ -159,30 +159,32 @@ export default function ManageSpaces() {
 										value={fetchedSpace.fetchedSelf.frozen ? 'True' : 'False'}
 									/>
 									<LabelVal label="Wallet address" value={fetchedSpace.fetchedSelf.walletAddress} />
-									<p className="text-2xl font-semibold mb-1">Danger zone</p>
-									<Button
-										label="Leave space"
-										onClick={async () => {
-											await sendMessage({
-												from: personas[0].id,
-												to: buildUrl({ host: spaceHost, path: 'leave-space' }),
-											});
-											personasSet((old) => {
-												old[0].spaceHosts.splice(
-													old[0].spaceHosts.findIndex((h) => h === spaceHost),
-													1,
-												);
-												return [...old];
-											});
-											fetchedSpacesSet((old) => {
-												delete old[spaceHost!];
-												return { ...old };
-											});
-											navigate('/manage-spaces');
-										}}
-									/>
 								</>
 							)}
+							<p className="text-2xl font-semibold mb-1">Danger zone</p>
+							<Button
+								label="Leave space"
+								onClick={async () => {
+									if (personas[0].id) {
+										await sendMessage({
+											from: personas[0].id,
+											to: buildUrl({ host: spaceHost, path: 'leave-space' }),
+										});
+									}
+									personasSet((old) => {
+										old[0].spaceHosts.splice(
+											old[0].spaceHosts.findIndex((h) => h === spaceHost),
+											1,
+										);
+										return [...old];
+									});
+									fetchedSpacesSet((old) => {
+										delete old[spaceHost!];
+										return { ...old };
+									});
+									navigate('/manage-spaces');
+								}}
+							/>
 						</>
 					)
 				) : (
@@ -226,7 +228,7 @@ export default function ManageSpaces() {
 }
 
 function NameTag({ id, name }: { id?: string; name?: string }) {
-	return !id ? (
+	return id === '' ? (
 		<p className="text-xl text-fg2 font-semibold leading-5">Anon</p>
 	) : (
 		<div className="flex gap-3 mt-1">

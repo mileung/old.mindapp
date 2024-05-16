@@ -160,7 +160,6 @@ function App() {
 			ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
 				.catch((err) => console.error(err));
 		}
-		// api.mindapp.cc
 	}, [personas]);
 
 	useEffect(() => {

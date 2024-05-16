@@ -85,8 +85,8 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 			// console.log('join result:', result);
 		} else throw new Error('Access denied');
 
-		if (space && authorRow?.[0] && message.getSpaceInfo) {
-			space.fetchedSelf = new Author(authorRow[0]).clientProps;
+		if (space && authorRow && message.getSpaceInfo) {
+			space.fetchedSelf = new Author(authorRow).clientProps;
 		}
 	}
 	return res.send({ space });
