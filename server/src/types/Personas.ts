@@ -174,6 +174,7 @@ export class Personas {
 			this.registry[p.id] = {
 				...this.registry[p.id],
 				...author?.clientProps,
+				spaceHosts: p.spaceHosts,
 				id: undefined,
 			};
 		});

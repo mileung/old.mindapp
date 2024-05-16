@@ -144,11 +144,6 @@ function App() {
 		if (personas) {
 			if (runs.current++ < 0) return;
 			updateFetchedSpaces();
-			if (hostedLocally) {
-				// TODO: Only update the persona that has its name changed?
-				ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
-					.catch((err) => console.error(err));
-			}
 		}
 	}, [JSON.stringify(personas), updateFetchedSpaces]);
 
@@ -160,6 +155,12 @@ function App() {
 			return { ...old };
 		});
 		localStateSet((old) => ({ ...old, personas }));
+		if (hostedLocally) {
+			// TODO: Only update the persona that has its name changed?
+			ping(makeUrl('update-personas'), post({ personas: personas.filter((p) => !p.locked) })) //
+				.catch((err) => console.error(err));
+		}
+		// api.mindapp.cc
 	}, [personas]);
 
 	useEffect(() => {
