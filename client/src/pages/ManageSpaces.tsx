@@ -96,6 +96,7 @@ export default function ManageSpaces() {
 							<Button
 								label="Try again"
 								onClick={async () => {
+									navigate('/manage-spaces');
 									// TODO: make this and App.tsx simpler
 
 									// fetchedSpacesSet((old) => {

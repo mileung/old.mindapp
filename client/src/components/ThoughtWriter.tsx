@@ -164,7 +164,7 @@ export const ThoughtWriter = ({
 					post({ thought: message.thought }),
 				)
 					.then((res) => {
-						console.log('res:', res);
+						// console.log('res:', res);
 						ping<TagTree>(makeUrl('get-tag-tree'))
 							.then((data) => tagTreeSet(data))
 							.catch((err) => alert(err));
