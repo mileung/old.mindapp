@@ -29,7 +29,7 @@ export default function Results({
 		tags?: string[];
 		other?: string[];
 		thoughtId?: string;
-		authorId?: string;
+		authorIds?: string[];
 	};
 }) {
 	const activeSpace = useActiveSpace();

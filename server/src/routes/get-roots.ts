@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, like, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, like, lte, or } from 'drizzle-orm';
 import { RequestHandler } from 'express';
 import { drizzleClient, inGroup } from '../db';
 import { thoughtsTable } from '../db/schema';
@@ -9,7 +9,7 @@ import { Author } from '../types/Author';
 
 type ResultsQuery = {
 	thoughtId?: string;
-	authorId?: string;
+	authorIds?: string[];
 	tags?: string[];
 	other?: string[];
 	freeForm: boolean;
@@ -25,7 +25,7 @@ const getRoots: RequestHandler = async (req, res) => {
 			from,
 			query: {
 				thoughtId,
-				authorId,
+				authorIds,
 				tags = [],
 				other = [],
 				freeForm,
@@ -44,8 +44,8 @@ const getRoots: RequestHandler = async (req, res) => {
 
 	const excludeIds = new Set(ignoreRootIds);
 	const roots: Thought['clientProps'][] = [];
-	const mentionedThoughIds = new Set<string>();
-	const authorIds = new Set<string>();
+	const mentionedThoughtIds = new Set<string>();
+	const allAuthorIdsSet = new Set<string>();
 	const mentionedThoughts: Record<string, Thought> = {};
 	const authors: Record<string, Author['clientProps']> = {};
 	let latestCreateDate = oldToNew ? 0 : Number.MAX_SAFE_INTEGER;
@@ -57,8 +57,8 @@ const getRoots: RequestHandler = async (req, res) => {
 
 		const rootThought = await thought.getRootThought();
 		const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand(from);
-		allMentionedIds.forEach((id) => mentionedThoughIds.add(id));
-		allAuthorIds.forEach((id) => authorIds.add(id));
+		allMentionedIds.forEach((id) => mentionedThoughtIds.add(id));
+		allAuthorIds.forEach((id) => allAuthorIdsSet.add(id));
 		roots.push(clientProps);
 	}
 
@@ -69,7 +69,11 @@ const getRoots: RequestHandler = async (req, res) => {
 			.from(thoughtsTable)
 			.where(
 				and(
-					authorId ? eq(thoughtsTable.authorId, authorId) : undefined,
+					or(
+						...(authorIds || []).map((id) =>
+							id ? eq(thoughtsTable.authorId, id) : isNull(thoughtsTable.authorId),
+						),
+					),
 					thoughtId
 						? like(thoughtsTable.content, `%${thoughtId}%`)
 						: or(
@@ -92,8 +96,8 @@ const getRoots: RequestHandler = async (req, res) => {
 				!roots.find((root) => new Thought(root).id === rootThought.id)
 			) {
 				const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand(from);
-				allMentionedIds.forEach((id) => mentionedThoughIds.add(id));
-				allAuthorIds.forEach((id) => authorIds.add(id));
+				allMentionedIds.forEach((id) => mentionedThoughtIds.add(id));
+				allAuthorIds.forEach((id) => allAuthorIdsSet.add(id));
 				roots.push(clientProps);
 			}
 		} else {
@@ -107,19 +111,19 @@ const getRoots: RequestHandler = async (req, res) => {
 	}
 
 	await Promise.all(
-		[...mentionedThoughIds].map((id) => {
+		[...mentionedThoughtIds].map((id) => {
 			return Thought.query(id).then((thought) => {
 				if (thought) {
 					mentionedThoughts[id] = thought;
-					authorIds.add(mentionedThoughts[id].authorId);
+					allAuthorIdsSet.add(mentionedThoughts[id].authorId);
 				}
 			});
 		}),
 	);
 
-	authorIds.delete('');
+	allAuthorIdsSet.delete('');
 	await Promise.all(
-		[...authorIds].map((id) => {
+		[...allAuthorIdsSet].map((id) => {
 			if (id) return Personas.getAuthor(id).then((a) => a && (authors[id] = a));
 		}),
 	);

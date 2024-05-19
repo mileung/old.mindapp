@@ -73,7 +73,7 @@ export default function Header() {
 	const [switchingSpaces, switchingSpacesSet] = useState(false);
 	const [switchingPersonas, switchingPersonasSet] = useState(false);
 	const [searchText, searchTextSet] = useState('');
-	const [tagIndex, tagIndexSet] = useState<number>(0);
+	const [tagIndex, tagIndexSet] = useState<number>(-1);
 	const tags = useMemo(() => getTags(searchText), [searchText]);
 	const tagFilter = useMemo(
 		() => searchText.trim().replace(bracketRegex, '').replace(/\s\s+/g, ' ').trim(),
@@ -177,14 +177,14 @@ export default function Header() {
 								placeholder="Search"
 								onFocus={() => {
 									suggestTagsSet(true);
-									tagIndexSet(0);
+									tagIndexSet(-1);
 								}}
 								onBlur={() => {
 									document.activeElement !== searchBtn.current && suggestTagsSet(false);
 								}}
 								onChange={(e) => {
 									suggestTagsSet(true);
-									tagIndexSet(0);
+									tagIndexSet(-1);
 									searchTextSet(e.target.value);
 								}}
 								onKeyDown={(e) => {
