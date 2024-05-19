@@ -48,6 +48,7 @@ export default function Results({
 	const thoughtsBeyond = useRef(oldToNew ? 0 : Number.MAX_SAFE_INTEGER);
 	const pinging = useRef(false);
 	const rootTextArea = useRef<HTMLTextAreaElement>(null);
+	const boundingDv = useRef<HTMLDivElement>(null);
 	const linkingThoughtId = useRef('');
 
 	useEffect(() => {
@@ -115,8 +116,7 @@ export default function Results({
 		const handleScroll = () => {
 			const scrollPosition = window.innerHeight + window.scrollY;
 			const documentHeight = document.body.offsetHeight;
-
-			if (roots.slice(-1)[0] !== null && scrollPosition >= documentHeight - 100) {
+			if (roots.slice(-1)[0] !== null && scrollPosition >= documentHeight - 500) {
 				if (roots.length !== rootsLengthLastLoad) {
 					rootsLengthLastLoad = roots.length;
 					loadMoreThoughts();
@@ -148,7 +148,17 @@ export default function Results({
 			<p className="text-lg font-semibold">Loading...</p>
 		</div>
 	) : (
-		<div className={`space-y-1.5 relative`}>
+		<div
+			className={`space-y-1.5 relative`}
+			onClick={() => {
+				setTimeout(() => {
+					if (boundingDv.current && boundingDv.current.clientHeight < window.innerHeight + 500) {
+						loadMoreThoughts();
+					}
+				}, 0);
+			}}
+			ref={boundingDv}
+		>
 			{queriedThoughtRoot && (
 				<ThoughtBlock
 					highlightedId={queriedThoughtId}

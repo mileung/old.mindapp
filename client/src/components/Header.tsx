@@ -10,7 +10,7 @@ import {
 import { CogIcon } from '@heroicons/react/24/outline';
 import { matchSorter } from 'match-sorter';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { hostedLocally, localApiHost, makeUrl, ping } from '../utils/api';
 import { shortenString } from '../utils/js';
 import { useKeyPress } from '../utils/keyboard';
@@ -88,10 +88,15 @@ export default function Header() {
 		return arr;
 	}, [nodesArr, suggestTags, tagFilter, lastUsedTags, tags]);
 
+	const location = useLocation();
 	useEffect(() => {
-		searchTextSet((searchedKeywords + ' ').trimStart());
+		if (!searchedKeywords && location.pathname.startsWith('/@')) {
+			searchTextSet(location.pathname.slice(1));
+		} else {
+			searchTextSet((searchedKeywords + ' ').trimStart());
+		}
 		window.scrollTo(0, 0);
-	}, [searchedKeywords]);
+	}, [location, searchedKeywords]);
 
 	useKeyPress(
 		'/',

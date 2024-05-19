@@ -4,6 +4,7 @@ import Results from '../components/Results';
 import { useTagTree } from '../utils/state';
 import { TagTree, bracketRegex, getTags, sortUniArr } from '../utils/tags';
 
+const authorIdsRegex = /@\w*/g;
 const quoteRegex = /"([^"]+)"/g;
 function getQuotes(input: string) {
 	return (input.match(quoteRegex) || []).map((match) => match.slice(1, -1));
@@ -17,6 +18,7 @@ function parseQuery(input: string, tagTree: TagTree) {
 			input
 				.replace(bracketRegex, ' ')
 				.replace(quoteRegex, ' ')
+				.replace(authorIdsRegex, ' ')
 				.split(/\s+/g)
 				.filter((a) => !!a),
 		)
@@ -36,6 +38,7 @@ function parseQuery(input: string, tagTree: TagTree) {
 
 	return {
 		tags: sortUniArr(tags.concat(subTags)),
+		authorIds: input.match(authorIdsRegex)?.map((a) => a.slice(1)),
 		other,
 	};
 }

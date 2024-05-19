@@ -143,17 +143,23 @@ app.use((req, res, next) => {
 	next();
 });
 
-const writeLimiter = rateLimit({
-	windowMs: 10 * minute,
-	max: 20,
-	message: JSON.stringify({ error: 'Too many requests from this IP' }),
-});
+const pass = (req, res, next) => next();
 
-const standardLimiter = rateLimit({
-	windowMs: 10 * minute,
-	max: 100,
-	message: JSON.stringify({ error: 'Too many requests from this IP' }),
-});
+const writeLimiter = env.GLOBAL_HOST
+	? rateLimit({
+			windowMs: 10 * minute,
+			max: 20,
+			message: JSON.stringify({ error: 'Too many requests from this IP' }),
+		})
+	: pass;
+
+const standardLimiter = env.GLOBAL_HOST
+	? rateLimit({
+			windowMs: 10 * minute,
+			max: 100,
+			message: JSON.stringify({ error: 'Too many requests from this IP' }),
+		})
+	: pass;
 
 // Public routes
 app.post('/write-thought', writeLimiter, tryCatch(writeThought));
