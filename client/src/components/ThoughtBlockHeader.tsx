@@ -6,6 +6,7 @@ import { copyToClipboardAsync } from '../utils/js';
 import { useFetchedSpaces, useAuthors, useSavedFileThoughtIds } from '../utils/state';
 import { formatTimestamp } from '../utils/time';
 import DeterministicVisualId from './DeterministicVisualId';
+import { localClientHost } from '../utils/api';
 
 export default function ThoughtBlockHeader({
 	thought,
@@ -24,6 +25,15 @@ export default function ThoughtBlockHeader({
 		() => savedFileThoughtIds[thoughtId],
 		[savedFileThoughtIds[thoughtId]],
 	);
+	const spaceUrl = useMemo(() => {
+		const { protocol, host } = new URL(
+			`http${thought.spaceHost ? 's' : ''}:${thought.spaceHost || localClientHost}`,
+		);
+		const parts = host.split('.').reverse();
+		const tld = parts[0];
+		const sld = parts[1];
+		return `${protocol}//${thought.spaceHost ? `${sld}.${tld}` : localClientHost}/thought/${thoughtId}`;
+	}, [thought]);
 
 	useEffect(() => {
 		// OPTIMIZE: Results component could recursively set this
@@ -55,9 +65,9 @@ export default function ThoughtBlockHeader({
 					{thought.authorId ? authors[thought.authorId]?.name || 'No name' : 'Anon'}
 				</p>
 			</Link>
-			<Link
+			<a
 				target="_blank"
-				to={`/search?${new URLSearchParams({ q: `@${thought.spaceHost || ''}` }).toString()}`}
+				href={spaceUrl}
 				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
@@ -67,7 +77,7 @@ export default function ThoughtBlockHeader({
 				<p className="whitespace-nowrap">
 					{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
 				</p>
-			</Link>
+			</a>
 			<button
 				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
 				onClick={() => copyToClipboardAsync(`${thoughtId}`)}

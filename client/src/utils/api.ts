@@ -1,6 +1,7 @@
-export const hostedLocally = location.host === 'localhost:1000';
-export const testingExternalClientLocally = location.host === 'localhost:1001';
 export const localApiHost = 'localhost:2000';
+export const localClientHost = 'localhost:1000';
+export const hostedLocally = location.host === localClientHost;
+export const testingExternalClientLocally = location.host === 'localhost:1001';
 
 export function makeUrl(path: string, params?: Record<string, any>) {
 	return buildUrl({ path, params });
