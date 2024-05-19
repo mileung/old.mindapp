@@ -11,7 +11,6 @@ import { Thought, getThoughtId } from '../utils/ClientThought';
 import { buildUrl, localApiHost } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
-	defaultSpaceHost,
 	useActiveSpace,
 	useMentionedThoughts,
 	useAuthors,
@@ -30,6 +29,7 @@ export default function Results({
 		tags?: string[];
 		other?: string[];
 		thoughtId?: string;
+		authorId?: string;
 	};
 }) {
 	const activeSpace = useActiveSpace();

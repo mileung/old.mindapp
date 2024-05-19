@@ -44,7 +44,7 @@ export default function ThoughtBlockHeader({
 			</Link>
 			<Link
 				target="_blank"
-				to={`/search?${new URLSearchParams({ q: `@${thought.authorId || ''}` }).toString()}`}
+				to={`/@${thought.authorId || ''}`}
 				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId

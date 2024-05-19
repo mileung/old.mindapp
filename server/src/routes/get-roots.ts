@@ -1,4 +1,4 @@
-import { and, asc, desc, gte, like, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, like, lte, or } from 'drizzle-orm';
 import { RequestHandler } from 'express';
 import { drizzleClient, inGroup } from '../db';
 import { thoughtsTable } from '../db/schema';
@@ -9,6 +9,7 @@ import { Author } from '../types/Author';
 
 type ResultsQuery = {
 	thoughtId?: string;
+	authorId?: string;
 	tags?: string[];
 	other?: string[];
 	freeForm: boolean;
@@ -24,6 +25,7 @@ const getRoots: RequestHandler = async (req, res) => {
 			from,
 			query: {
 				thoughtId,
+				authorId,
 				tags = [],
 				other = [],
 				freeForm,
@@ -67,6 +69,7 @@ const getRoots: RequestHandler = async (req, res) => {
 			.from(thoughtsTable)
 			.where(
 				and(
+					authorId ? eq(thoughtsTable.authorId, authorId) : undefined,
 					thoughtId
 						? like(thoughtsTable.content, `%${thoughtId}%`)
 						: or(

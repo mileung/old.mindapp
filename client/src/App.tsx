@@ -29,6 +29,7 @@ import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
 import { Author } from './types/Author';
 import { tokenNetwork } from './types/TokenNetwork';
+import AuthorId from './pages/AuthorId';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -183,6 +184,7 @@ function App() {
 					<Route path="/Settings" Component={Settings} />
 					<Route path="/unlock/:personaId" Component={UnlockPersona} />
 					<Route path="/thought/:thoughtId" Component={ThoughtId} />
+					<Route path="/:authorId" Component={AuthorId} />
 					<Route path="/*" element={<Navigate replace to="/" />} />
 				</Routes>
 			</BrowserRouter>
