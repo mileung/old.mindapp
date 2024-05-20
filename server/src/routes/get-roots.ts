@@ -7,13 +7,15 @@ import { Thought } from '../types/Thought';
 import env from '../utils/env';
 import { Author } from '../types/Author';
 
-type ResultsQuery = {
+type UrlQuery = {
+	mode: 'new' | 'old' | 'table';
 	thoughtId?: string;
 	authorIds?: string[];
 	tags?: string[];
 	other?: string[];
-	freeForm: boolean;
-	oldToNew: boolean;
+};
+
+type ResultsQuery = UrlQuery & {
 	ignoreRootIds: string[];
 	thoughtsBeyond: number;
 };
@@ -23,16 +25,7 @@ const getRoots: RequestHandler = async (req, res) => {
 	const {
 		message: {
 			from,
-			query: {
-				thoughtId,
-				authorIds,
-				tags = [],
-				other = [],
-				freeForm,
-				oldToNew,
-				ignoreRootIds,
-				thoughtsBeyond,
-			},
+			query: { thoughtId, authorIds, tags = [], other = [], mode, ignoreRootIds, thoughtsBeyond },
 		},
 	} = req.body as { message: { from: string; query: ResultsQuery } };
 
@@ -42,6 +35,8 @@ const getRoots: RequestHandler = async (req, res) => {
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
+	const freeForm = mode !== 'table';
+	const oldToNew = mode === 'old';
 	const excludeIds = new Set(ignoreRootIds);
 	const roots: Thought['clientProps'][] = [];
 	const mentionedThoughtIds = new Set<string>();
@@ -53,7 +48,7 @@ const getRoots: RequestHandler = async (req, res) => {
 
 	if (thoughtId) {
 		const thought = await Thought.query(thoughtId);
-		if (!thought) return res.send({ mentionedThoughts: {}, moreRoots: [] });
+		if (!thought) return res.send({ mentionedThoughts: {}, roots: [] });
 
 		const rootThought = await thought.getRootThought();
 		const { clientProps, allMentionedIds, allAuthorIds } = await rootThought.expand(from);

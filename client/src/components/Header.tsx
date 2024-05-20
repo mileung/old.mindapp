@@ -91,7 +91,8 @@ export default function Header() {
 	const location = useLocation();
 	useEffect(() => {
 		if (!searchedKeywords && location.pathname.startsWith('/@')) {
-			searchTextSet(location.pathname.slice(1));
+			const nextSlashIndex = location.pathname.indexOf('/', 1);
+			searchTextSet(location.pathname.slice(1, nextSlashIndex === -1 ? undefined : nextSlashIndex));
 		} else {
 			searchTextSet((searchedKeywords + ' ').trimStart());
 		}

@@ -27,12 +27,14 @@ export default function ThoughtBlockHeader({
 	);
 	const spaceUrl = useMemo(() => {
 		const { protocol, host } = new URL(
-			`http${thought.spaceHost ? 's' : ''}:${thought.spaceHost || localClientHost}`,
+			`http${thought.spaceHost && !thought.spaceHost.startsWith('localhost') ? 's' : ''}:${thought.spaceHost || localClientHost}`,
 		);
 		const parts = host.split('.').reverse();
 		const tld = parts[0];
 		const sld = parts[1];
-		return `${protocol}//${thought.spaceHost ? `${sld}.${tld}` : localClientHost}/thought/${thoughtId}`;
+		return `${protocol}//${
+			thought.spaceHost && tld && sld ? `${sld}.${tld}` : localClientHost
+		}/${thoughtId}`;
 	}, [thought]);
 
 	useEffect(() => {
@@ -47,7 +49,7 @@ export default function ThoughtBlockHeader({
 		<div className="mr-1 fx gap-2 text-fg2 max-w-full">
 			<Link
 				target="_blank"
-				to={`/thought/${thoughtId}`}
+				to={`/${thoughtId}`}
 				className="text-sm font-bold transition text-fg2 hover:text-fg1"
 			>
 				{formatTimestamp(thought.createDate)}

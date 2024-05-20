@@ -1,35 +1,32 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
-import Home from './pages/Home';
 import ManagePersonas from './pages/ManagePersonas';
 import ManageSpaces from './pages/ManageSpaces';
-import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
-import ThoughtId from './pages/ThoughtId';
 import UnlockPersona from './pages/UnlockPersona';
+import { Author } from './types/Author';
 import { Persona } from './types/PersonasPolyfill';
+import { tokenNetwork } from './types/TokenNetwork';
 import { buildUrl, hostedLocally, makeUrl, ping, post } from './utils/api';
 import { RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
 	getLocalState,
 	updateLocalState,
-	useFetchedSpaces,
-	useLocalState,
 	useAuthors,
+	useFetchedSpaces,
+	useGetMnemonic,
+	useLocalState,
 	usePersonas,
 	useRootSettings,
 	useSendMessage,
 	useTagTree,
 	useWorkingDirectory,
-	useGetMnemonic,
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
-import { Author } from './types/Author';
-import { tokenNetwork } from './types/TokenNetwork';
-import AuthorId from './pages/AuthorId';
+import Results from './pages/Results';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -176,15 +173,12 @@ function App() {
 			<BrowserRouter>
 				<Header />
 				<Routes>
-					<Route path="/" Component={Home} />
-					<Route path="/search" Component={Search} />
+					<Route path="/:idOrMode?/:mode?" Component={Results} />
+					<Route path="/unlock/:personaId" Component={UnlockPersona} />
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />
 					<Route path="/manage-spaces/:spaceHost?" Component={ManageSpaces} />
 					<Route path="/tags/:tag?" Component={Tags} />
 					<Route path="/Settings" Component={Settings} />
-					<Route path="/unlock/:personaId" Component={UnlockPersona} />
-					<Route path="/thought/:thoughtId" Component={ThoughtId} />
-					<Route path="/:authorId" Component={AuthorId} />
 					<Route path="/*" element={<Navigate replace to="/" />} />
 				</Routes>
 			</BrowserRouter>

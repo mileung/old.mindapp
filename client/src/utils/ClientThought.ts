@@ -20,6 +20,6 @@ export function getThoughtId(thought: Thought) {
 }
 
 const thoughtIdRegex = /^\d{9,}_(|[A-HJ-NP-Za-km-z1-9]{9,})_(|[\w:\.-]{3,})$/;
-export function isThoughtId(str: string) {
+export function isThoughtId(str = '') {
 	return thoughtIdRegex.test(str);
 }
