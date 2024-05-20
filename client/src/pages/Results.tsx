@@ -221,7 +221,7 @@ export default function Results() {
 					<p className="text-xl text-fg2 text-center font-semibold">Couldn't join space </p>
 				) : (
 					<div className="space-y-1.5">
-						{!urlQuery && (
+						{pathnameWithoutMode === '/' && (
 							<ThoughtWriter
 								parentRef={rootTextArea}
 								initialContent={queriedThoughtId}
