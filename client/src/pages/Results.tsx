@@ -34,7 +34,7 @@ function isAuthorId(str = '') {
 }
 
 export const modes = ['new', 'old', 'table'];
-const authorIdsRegex = /@\w*/g;
+const authorIdsRegex = /\B@\w*/g;
 const quoteRegex = /"([^"]+)"/g;
 function getQuotes(q: string) {
 	return (q.match(quoteRegex) || []).map((match) => match.slice(1, -1));
@@ -117,6 +117,7 @@ export default function Results() {
 		urlQuery.tags = allTags;
 		return urlQuery;
 	}, [thoughtId, authorId, mode, pathnameWithoutMode, q, tagTree]);
+	// console.log(urlQuery);
 
 	const queriedThoughtId = useMemo(() => urlQuery?.thoughtId, [urlQuery?.thoughtId]);
 	const thoughtsBeyond = useRef(urlQuery.mode === 'old' ? 0 : Number.MAX_SAFE_INTEGER);
