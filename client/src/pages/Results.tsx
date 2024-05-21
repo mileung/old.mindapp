@@ -103,13 +103,14 @@ export default function Results() {
 					.map((s) => s.toLowerCase()),
 			],
 		};
-		const processedTags: Set<string> = new Set();
+		const processedTags: Set<string> = new Set(tags);
 		const allTags = tags;
 		const getSubTags = (tag: string) => {
+			if (!tagTree) return;
 			if (tag && !processedTags.has(tag)) {
 				processedTags.add(tag);
 				allTags.push(tag);
-				(tagTree!.parents[tag] || []).forEach(getSubTags);
+				(tagTree.parents[tag] || []).forEach(getSubTags);
 			}
 		};
 		tags.forEach(getSubTags);
@@ -214,7 +215,11 @@ export default function Results() {
 
 	return (
 		<div className="p-1.5 sm:p-3">
-			{pathnameWithoutMode === '/' || urlQuery.thoughtId || urlQuery.authorIds?.length ? (
+			{pathnameWithoutMode === '/' ||
+			urlQuery.thoughtId ||
+			urlQuery.authorIds?.length ||
+			urlQuery.tags?.length ||
+			urlQuery.other?.length ? (
 				urlQuery &&
 				(!tags.length || tagTree) &&
 				(!pluggedIn ? (
