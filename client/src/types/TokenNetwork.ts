@@ -28,7 +28,7 @@ class TokenNetwork {
 		if (fromAddress !== address) throw new Error('mnemonic did not derive fromAddress');
 		const { unreceived, balance } = await this.getBalanceInfo(fromAddress);
 		if (unreceived.blockCount !== '0') {
-			this.receiveBlocks(fromAddress, privateKey, true);
+			this.receiveBlocks(fromAddress, mnemonic, true);
 		}
 		if (balance.balanceInfoMap) {
 			const tokenBalance = balance.balanceInfoMap[tokenId]?.balance || 0;

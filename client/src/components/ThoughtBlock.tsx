@@ -138,10 +138,13 @@ export default function ThoughtBlock({
 						thoughtId,
 					});
 				}
+				const [createDate, authorId, spaceHost] = thoughtId.split('_', 3);
 				const unsignedVote: UnsignedVote = {
-					voterId: personaId,
+					thoughtCreateDate: +createDate,
+					thoughtAuthorId: authorId,
+					thoughtSpaceHost: spaceHost,
 					up: newVote,
-					thoughtId,
+					voterId: personaId,
 					voteDate: Date.now(),
 				};
 				if (activeSpace.tokenId) {
@@ -483,10 +486,12 @@ function Highlight({
 	);
 }
 type UnsignedVote = {
-	voterId: string;
+	thoughtCreateDate: number;
+	thoughtAuthorId: string;
+	thoughtSpaceHost: string;
 	up: boolean;
-	thoughtId: string;
 	voteDate: number;
+	voterId: string;
 	txHash?: string;
 };
 

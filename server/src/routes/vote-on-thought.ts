@@ -31,7 +31,7 @@ const voteOnThought: RequestHandler = async (req, res) => {
 	const fromAuthor = await inGroup(message.from);
 	if (!fromAuthor) throw new Error('Access denied');
 	if (fromAuthor?.frozen) throw new Error('Frozen persona');
-	const [, toAuthorId] = vote.thoughtId.split('_', 3);
+	const toAuthorId = vote.thoughtAuthorId;
 	const toAuthor = await inGroup(toAuthorId);
 	if (!toAuthor) throw new Error('toAuthor dne');
 
@@ -57,10 +57,9 @@ const voteOnThought: RequestHandler = async (req, res) => {
 			.update(votesTable)
 			.set(vote.dbColumns)
 			.where(
-				and(
-					//
-					eq(votesTable.thoughtId, vote.thoughtId),
-					eq(votesTable.voterId, message.from),
+				Vote.makeVoteFilter(
+					Thought.calcId(vote.thoughtCreateDate, vote.thoughtAuthorId, vote.thoughtSpaceHost),
+					message.from,
 				),
 			);
 		if (!thing.rowsAffected) throw new Error('No vote to replace');

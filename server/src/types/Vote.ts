@@ -1,49 +1,70 @@
 import Ajv from 'ajv';
 import { signItem, verifyItem } from '../utils/security';
+import { and, eq, isNull } from 'drizzle-orm';
+import { thoughtsTable, votesTable } from '../db/schema';
 
 const ajv = new Ajv({ verbose: true });
 
 const schema = {
 	type: 'object',
 	properties: {
-		voterId: { type: 'string' },
+		thoughtCreateDate: { type: 'number' },
+		thoughtAuthorId: { type: 'string' },
+		thoughtSpaceHost: { type: 'string' },
 		up: { type: 'boolean' },
-		thoughtId: { type: 'string' },
 		voteDate: { type: 'number' },
+		voterId: { type: 'string' },
 		txHash: { type: 'string' },
 		signature: { type: 'string' },
 	},
-	required: ['voterId', 'up', 'thoughtId', 'voteDate', 'txHash', 'signature'],
+	required: [
+		'thoughtCreateDate',
+		'thoughtAuthorId',
+		'thoughtSpaceHost',
+		'up',
+		'voteDate',
+		'voterId',
+		'txHash',
+		'signature',
+	],
 	additionalProperties: false,
 };
 
 export class Vote {
-	public voterId: string;
+	public thoughtCreateDate: number;
+	public thoughtAuthorId: string;
+	public thoughtSpaceHost: string;
 	public up: boolean;
-	public thoughtId: string;
 	public voteDate: number;
+	public voterId: string;
 	public txHash: string;
 	public signature: string;
 
 	constructor({
-		voterId,
+		thoughtCreateDate,
+		thoughtAuthorId,
+		thoughtSpaceHost,
 		up,
-		thoughtId,
 		voteDate,
+		voterId,
 		txHash,
 		signature,
 	}: {
-		voterId: string;
-		thoughtId: string;
-		voteDate: number;
+		thoughtCreateDate: number;
+		thoughtAuthorId?: string | null;
+		thoughtSpaceHost?: string | null;
 		up?: boolean | null;
+		voteDate: number;
+		voterId: string;
 		txHash?: string | null;
 		signature?: string | null;
 	}) {
-		this.voterId = voterId;
-		this.thoughtId = thoughtId;
-		this.voteDate = voteDate;
+		this.thoughtCreateDate = thoughtCreateDate;
+		this.thoughtAuthorId = thoughtAuthorId || '';
+		this.thoughtSpaceHost = thoughtSpaceHost || '';
 		this.up = !!up;
+		this.voteDate = voteDate;
+		this.voterId = voterId;
 		this.txHash = txHash || '';
 		this.signature = signature || '';
 		// console.log("this:", this);
@@ -54,10 +75,12 @@ export class Vote {
 
 	get dbColumns() {
 		return {
+			thoughtCreateDate: this.thoughtCreateDate,
+			thoughtAuthorId: this.thoughtAuthorId || null,
+			thoughtSpaceHost: this.thoughtSpaceHost || null,
+			up: this.up || null,
 			voteDate: this.voteDate,
 			voterId: this.voterId,
-			thoughtId: this.thoughtId,
-			up: this.up || null,
 			txHash: this.txHash || null,
 			signature: this.signature,
 		};
@@ -65,10 +88,12 @@ export class Vote {
 
 	get clientProps() {
 		return {
-			voteDate: this.voteDate || undefined,
-			voterId: this.voterId || undefined,
-			thoughtId: this.thoughtId || undefined,
+			thoughtCreateDate: this.thoughtCreateDate,
+			thoughtAuthorId: this.thoughtAuthorId || undefined,
+			thoughtSpaceHost: this.thoughtSpaceHost || undefined,
 			up: this.up || undefined,
+			voteDate: this.voteDate,
+			voterId: this.voterId,
 			txHash: this.txHash || undefined,
 			signature: this.signature || undefined,
 		};
@@ -80,10 +105,12 @@ export class Vote {
 
 	get unsigned() {
 		return {
-			voterId: this.voterId,
+			thoughtCreateDate: this.thoughtCreateDate,
+			thoughtAuthorId: this.thoughtAuthorId,
+			thoughtSpaceHost: this.thoughtSpaceHost,
 			up: this.up,
-			thoughtId: this.thoughtId,
 			voteDate: this.voteDate,
+			voterId: this.voterId,
 			txHash: this.txHash,
 		};
 	}
@@ -96,6 +123,20 @@ export class Vote {
 	sign(privateKey: string) {
 		this.voteDate = Date.now();
 		this.signature = signItem(this.unsigned, privateKey);
+	}
+
+	static makeVoteFilter(thoughtId: string, voterId?: string) {
+		const [createDate, authorId, spaceHost] = thoughtId.split('_', 3);
+		return and(
+			eq(votesTable.thoughtCreateDate, +createDate),
+			authorId //
+				? eq(votesTable.thoughtAuthorId, authorId)
+				: isNull(votesTable.thoughtAuthorId),
+			spaceHost //
+				? eq(votesTable.thoughtSpaceHost, spaceHost)
+				: isNull(votesTable.thoughtSpaceHost),
+			voterId ? eq(votesTable.voterId, voterId) : undefined,
+		);
 	}
 }
 

@@ -11,6 +11,7 @@ import { thoughtsTable, votesTable } from '../db/schema';
 import { and, asc, desc, eq, isNull, like, or, sql } from 'drizzle-orm';
 import env from '../utils/env';
 import { localApiHost } from '../utils/api';
+import { Vote } from './Vote';
 
 const ajv = new Ajv({ verbose: true });
 
@@ -195,19 +196,14 @@ export class Thought {
 				: drizzleClient
 						.select({ up: votesTable.up })
 						.from(votesTable)
-						.where(
-							and(
-								eq(votesTable.thoughtId, this.id),
-								eq(votesTable.voterId, voterId), //
-							),
-						),
+						.where(Vote.makeVoteFilter(this.id, voterId)),
 			drizzleClient
 				.select({
 					up: sql<number>`count(case when up then 1 end)`,
-					down: sql<number>`count(case when not up then 1 end)`,
+					down: sql<number>`count(case when up is null then 1 end)`,
 				})
 				.from(votesTable)
-				.where(eq(votesTable.thoughtId, this.id)),
+				.where(Vote.makeVoteFilter(this.id)),
 		]);
 
 		return {

@@ -56,8 +56,10 @@ export type SelectThought = typeof thoughtsTable.$inferSelect;
 export const votesTable = sqliteTable(
 	'votes',
 	{
+		thoughtCreateDate: integer('thought_create_date').notNull(),
+		thoughtAuthorId: text('thought_author_id'),
+		thoughtSpaceHost: text('thought_space_host'),
 		up: integer('up', { mode: 'boolean' }),
-		thoughtId: text('thought_id').notNull(),
 		voterId: text('voter_id').notNull(),
 		voteDate: integer('vote_date').notNull(),
 		txHash: text('tx_hash').unique(),
@@ -67,10 +69,17 @@ export const votesTable = sqliteTable(
 		return {
 			pkWithCustomName: primaryKey({
 				name: 'id',
-				columns: [table.thoughtId, table.voterId],
+				columns: [
+					table.thoughtCreateDate,
+					table.thoughtAuthorId,
+					table.thoughtSpaceHost,
+					table.voterId,
+				],
 			}),
 			upIdx: index('up_idx').on(table.up),
-			thoughtIdIdx: index('thought_id_idx').on(table.thoughtId),
+			thoughtCreateDateIdx: index('thought_create_date_idx').on(table.thoughtCreateDate),
+			thoughtAuthorIdIdx: index('thought_author_id_idx').on(table.thoughtAuthorId),
+			thoughtSpaceHostIdx: index('thought_space_host_idx').on(table.thoughtSpaceHost),
 			voterIdIdx: index('voter_id_idx').on(table.voterId),
 			voteDateIdx: index('vote_date_idx').on(table.voteDate),
 			txHashIdx: index('tx_hash_idx').on(table.txHash),

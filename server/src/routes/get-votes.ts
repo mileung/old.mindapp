@@ -30,10 +30,7 @@ const getVotes: RequestHandler = async (req, res) => {
 		.select()
 		.from(votesTable)
 		.where(
-			and(
-				eq(votesTable.thoughtId, thoughtId),
-				(oldToNew ? gte : lte)(votesTable.voteDate, votesBeyond),
-			),
+			and(Vote.makeVoteFilter(thoughtId), (oldToNew ? gte : lte)(votesTable.voteDate, votesBeyond)),
 		)
 		.orderBy((oldToNew ? asc : desc)(votesTable.voteDate))
 		.limit(votesPerLoad);
