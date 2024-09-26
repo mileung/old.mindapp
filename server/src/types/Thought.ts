@@ -241,7 +241,8 @@ export class Thought {
 	}
 
 	async hasUserInteraction() {
-		// TODO: check for reactions
+		// TODO: check for votes
+		// const [vote] = await drizzleClient
 		const [childOrMention] = await drizzleClient
 			.select()
 			.from(thoughtsTable)

@@ -85,6 +85,7 @@ export default function UnlockPersona({ manage }: { manage?: boolean }) {
 						label="Password"
 						onSubmit={() => unlockPersona()}
 					/>
+					{/* TODO: Save password checkbox */}
 					<Button label="Unlock persona" onClick={() => unlockPersona()} />
 				</>
 			)}

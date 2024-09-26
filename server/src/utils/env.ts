@@ -7,7 +7,7 @@ const env = {
 	SPACE_NAME: process.env.SPACE_NAME,
 	OWNER_ID: process.env.OWNER_ID,
 	DOWNVOTE_ADDRESS: process.env.DOWNVOTE_ADDRESS,
-	TOKEN_ID: process.env.TOKEN_ID,
+	TOKEN_ID: process.env.TOKEN_ID || '',
 	CONTENT_LIMIT: Number(process.env.CONTENT_LIMIT) || undefined,
 	TAG_LIMIT: Number(process.env.TAG_LIMIT) || undefined,
 	ANYONE_CAN_JOIN: process.env.ANYONE_CAN_JOIN === 'true' || undefined,

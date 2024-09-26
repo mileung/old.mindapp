@@ -1,4 +1,9 @@
-import { CubeIcon, CubeTransparentIcon, FingerPrintIcon } from '@heroicons/react/16/solid';
+import {
+	CubeIcon,
+	CubeTransparentIcon,
+	FingerPrintIcon,
+	PlayCircleIcon,
+} from '@heroicons/react/16/solid';
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Thought, getThoughtId } from '../utils/ClientThought';
@@ -80,6 +85,20 @@ export default function ThoughtBlockHeader({
 					{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
 				</p>
 			</a>
+			{/* <button
+				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+				// TODO: onClick={() => playTextToSpeechAudio()}
+				
+			>
+				<PlayCircleIcon className="absolute h-4 w-4" />
+			</button> */}
+			{/* <button
+				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+				// TODO: onClick={() => Translate()}
+				
+			>
+				<Translate className="absolute h-4 w-4" />
+			</button> */}
 			<button
 				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
 				onClick={() => copyToClipboardAsync(`${thoughtId}`)}

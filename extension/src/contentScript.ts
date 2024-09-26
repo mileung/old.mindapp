@@ -75,7 +75,7 @@ const urlSelectors: Record<
 		const tags = author ? ['YouTube Channel', `YouTube${author}`] : [];
 		return { headline: findLargestText(), tags };
 	},
-	'twitter.com': () => {
+	'x.com': () => {
 		// @ts-ignore
 		const tweetText = document.querySelector('[data-testid="tweetText"]')?.innerText;
 		let author = location.pathname.slice(1);

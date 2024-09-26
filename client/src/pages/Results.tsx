@@ -257,6 +257,16 @@ export default function Results() {
 								}}
 							/>
 						)}
+						{/* TODO: To me (Awaiting interaction) */}
+						{/* TODO: From me (My interactions) */}
+
+						{/* TODO: Pending response */}
+						{/* TODO: Root posts */}
+						{/* TODO: Post replies */}
+						{/* TODO: Strong upvotes */}
+						{/* TODO: Strong downvotes */}
+						{/* TODO: Weak upvotes */}
+						{/* TODO: Weak downvotes */}
 						<div className="fx gap-3">
 							{queriedThoughtId && roots.length > 1 && (
 								<p className="text-xl leading-4 text-fg2 text-center">

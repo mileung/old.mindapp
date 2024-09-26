@@ -353,7 +353,9 @@ export const ThoughtWriter = ({
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
 				{/* <button
-					//  TODO: upload files
+					// TODO: Convert image files into braille ascii art
+					// https://github.com/LachlanArthur/Braille-ASCII-Art
+					// https://lachlanarthur.github.io/Braille-ASCII-Art/
 					className="px-2.5 p-0.5 transition text-fg2 hover:text-fg1"
 					onClick={() => writeThought()}
 				>

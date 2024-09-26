@@ -1,11 +1,11 @@
-import { wallet, WS_RPC, accountBlock, AccountBlockBlock, ViteAPI } from '@vite/vitejs/es5';
+import { wallet, HTTP_RPC, accountBlock, AccountBlockBlock, ViteAPI } from '@vite/vitejs/es5';
 import Big from 'big.js';
 
 class TokenNetwork {
 	public viteApi: typeof ViteAPI;
 
 	constructor() {
-		const rpc = new WS_RPC('wss://node.vite.net/gvite/ws');
+		const rpc = new HTTP_RPC('https://node.vite.net/gvite');
 		this.viteApi = new ViteAPI(rpc, () => {});
 	}
 

@@ -109,6 +109,7 @@ export const useTagTree = createAtom<null | TagTree>(
 	hostedLocally
 		? null
 		: {
+				// TODO: add default tags
 				parents: {},
 				loners: [],
 			},

@@ -40,6 +40,7 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 				owner: !env.OWNER_ID ? null : await inGroup(env.OWNER_ID),
 				tokenId: env.TOKEN_ID,
 				downvoteAddress: env.DOWNVOTE_ADDRESS,
+				// TODO: enforce contentLimit and tagLimit client side
 				contentLimit: env.CONTENT_LIMIT,
 				tagLimit: env.TAG_LIMIT,
 				// env.ANYONE_CAN_JOIN

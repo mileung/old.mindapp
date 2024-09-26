@@ -147,6 +147,10 @@ export default function ThoughtBlock({
 					voterId: personaId,
 					voteDate: Date.now(),
 				};
+				// TODO: If the user has no tokens in their wallet, do a weak vote.
+				// Else do a strong vote
+				// Weak votes are free to make and have 1 chevron colored
+				// Strong votes are backed by 1 $VIBE and have 2 chevrons colored
 				if (activeSpace.tokenId) {
 					if (!walletAddress) return alert('Persona missing walletAddress');
 					const toAddress = newVote
@@ -282,6 +286,7 @@ export default function ThoughtBlock({
 							{(true || activeSpace.host) && (
 								<div className="fx relative">
 									<button
+									// TODO: make click area bigger and overlap with the collapse button.
 										className={`fx h-4 transition hover:text-orange-500 ${upvoted ? 'text-orange-500' : ''}`}
 										onClick={() => debouncedSwitchVote(true)}
 									>

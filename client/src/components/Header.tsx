@@ -405,6 +405,7 @@ export default function Header() {
 									)}
 								</div>
 								<p className="ml-1.5 text-lg font-medium">
+									{/* TODO: Button should say add space or create persona? */}
 									Manage {switchingSpaces ? 'spaces' : 'personas'}
 								</p>
 							</Link>
@@ -443,6 +444,9 @@ export default function Header() {
 							)}
 						</div>
 					)}
+					{/* <div className="">
+					TODO: tag suggestions
+					</div> */}
 				</header>
 			)}
 		</>

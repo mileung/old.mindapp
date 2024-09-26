@@ -175,7 +175,9 @@ function App() {
 				<Routes>
 					<Route path="/:idOrMode?/:mode?" Component={Results} />
 					<Route path="/unlock/:personaId" Component={UnlockPersona} />
+					{/* <Route path="/manage-persona/:personaId?" Component={ManagePersonas} /> */}
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />
+					{/* <Route path="/create-persona" Component={ManagePersonas} /> */}
 					<Route path="/manage-spaces/:spaceHost?" Component={ManageSpaces} />
 					<Route path="/tags/:tag?" Component={Tags} />
 					<Route path="/Settings" Component={Settings} />
@@ -187,3 +189,6 @@ function App() {
 }
 
 export default App;
+
+// TODO: use Progressive Web App (PWA) like gab.com
+// http://localhost:1000/1720557792387__

@@ -10,6 +10,16 @@ import { useKeyPress } from '../utils/keyboard';
 import { matchSorter } from 'match-sorter';
 import InputAutoWidth from '../components/InputAutoWidth';
 
+// TODO: the owner of communal spaces can edit this page
+// Viewers of the space can send their current tag tree and the api returns
+// a more up to date one if necessary. This sounds overly complicated
+// Need to have an easier way
+// How about the default tag tree can be overridden by the client and
+// they can revert back to the default if they want
+// Ya, the owner can switch workspaces for their personal and communal space tag trees and just copy over the tag tree from the test workspace to state.ts
+// For keeping the client tag tree up to date, clients can send a hash of their tag tree to the server
+// and the server will send back an up to date tag tree if the hash of its tag tree doesn't match
+
 export default function Tags() {
 	const navigate = useNavigate();
 	const { tag } = useParams();

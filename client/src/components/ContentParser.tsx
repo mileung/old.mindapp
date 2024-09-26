@@ -36,6 +36,8 @@ export default function ContentParser({
 				return parseMd(str);
 			});
 		}
+
+		// TODO: Just show json in pretty form. screw styling divs
 		const longestKeyLength = Math.max(...Object.keys(content).map((key) => key.length));
 		return (
 			<div className="">
