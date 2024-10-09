@@ -3,6 +3,9 @@ import TagTree from '../types/TagTree';
 import { debouncedSnapshot } from '../utils/git';
 import { shouldBeLoner, sortObjectProps, sortUniArr } from '../utils/tags';
 
+// TODO: the tag tree could just be handled entirely client side
+// Also when you change the name of a child tag, it may leave the new tag name under Loners in the tag-tree
+
 const addTag: RequestHandler = (req, res) => {
 	const tagTree = TagTree.get();
 	const tag = (req.body.tag || '').trim();

@@ -43,9 +43,9 @@ const urlSelectors: Record<
 		const nameTag = document.querySelector(
 			'#upload-info .yt-simple-endpoint.style-scope.yt-formatted-string',
 		);
-		const ppHref = document
-			.querySelector('#owner > ytd-video-owner-renderer > a')!
-			.getAttribute('href');
+		const ppHref = decodeURIComponent(
+			document.querySelector('#owner > ytd-video-owner-renderer > a')!.getAttribute('href')!,
+		);
 
 		const author: string = ppHref?.startsWith('/channel/')
 			? // @ts-ignore
@@ -61,10 +61,9 @@ const urlSelectors: Record<
 		};
 	},
 	'www.youtube.com/playlist': () => {
-		const author: string = document
-			.querySelector('#owner-text > a')!
-			.getAttribute('href')
-			?.slice(1)!;
+		const author: string = decodeURIComponent(
+			document.querySelector('#owner-text > a')!.getAttribute('href')?.slice(1)!,
+		);
 
 		return { headline: findLargestText(), tags: [`YouTube${author}`] };
 	},

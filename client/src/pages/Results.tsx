@@ -67,7 +67,6 @@ export function deconstructPathname(pathname: string) {
 }
 
 export default function Results() {
-	// const [mode, modeSet] = useState<'New' | 'old' | 'Table'>('New');
 	const activeSpace = useActiveSpace();
 	const location = useLocation();
 	const [searchParams, searchParamsSet] = useSearchParams();
@@ -103,21 +102,18 @@ export default function Results() {
 					.map((s) => s.toLowerCase()),
 			],
 		};
-		const processedTags: Set<string> = new Set(tags);
-		const allTags = tags;
+		const allTags: Set<string> = new Set(tags);
 		const getSubTags = (tag: string) => {
 			if (!tagTree) return;
-			if (tag && !processedTags.has(tag)) {
-				processedTags.add(tag);
-				allTags.push(tag);
-				(tagTree.parents[tag] || []).forEach(getSubTags);
-			}
+			(tagTree.parents[tag] || []).forEach((subtag) => {
+				!allTags.has(subtag) && getSubTags(subtag);
+			});
+			tag && allTags.add(tag);
 		};
 		tags.forEach(getSubTags);
-		urlQuery.tags = allTags;
+		urlQuery.tags = [...allTags];
 		return urlQuery;
 	}, [thoughtId, authorId, mode, pathnameWithoutMode, q, tagTree]);
-	// console.log(urlQuery);
 
 	const queriedThoughtId = useMemo(() => urlQuery?.thoughtId, [urlQuery?.thoughtId]);
 	const thoughtsBeyond = useRef(urlQuery.mode === 'old' ? 0 : Number.MAX_SAFE_INTEGER);
@@ -203,12 +199,12 @@ export default function Results() {
 	}, [roots, loadMoreThoughts]);
 
 	useEffect(() => {
-		if (!roots.length && !pinging.current && pluggedIn) {
+		if (tagTree && !roots.length && !pinging.current && pluggedIn) {
 			mentionedThoughtsSet({});
 			thoughtsBeyond.current = urlQuery.mode === 'old' ? 0 : Number.MAX_SAFE_INTEGER;
 			loadMoreThoughts();
 		}
-	}, [urlQuery.mode, roots, pluggedIn, loadMoreThoughts]);
+	}, [tagTree, urlQuery.mode, roots, pluggedIn, loadMoreThoughts]);
 
 	useEffect(() => {
 		rootsSet([]);
@@ -280,7 +276,7 @@ export default function Results() {
 									// [TrophyIcon, 'Top'],
 									[BarsArrowDownIcon, 'New'],
 									[BarsArrowUpIcon, 'Old'],
-									[TableCellsIcon, 'Table'],
+									// [TableCellsIcon, 'Table'],
 								] as const
 							).map(([Icon, label], i) => {
 								const to = `${pathnameWithoutMode}${pathnameWithoutMode === '/' ? '' : '/'}${!i ? '' : label.toLowerCase()}`;

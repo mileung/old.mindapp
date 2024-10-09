@@ -190,18 +190,6 @@ const TagEditor = ({
 				)}
 			</div>
 			<div className="pl-3 border-l-2 border-fg2 w-fit relative">
-				{recTag.subRecTags?.map((subRecTag) => (
-					<TagEditor
-						key={subRecTag.label}
-						subTaggingLineage={subTaggingLineage}
-						parentTag={recTag.label}
-						recTag={subRecTag}
-						onRename={onRename}
-						onLinkClick={onLinkClick}
-						onSubtag={onSubtag}
-						onRemove={onRemove}
-					/>
-				))}
 				{addingSubtag && (
 					<>
 						<InputAutoWidth
@@ -270,6 +258,18 @@ const TagEditor = ({
 						)}
 					</>
 				)}
+				{recTag.subRecTags?.map((subRecTag) => (
+					<TagEditor
+						key={subRecTag.label}
+						subTaggingLineage={subTaggingLineage}
+						parentTag={recTag.label}
+						recTag={subRecTag}
+						onRename={onRename}
+						onLinkClick={onLinkClick}
+						onSubtag={onSubtag}
+						onRemove={onRemove}
+					/>
+				))}
 			</div>
 		</div>
 	);

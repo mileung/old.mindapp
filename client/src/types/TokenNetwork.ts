@@ -56,7 +56,7 @@ class TokenNetwork {
 		if (receivingAddress !== address) throw new Error('mnemonic did not derive receivingAddress');
 		if (!skipBalanceCheck) {
 			const balance = await tokenNetwork.getBalanceInfo(address);
-			if (balance.unreceived.blockCount === '0') return;
+			if (balance.unreceived?.blockCount === '0') return;
 		}
 		const receiveTask = new accountBlock.ReceiveAccountBlockTask({
 			address,
