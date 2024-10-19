@@ -3,6 +3,7 @@ import {
 	// ChatBubbleBottomCenterTextIcon,
 	// ListBulletIcon,
 	PlusIcon,
+	UserPlusIcon,
 	XCircleIcon,
 } from '@heroicons/react/16/solid';
 import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
@@ -75,6 +76,7 @@ export const ThoughtWriter = ({
 	const [tagIndex, tagIndexSet] = useState(0);
 	const [suggestTags, suggestTagsSet] = useState(false);
 	const contentTextArea = parentRef || useRef<null | HTMLTextAreaElement>(null);
+	const tagStuffDiv = useRef<null | HTMLDivElement>(null);
 	const tagIpt = useRef<null | HTMLInputElement>(null);
 	const tagXs = useRef<(null | HTMLButtonElement)[]>([]);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -87,7 +89,17 @@ export const ThoughtWriter = ({
 		arr = [...new Set(arr)].filter((tag) => !tags.includes(tag));
 		return arr;
 	}, [nodesArr, suggestTags, tagFilter, trimmedFilter, lastUsedTags, tags]);
-
+	const defaultValue = useMemo(() => {
+		const initialStuff = initialContent || jsonParam?.initialContent || '';
+		return isStringifiedRecord(initialStuff)
+			? JSON.stringify(JSON.parse(initialStuff), null, 2)
+			: initialStuff;
+	}, []);
+	const makePersonaOnPost = useMemo(
+		// TODO: () => activeSpace.host && !personas[0].id,
+		() => false,
+		[activeSpace, personas[0]],
+	);
 	const addTag = useCallback(
 		(tagToAdd?: string) => {
 			tagToAdd = tagToAdd || suggestedTags[tagIndex] || trimmedFilter;
@@ -103,7 +115,7 @@ export const ThoughtWriter = ({
 	const writeThought = useCallback(
 		async (ctrlKey?: boolean, altKey?: boolean) => {
 			const content = contentTextArea.current!.value;
-			if (!content || !personas || !activeSpace) return;
+			if (!content) return;
 			jsonString && navigate(pathname, { replace: true });
 			contentTextArea.current!.style.height = 'auto';
 			const additionalTag = ((suggestTags && suggestedTags[tagIndex]) || tagFilter).trim();
@@ -186,28 +198,21 @@ export const ThoughtWriter = ({
 			onWrite,
 			tags,
 		],
-	); //
+	);
 
 	useKeyPress(
 		{ key: 'Enter', modifiers: ['Meta', 'Alt', 'Control'] },
 		(e) => {
-			// console.log('e:', e);
 			const focusedOnThoughtWriter =
 				document.activeElement === contentTextArea.current ||
-				document.activeElement === tagIpt.current;
+				document.activeElement === tagIpt.current ||
+				tagXs.current.find((e) => e === document.activeElement);
 			if (focusedOnThoughtWriter) {
 				writeThought(e.ctrlKey, e.altKey);
 			}
 		},
 		[suggestedTags, writeThought],
 	);
-
-	const defaultValue = useMemo(() => {
-		const initialStuff = initialContent || jsonParam?.initialContent || '';
-		return isStringifiedRecord(initialStuff)
-			? JSON.stringify(JSON.parse(initialStuff), null, 2)
-			: initialStuff;
-	}, []);
 
 	return (
 		<div className="w-full flex flex-col">
@@ -244,6 +249,8 @@ export const ThoughtWriter = ({
 			<div className="mt-1 relative">
 				{!!tags.length && (
 					<div
+						tabIndex={-1}
+						ref={tagStuffDiv}
 						className="mb-0.5 fx flex-wrap px-3 py-1 gap-1 rounded-t bg-bg2 text-lg"
 						onClick={() => tagIpt.current!.focus()}
 					>
@@ -325,6 +332,7 @@ export const ThoughtWriter = ({
 					onBlur={() => {
 						setTimeout(() => {
 							if (
+								document.activeElement !== tagStuffDiv.current &&
 								document.activeElement !== tagIpt.current &&
 								!tagSuggestionsRefs.current.find((e) => e === document.activeElement)
 							) {
@@ -334,24 +342,28 @@ export const ThoughtWriter = ({
 						}, 0);
 					}}
 				/>
-				{suggestTags && (
-					<div className="z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow">
-						{suggestedTags.map((tag, i) => {
-							return (
-								<button
-									key={i}
-									ref={(r) => (tagSuggestionsRefs.current[i] = r)}
-									className={`fx px-3 text-nowrap text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
-									onClick={() => addTag(tag)}
-								>
-									{tag}
-								</button>
-							);
-						})}
-					</div>
-				)}
+				<div
+					// Need the ternary "invisible" over `suggestTags && </>` otherwise may get:
+					// Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
+					// When inputting two tags like "Japan", "Physics", then blurring tag input idk y
+					className={`z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow ${suggestTags ? '' : 'invisible'}`}
+				>
+					{suggestedTags.map((tag, i) => {
+						return (
+							<button
+								key={i}
+								ref={(r) => (tagSuggestionsRefs.current[i] = r)}
+								className={`fx px-3 text-nowrap text-xl hover:bg-mg2 ${tagIndex === i ? 'bg-mg2' : 'bg-mg1'}`}
+								onClick={() => addTag(tag)}
+							>
+								{tag}
+							</button>
+						);
+					})}
+				</div>
 			</div>
 			<div className="mt-1 fx justify-end gap-1.5">
+				{/* <p className="">Will post as a random persona</p> */}
 				{/* <button
 					// TODO: Convert image files into braille ascii art
 					// https://github.com/LachlanArthur/Braille-ASCII-Art
@@ -362,10 +374,15 @@ export const ThoughtWriter = ({
 					<ArrowUpOnSquareIcon className="h-6 w-6" />
 				</button> */}
 				<button
-					className="px-2 rounded text-lg font-semibold transition bg-mg1 hover:bg-mg2"
+					// TODO: opacity-50 when no content
+					className="opacity-50 px-2 rounded h-8 w-11 xy font-semibold transition bg-mg1 hover:bg-mg2"
 					onClick={() => writeThought()}
 				>
-					<PlusIcon className="h-7 w-7" />
+					{makePersonaOnPost ? (
+						<UserPlusIcon className="h-6 w-6" />
+					) : (
+						<PlusIcon className="h-7 w-7" />
+					)}
 				</button>
 			</div>
 		</div>

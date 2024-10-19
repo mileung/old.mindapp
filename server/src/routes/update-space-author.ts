@@ -46,6 +46,10 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 				// env.ANYONE_CAN_JOIN
 				// env.ANYONE_CAN_ADD
 				deletableVotes: env.DELETABLE_VOTES,
+				tagTree: {
+					parents: { Country: ['Japan'], Japan: ['Japanese Music'], Music: ['Japanese Music'] },
+					loners: [],
+				},
 				fetchedSelf: fromExistingMember,
 			}
 		: undefined;

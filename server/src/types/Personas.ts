@@ -54,7 +54,7 @@ export class Personas {
 	constructor({ registry = { '': { spaceHosts: [''] } } }: { registry?: Record<string, Persona> }) {
 		if (env.GLOBAL_HOST) throw new Error('Global space cannot use Personas');
 		this.registry = registry;
-		// console.log("this:", this);
+		// console.log('this:', this);
 		if (!ajv.validate(schema, this)) throw new Error('Invalid Personas: ' + JSON.stringify(this));
 	}
 

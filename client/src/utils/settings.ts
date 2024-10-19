@@ -1,4 +1,5 @@
 import { Author } from '../types/Author';
+import { TagTree } from './tags';
 
 export type RootSettings = {
 	testWorkingDirectory: boolean;
@@ -20,4 +21,5 @@ export type Space = {
 	downvoteAddress?: string;
 	deletableVotes?: true;
 	fetchedSelf?: null | Author;
+	tagTree: null | TagTree;
 };

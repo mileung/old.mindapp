@@ -105,15 +105,7 @@ export const useRootSettings = createAtom<null | RootSettings>(null);
 export const useWorkingDirectory = createAtom<undefined | null | WorkingDirectory>(undefined);
 export const useLastUsedTags = createAtom<string[]>([]);
 export const useLocalState = createAtom<LocalState>(currentLocalState);
-export const useTagTree = createAtom<null | TagTree>(
-	hostedLocally
-		? null
-		: {
-				// TODO: add default tags
-				parents: {},
-				loners: [],
-			},
-);
+export const useTagTree = createAtom<null | TagTree>(null);
 
 type Item = string | Record<string, any> | any[];
 export function useGetSignature() {

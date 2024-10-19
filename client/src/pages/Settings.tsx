@@ -2,7 +2,7 @@ import { ArrowTopRightOnSquareIcon } from '@heroicons/react/16/solid';
 import { useCallback, useEffect } from 'react';
 import { hostedLocally, makeUrl, ping, post } from '../utils/api';
 import { RootSettings, WorkingDirectory } from '../utils/settings';
-import { useLocalState, useRootSettings, useWorkingDirectory } from '../utils/state';
+import { useLocalState, usePersonas, useRootSettings, useWorkingDirectory } from '../utils/state';
 import { InputPicker } from '../components/InputPicker';
 import TextInput, { useTextInputRef } from '../components/TextInput';
 
@@ -10,6 +10,7 @@ export default function Settings() {
 	const [localState, localStateSet] = useLocalState();
 	const [rootSettings, rootSettingsSet] = useRootSettings();
 	const [workingDirectory, workingDirectorySet] = useWorkingDirectory();
+	const [personas, personasSet] = usePersonas();
 	const keybaseGitUrlIpt = useTextInputRef();
 
 	const updateRootSettings = useCallback((update: Partial<RootSettings>) => {
@@ -73,6 +74,17 @@ export default function Settings() {
 									// @ts-ignore
 									onSubmit={(mode: 'Default' | 'Test') => {
 										updateRootSettings({ testWorkingDirectory: mode === 'Test' });
+										personasSet((old) => {
+											old.splice(
+												0,
+												0,
+												old.splice(
+													old.findIndex((p) => p.id === ''),
+													1,
+												)[0],
+											);
+											return [...old];
+										});
 									}}
 								/>
 								{workingDirectory?.dirPath && (

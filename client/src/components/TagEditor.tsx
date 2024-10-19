@@ -126,10 +126,12 @@ const TagEditor = ({
 						onKeyDown?.(e);
 						e.key === 'Escape' && editingIpt.current?.blur();
 						const newLabel = editingIpt.current?.value.trim();
-						if (e.key === 'Enter' && newLabel) {
-							if (newLabel === recTag.label && !e.altKey) {
+						if (!newLabel) return;
+						if (e.key === 'Enter') {
+							if (e.altKey) {
 								addingSubtagSet(true);
-							} else {
+							}
+							if (newLabel !== recTag.label) {
 								editingSet(false);
 								defaultLabel.current = newLabel;
 								// editingIpt.current?.blur();

@@ -211,7 +211,7 @@ export default function Results() {
 	}, [location, personas[0].spaceHosts[0]]);
 
 	return (
-		<div className="p-1.5 sm:p-3">
+		<div className="flex-1 p-1.5 sm:p-3">
 			{pathnameWithoutMode === '/' ||
 			urlQuery.thoughtId ||
 			urlQuery.authorIds?.length ||

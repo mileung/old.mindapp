@@ -24,7 +24,6 @@ export default function Tags() {
 	const navigate = useNavigate();
 	const { tag } = useParams();
 	const [tagTree, tagTreeSet] = useTagTree();
-	// let [tagTree, tagTreeSet] = useTagTree();
 	// tagTree = { parents: {}, loners: [] };
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
 	const [parentTagFilter, parentTagFilterSet] = useState('');

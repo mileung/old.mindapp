@@ -189,7 +189,9 @@ export default function ManagePersonas() {
 										/>
 									)}
 									<LabelVal label="Frozen" value={frozen ? 'True' : 'False'} />
-									<LabelVal label="Wallet address" value={persona.walletAddress} />
+									{hostedLocally && (
+										<LabelVal label="Wallet address" value={persona.walletAddress} />
+									)}
 									<p className="text-2xl font-semibold mb-1">Security</p>
 									<Button
 										label={changingPw ? 'Keep password' : 'Change password'}

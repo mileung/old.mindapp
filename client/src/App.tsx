@@ -27,6 +27,8 @@ import {
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
 import Results from './pages/Results';
+import TextInput from './components/TextInput';
+import { Button } from './components/Button';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -67,9 +69,13 @@ function App() {
 					// console.log('space:', space);
 					if (!id) space.fetchedSelf = new Author({});
 					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
+					tagTreeSet(JSON.parse(JSON.stringify(space.tagTree)));
 				} catch (error) {
 					console.log('error:', error);
-					fetchedSpacesSet((old) => ({ ...old, [host]: { host, fetchedSelf: null } }));
+					fetchedSpacesSet((old) => ({
+						...old,
+						[host]: { host, fetchedSelf: null, tagTree: null },
+					}));
 				} finally {
 					setTimeout(() => (pinging.current[host] = false), 0);
 				}
@@ -79,18 +85,18 @@ function App() {
 
 	useEffect(() => {
 		if (!personas[0].id) return;
-		if (hostedLocally) {
-			ping<TagTree>(
-				makeUrl('receive-blocks'), //
-				post({ personaId: personas[0].id }),
-			).catch((err) => console.error(err));
-		} else {
-			const mnemonic = getMnemonic(personas[0].id);
-			const { walletAddress } = personas[0];
-			if (walletAddress && mnemonic) {
-				tokenNetwork.receiveBlocks(walletAddress, mnemonic);
-			}
+		// if (hostedLocally) {
+		// 	ping<TagTree>(
+		// 		makeUrl('receive-blocks'), //
+		// 		post({ personaId: personas[0].id }),
+		// 	).catch((err) => console.error(err));
+		// } else {
+		const mnemonic = getMnemonic(personas[0].id);
+		const { walletAddress } = personas[0];
+		if (walletAddress && mnemonic) {
+			tokenNetwork.receiveBlocks(walletAddress, mnemonic);
 		}
+		// }
 	}, [personas[0].id]);
 
 	useEffect(() => {
@@ -120,21 +126,21 @@ function App() {
 		ping<WorkingDirectory>(makeUrl('get-working-directory'))
 			.then((data) => workingDirectorySet(data))
 			.catch((err) => console.error(err));
-		ping<TagTree>(makeUrl('get-tag-tree'))
-			.then((data) => tagTreeSet(data))
-			.catch((err) => console.error(err));
-		ping<Persona[]>(
-			makeUrl('get-personas'),
-			post({
-				order: getLocalState().personas.map(({ id }) => id),
-			}),
-		)
-			.then((p) => {
-				// console.log('p:', p);
-				personasSet(p);
-				localStateSet((old) => ({ ...old, personas: p }));
-			})
-			.catch((err) => console.error(err));
+		// ping<TagTree>(makeUrl('get-tag-tree'))
+		// 	.then((data) => tagTreeSet(data))
+		// 	.catch((err) => console.error(err));
+		// ping<Persona[]>(
+		// 	makeUrl('get-personas'),
+		// 	post({
+		// 		order: getLocalState().personas.map(({ id }) => id),
+		// 	}),
+		// )
+		// 	.then((p) => {
+		// 		// console.log('p:', p);
+		// 		personasSet(p);
+		// 		localStateSet((old) => ({ ...old, personas: p }));
+		// 	})
+		// 	.catch((err) => console.error(err));
 	}, [!!rootSettings?.testWorkingDirectory]);
 
 	const runs = useRef(0);
@@ -179,8 +185,9 @@ function App() {
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />
 					{/* <Route path="/create-persona" Component={ManagePersonas} /> */}
 					<Route path="/manage-spaces/:spaceHost?" Component={ManageSpaces} />
-					<Route path="/tags/:tag?" Component={Tags} />
-					<Route path="/Settings" Component={Settings} />
+					{hostedLocally && <Route path="/tags/:tag?" Component={Tags} />}
+					<Route path="/settings" Component={Settings} />
+					{hostedLocally && <Route path="/test" Component={Test} />}
 					<Route path="/*" element={<Navigate replace to="/" />} />
 				</Routes>
 			</BrowserRouter>
@@ -192,3 +199,25 @@ export default App;
 
 // TODO: use Progressive Web App (PWA) like gab.com
 // http://localhost:1000/1720557792387__
+
+const Test = () => {
+	// TODO: decide how to simplify the persona creation flow
+	return (
+		<div className="">
+			<p className="">test</p>
+			<form method="post" action="/login">
+				{/* <TextInput required disabled label="Author ID" defaultValue="0xmike" />
+				<TextInput
+					required
+					password
+					label="Mnemonic"
+					defaultValue="century shock into glow color charge"
+				/>
+				<Button label="Next" /> */}
+				<input type="text" name="username" placeholder="Username" />
+				<input type="password" name="password" placeholder="Password" />
+				<button type="submit">Create persona</button>
+			</form>
+		</div>
+	);
+};

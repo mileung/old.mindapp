@@ -41,6 +41,7 @@ export default function ThoughtBlockHeader({
 			thought.spaceHost && tld && sld ? `${sld}.${tld}` : localClientHost
 		}/${thoughtId}`;
 	}, [thought]);
+	const time = useMemo(() => formatTimestamp(thought.createDate), [thought.createDate]);
 
 	useEffect(() => {
 		// OPTIMIZE: Results component could recursively set this
@@ -55,33 +56,33 @@ export default function ThoughtBlockHeader({
 			<Link
 				target="_blank"
 				to={`/${thoughtId}`}
-				className="text-sm font-bold transition text-fg2 hover:text-fg1"
+				className={`${time.length > 9 ? 'truncate' : ''} text-sm font-bold transition text-fg2 hover:text-fg1`}
 			>
-				{formatTimestamp(thought.createDate)}
+				{time}
 			</Link>
 			<Link
 				target="_blank"
 				to={`/@${thought.authorId || ''}`}
-				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
+				className={`truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={thought.authorId}
 					className="rounded-full overflow-hidden h-3 w-3 mr-1"
 				/>
-				<p className="whitespace-nowrap">
+				<p className="whitespace-nowrap truncate">
 					{thought.authorId ? authors[thought.authorId]?.name || 'No name' : 'Anon'}
 				</p>
 			</Link>
 			<a
 				target="_blank"
 				href={spaceUrl}
-				className={`fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
+				className={`truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={fetchedSpaces[thought.spaceHost || '']}
 					className="rounded-sm overflow-hidden h-3 w-3 mr-1"
 				/>
-				<p className="whitespace-nowrap">
+				<p className="whitespace-nowrap truncate">
 					{thought.spaceHost ? fetchedSpaces[thought.spaceHost]?.name || 'No name' : 'Local'}
 				</p>
 			</a>

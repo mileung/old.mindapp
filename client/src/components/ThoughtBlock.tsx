@@ -211,9 +211,9 @@ export default function ThoughtBlock({
 	);
 
 	return (
-		<Highlight on={highlighted} shadow={!depth}>
+		<Highlight on={highlighted} depth={depth}>
 			<div
-				className={`flex rounded ${!depth && !highlighted ? 'shadow' : ''} ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}
+				className={`flex rounded ${!depth ? 'shadow max-w-full' : ''} ${depth % 2 === 0 ? 'bg-bg2' : 'bg-bg1'}`}
 			>
 				<button
 					className="w-5 z-10 fy transition rounded text-fg2 hover:text-fg1 hover:bg-mg2"
@@ -223,7 +223,7 @@ export default function ThoughtBlock({
 						{open ? <MinusIcon className="h-4 w-5" /> : <PlusIcon className="h-4 w-5" />}
 					</div>
 				</button>
-				<div className="mt-0.5 flex-1">
+				<div className="mt-0.5 flex-1 max-w-[calc(100%-1.25rem)]">
 					<ThoughtBlockHeader thought={thought} parsedSet={parsedSet} parsed={parsed} />
 					<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 						{editing ? (
@@ -286,7 +286,7 @@ export default function ThoughtBlock({
 							{(true || activeSpace.host) && (
 								<div className="fx relative">
 									<button
-									// TODO: make click area bigger and overlap with the collapse button.
+										// TODO: make click area bigger and overlap with the collapse button.
 										className={`fx h-4 transition hover:text-orange-500 ${upvoted ? 'text-orange-500' : ''}`}
 										onClick={() => debouncedSwitchVote(true)}
 									>
@@ -461,15 +461,7 @@ export default function ThoughtBlock({
 	);
 }
 
-function Highlight({
-	shadow,
-	on,
-	children,
-}: {
-	shadow: boolean;
-	on: boolean;
-	children: ReactNode;
-}) {
+function Highlight({ depth, on, children }: { depth: number; on: boolean; children: ReactNode }) {
 	const scrolledTo = useRef(false);
 	return on ? (
 		<div
@@ -482,7 +474,7 @@ function Highlight({
 						scrolledTo.current = true;
 					}, 0);
 			}}
-			className={`${shadow && 'shadow'} rounded bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 p-0.5`}
+			className={`${!depth && 'shadow max-w-full'} rounded bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 p-0.5`}
 		>
 			{children}
 		</div>

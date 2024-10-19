@@ -243,9 +243,11 @@ export default function Header() {
 						)}
 					</div>
 					<div className="fx">
-						<Link to="/tags" className="xy w-10 text-fg2 transition hover:text-fg1">
-							<TagIcon className="h-7 w-7" />
-						</Link>
+						{hostedLocally && (
+							<Link to="/tags" className="xy w-10 text-fg2 transition hover:text-fg1">
+								<TagIcon className="h-7 w-7" />
+							</Link>
+						)}
 						<Link
 							ref={gearLnk}
 							to="/settings"

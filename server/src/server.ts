@@ -37,7 +37,6 @@ import { rootSettingsPath, touchIfDne } from './utils/files';
 import { verifyItem } from './utils/security';
 import { minute } from './utils/time';
 import voteOnThought from './routes/vote-on-thought';
-import del from './routes/vote-on-thought';
 import deleteVote from './routes/delete-vote';
 import sendTokenAmount from './routes/send-token-amount';
 import receiveBlocks from './routes/receive-blocks';
