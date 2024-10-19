@@ -133,7 +133,11 @@ export default function ManageSpaces() {
 											console.log('error:', error);
 											fetchedSpacesSet((old) => ({
 												...old,
-												[spaceHost]: { host: spaceHost, fetchedSelf: null },
+												[spaceHost]: {
+													host: spaceHost,
+													fetchedSelf: null,
+													tagTree: { parents: {}, loners: [] },
+												},
 											}));
 										}
 									}
