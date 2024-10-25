@@ -9,11 +9,11 @@ export default function MentionedThought({ thought }: { thought: Thought }) {
 	const [parsed, parsedSet] = useState(true);
 
 	return (
-		<div className={`py-1 px-1.5 border border-mg2 rounded`}>
+		<div className={`my-1 py-1 px-1.5 border border-mg2 rounded`}>
 			<ThoughtBlockHeader thought={thought} parsedSet={parsedSet} parsed={parsed} />
 			{thought.content ? (
 				parsed ? (
-					<ContentParser disableMentions thought={thought} />
+					<ContentParser miniMentions thought={thought} />
 				) : (
 					<p className="whitespace-pre-wrap break-all font-thin font-mono">
 						{isStringifiedRecord(thought.content)

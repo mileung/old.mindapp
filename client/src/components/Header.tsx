@@ -21,6 +21,7 @@ import {
 	useLastUsedTags,
 	usePersonas,
 	useRootSettings,
+	useTagMapOpen,
 	useTagTree,
 } from '../utils/state';
 import { bracketRegex, getNodes, getNodesArr, getTags } from '../utils/tags';
@@ -62,6 +63,7 @@ export default function Header() {
 	const [tagTree] = useTagTree();
 	const [searchParams] = useSearchParams();
 	const [lastUsedTags, lastUsedTagsSet] = useLastUsedTags();
+	const [tagListOpen, tagListOpenSet] = useTagMapOpen();
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchIpt = useRef<HTMLInputElement>(null);
 	const searchBtn = useRef<HTMLButtonElement>(null);
@@ -163,7 +165,9 @@ export default function Header() {
 			{personas && (
 				<header
 					className="z-50 fixed top-0 w-full px-2 sm:px-3 flex justify-between py-1 h-12 transition-opacity bg-bg1"
-					style={{ opacity: 'var(--header-opacity)' }}
+					// Not sure how I feel about this especially now
+					// that the tag map is there
+					// style={{ opacity: 'var(--header-opacity)' }}
 					onMouseMove={() => setGlobalCssVariable('header-opacity', '1')}
 				>
 					<Link to="/" className="fx shrink-0">
@@ -243,11 +247,18 @@ export default function Header() {
 						)}
 					</div>
 					<div className="fx">
-						{hostedLocally && (
+						{/* {hostedLocally ? (
 							<Link to="/tags" className="xy w-10 text-fg2 transition hover:text-fg1">
 								<TagIcon className="h-7 w-7" />
 							</Link>
-						)}
+						) : (
+						)} */}
+						<button
+							className="md:invisible xy w-10 text-fg2 transition hover:text-fg1"
+							onClick={() => tagListOpenSet(!tagListOpen)}
+						>
+							<TagIcon className="h-7 w-7" />
+						</button>
 						<Link
 							ref={gearLnk}
 							to="/settings"
@@ -446,9 +457,6 @@ export default function Header() {
 							)}
 						</div>
 					)}
-					{/* <div className="">
-					TODO: tag suggestions
-					</div> */}
 				</header>
 			)}
 		</>

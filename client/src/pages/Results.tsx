@@ -23,7 +23,7 @@ import {
 } from '../utils/state';
 import { ThoughtWriter } from '../components/ThoughtWriter';
 import { SignedAuthor } from '../types/Author';
-import { bracketRegex, getTags } from '../utils/tags';
+import { bracketRegex, getAllSubTags, getTags } from '../utils/tags';
 
 const defaultColumnLabels = ['createDate', 'authorId', 'spaceHost', 'content', 'tags', 'parentId'];
 
@@ -103,14 +103,13 @@ export default function Results() {
 			],
 		};
 		const allTags: Set<string> = new Set(tags);
-		const getSubTags = (tag: string) => {
+
+		tags.forEach((tag) => {
 			if (!tagTree) return;
-			(tagTree.parents[tag] || []).forEach((subtag) => {
-				!allTags.has(subtag) && getSubTags(subtag);
-			});
-			tag && allTags.add(tag);
-		};
-		tags.forEach(getSubTags);
+			const arr = getAllSubTags(tagTree, tag);
+			arr.forEach((tag) => allTags.add(tag));
+		});
+
 		urlQuery.tags = [...allTags];
 		return urlQuery;
 	}, [thoughtId, authorId, mode, pathnameWithoutMode, q, tagTree]);
@@ -186,7 +185,7 @@ export default function Results() {
 		const handleScroll = () => {
 			const scrollPosition = window.innerHeight + window.scrollY;
 			const documentHeight = document.body.offsetHeight;
-			if (roots.slice(-1)[0] !== null && scrollPosition >= documentHeight - 500) {
+			if (roots.slice(-1)[0] !== null && scrollPosition >= documentHeight - 2000) {
 				if (roots.length !== rootsLengthLastLoad) {
 					rootsLengthLastLoad = roots.length;
 					loadMoreThoughts();
@@ -211,7 +210,7 @@ export default function Results() {
 	}, [location, personas[0].spaceHosts[0]]);
 
 	return (
-		<div className="flex-1 p-1.5 sm:p-3">
+		<div className="flex-1">
 			{pathnameWithoutMode === '/' ||
 			urlQuery.thoughtId ||
 			urlQuery.authorIds?.length ||

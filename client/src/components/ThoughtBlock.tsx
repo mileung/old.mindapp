@@ -219,13 +219,13 @@ export default function ThoughtBlock({
 					className="w-5 z-10 fy transition rounded text-fg2 hover:text-fg1 hover:bg-mg2"
 					onClick={() => openSet(!open)}
 				>
-					<div className="my-0.5">
-						{open ? <MinusIcon className="h-4 w-5" /> : <PlusIcon className="h-4 w-5" />}
+					<div className="my-0.5 h-5 xy">
+						{open ? <MinusIcon className="w-4" /> : <PlusIcon className="w-4" />}
 					</div>
 				</button>
 				<div className="mt-0.5 flex-1 max-w-[calc(100%-1.25rem)]">
 					<ThoughtBlockHeader thought={thought} parsedSet={parsedSet} parsed={parsed} />
-					<div className={`pb-1 pr-1 ${open ? '' : 'hidden'}`}>
+					<div className={`z-10 pb-1 pr-1 ${open ? '' : 'hidden'}`}>
 						{editing ? (
 							<div className="mt-1">
 								<ThoughtWriter
@@ -282,18 +282,18 @@ export default function ThoughtBlock({
 								)}
 							</>
 						)}
-						<div className="mt-2 flex gap-2 text-fg2 max-w-full justify-between">
+						<div className="z-50 mt-2 flex gap-2 text-fg2 max-w-full justify-between">
 							{(true || activeSpace.host) && (
-								<div className="fx relative">
+								<div className="z-20 fx h-4 relative">
 									<button
 										// TODO: make click area bigger and overlap with the collapse button.
-										className={`fx h-4 transition hover:text-orange-500 ${upvoted ? 'text-orange-500' : ''}`}
+										className={`xy -ml-2 h-7 w-7 transition hover:text-orange-500 ${upvoted ? 'text-orange-500' : ''}`}
 										onClick={() => debouncedSwitchVote(true)}
 									>
-										<ChevronDoubleUpIcon className="-ml-1 mr-1 w-5" />
+										<ChevronDoubleUpIcon className="w-5" />
 									</button>
 									<button
-										className="fx"
+										className="fx h-7"
 										ref={votesBtn}
 										onClick={() => showVotersSet(!showVoters)}
 										onBlur={onShowVotersBlur}
@@ -304,10 +304,10 @@ export default function ThoughtBlock({
 										</p>
 									</button>
 									<button
-										className={`fx h-4 transition hover:text-blue-400 ${upvoted === false ? 'text-blue-400' : ''}`}
+										className={`xy -mr-2 h-7 w-7 transition hover:text-blue-400 ${upvoted === false ? 'text-blue-400' : ''}`}
 										onClick={() => debouncedSwitchVote()}
 									>
-										<ChevronDoubleDownIcon className="-mr-1 ml-1 w-5" />
+										<ChevronDoubleDownIcon className="w-5" />
 									</button>
 									{showVoters && (
 										<div
@@ -315,7 +315,7 @@ export default function ThoughtBlock({
 											tabIndex={0}
 											onBlur={onShowVotersBlur}
 											onKeyDown={(e) => e.key === 'Escape' && showVotersSet(false)}
-											className="z-20 absolute top-4 mt-0.5 left-0 w-48 rounded bg-mg1 shadow"
+											className="z-50 absolute top-4 mt-0.5 left-0 w-48 rounded bg-mg1 shadow"
 										>
 											<div className="fx justify-between pl-1">
 												<p className="font-semibold">Voters</p>
@@ -332,12 +332,14 @@ export default function ThoughtBlock({
 									)}
 								</div>
 							)}
-							<button
-								className="flex-1 min-w-4 h-4 fx hover:text-fg1 transition"
-								onClick={() => linkingSet(!linking)}
-							>
-								<ArrowTopRightOnSquareIcon className="absolute rotate-90 w-5" />
-							</button>
+							<div className="flex-1 h-4 fx">
+								<button
+									className="flex-1 min-w-4 h-7 fx hover:text-fg1 transition"
+									onClick={() => linkingSet(!linking)}
+								>
+									<ArrowTopRightOnSquareIcon className="absolute rotate-90 w-5" />
+								</button>
+							</div>
 							<div className="fx gap-1 flex-wrap">{/*  */}</div>
 							{(!personas[0].spaceHosts[0] ||
 								(thought.authorId === personas[0].id &&
@@ -436,7 +438,7 @@ export default function ThoughtBlock({
 							</div>
 						)}
 						{thought.children && (
-							<div className="mt-1 space-y-1">
+							<div className="z-0 mt-1 space-y-1">
 								{thought.children.map(
 									(childThought, i) =>
 										childThought && (

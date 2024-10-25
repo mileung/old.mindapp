@@ -97,6 +97,7 @@ export const usePersonas = createAtom<Persona[]>(
 		return arr;
 	})(),
 );
+export const useTagMapOpen = createAtom<boolean>(false);
 export const useFetchedSpaces = createAtom<Record<string, Space>>(currentLocalState.fetchedSpaces);
 export const useSavedFileThoughtIds = createAtom<Record<string, boolean>>({});
 export const useAuthors = createAtom<Record<string, SignedAuthor>>({});

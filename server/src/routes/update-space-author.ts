@@ -4,14 +4,16 @@ import { SelectPersona, authorsTable } from '../db/schema';
 import env from '../utils/env';
 import { and, eq, lt } from 'drizzle-orm';
 import { Author, SignedAuthor } from '../types/Author';
+import { hashItem } from '../utils/security';
+
+const tagTreeHash = hashItem(env.TAG_TREE);
 
 const updateSpaceAuthor: RequestHandler = async (req, res) => {
 	const { message } = req.body as {
 		message: {
 			from: string;
-			joinIfNotInSpace?: boolean;
-			getSpaceInfo?: boolean;
 			signedAuthor?: SignedAuthor;
+			tagTreeHash?: string;
 		};
 	};
 
@@ -34,25 +36,20 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 	}
 	if (fromExistingMember?.frozen) throw new Error('Frozen persona');
 
-	const space = message.getSpaceInfo
-		? {
-				name: env.SPACE_NAME,
-				owner: !env.OWNER_ID ? null : await inGroup(env.OWNER_ID),
-				tokenId: env.TOKEN_ID,
-				downvoteAddress: env.DOWNVOTE_ADDRESS,
-				// TODO: enforce contentLimit and tagLimit client side
-				contentLimit: env.CONTENT_LIMIT,
-				tagLimit: env.TAG_LIMIT,
-				// env.ANYONE_CAN_JOIN
-				// env.ANYONE_CAN_ADD
-				deletableVotes: env.DELETABLE_VOTES,
-				tagTree: {
-					parents: { Country: ['Japan'], Japan: ['Japanese Music'], Music: ['Japanese Music'] },
-					loners: [],
-				},
-				fetchedSelf: fromExistingMember,
-			}
-		: undefined;
+	const space = {
+		name: env.SPACE_NAME,
+		owner: !env.OWNER_ID ? null : await inGroup(env.OWNER_ID),
+		tokenId: env.TOKEN_ID,
+		downvoteAddress: env.DOWNVOTE_ADDRESS,
+		// TODO: enforce contentLimit and tagLimit client side
+		contentLimit: env.CONTENT_LIMIT,
+		tagLimit: env.TAG_LIMIT,
+		// env.ANYONE_CAN_JOIN
+		// env.ANYONE_CAN_ADD
+		deletableVotes: env.DELETABLE_VOTES,
+		tagTree: tagTreeHash === message.tagTreeHash ? undefined : env.TAG_TREE,
+		fetchedSelf: fromExistingMember,
+	};
 
 	if (author) {
 		let authorRow: undefined | SelectPersona;
@@ -80,7 +77,7 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 						.returning()
 				)[0];
 			}
-		} else if (message.joinIfNotInSpace) {
+		} else if (message.from) {
 			authorRow = (
 				await drizzleClient
 					.insert(authorsTable)
@@ -90,7 +87,7 @@ const updateSpaceAuthor: RequestHandler = async (req, res) => {
 			// console.log('join result:', result);
 		} else throw new Error('Access denied');
 
-		if (space && authorRow && message.getSpaceInfo) {
+		if (space && authorRow) {
 			space.fetchedSelf = new Author(authorRow).clientProps;
 		}
 	}

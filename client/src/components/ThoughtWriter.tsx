@@ -177,9 +177,11 @@ export const ThoughtWriter = ({
 				)
 					.then((res) => {
 						// console.log('res:', res);
-						ping<TagTree>(makeUrl('get-tag-tree'))
-							.then((data) => tagTreeSet(data))
-							.catch((err) => alert(err));
+						if (!activeSpace.host) {
+							ping<TagTree>(makeUrl('get-tag-tree'))
+								.then((data) => tagTreeSet(data))
+								.catch((err) => alert(err));
+						}
 					})
 					.catch((err) => alert(err));
 			}
@@ -375,7 +377,7 @@ export const ThoughtWriter = ({
 				</button> */}
 				<button
 					// TODO: opacity-50 when no content
-					className="opacity-50 px-2 rounded h-8 w-11 xy font-semibold transition bg-mg1 hover:bg-mg2"
+					className="px-2 rounded h-8 w-11 xy font-semibold transition bg-mg1 hover:bg-mg2"
 					onClick={() => writeThought()}
 				>
 					{makePersonaOnPost ? (

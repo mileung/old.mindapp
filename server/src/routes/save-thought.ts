@@ -15,8 +15,7 @@ const saveThought: RequestHandler = async (req, res) => {
 	} else {
 		newThought.write();
 	}
-	addTagsByLabel(newThought.tags);
-
+	addTagsByLabel(newThought.tags.filter((tag) => !tag.includes('@')));
 	res.send({});
 	debouncedSnapshot();
 };

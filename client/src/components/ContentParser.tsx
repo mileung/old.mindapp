@@ -7,10 +7,10 @@ import { useMentionedThoughts } from '../utils/state';
 import { isRecord } from '../utils/js';
 
 export default function ContentParser({
-	disableMentions,
+	miniMentions,
 	thought,
 }: {
-	disableMentions?: boolean;
+	miniMentions?: boolean;
 	thought: Thought;
 }) {
 	const [mentionedThoughts] = useMentionedThoughts();
@@ -25,15 +25,19 @@ export default function ContentParser({
 		if (Array.isArray(content)) {
 			return content.map((str, i) => {
 				if (i % 2) {
-					return disableMentions ? (
+					return miniMentions ? (
 						<MiniMentionedThought key={i} thoughtId={str} />
 					) : mentionedThoughts[str] ? (
 						<MentionedThought key={i} thought={mentionedThoughts[str]} />
 					) : (
-						<p key={i}>{str}</p>
+						// Missing mentioned thought
+						<p className="" key={i}>
+							{str}
+						</p>
 					);
 				}
-				return parseMd(str);
+				// remove the first new line cuz the mentioned thought has block display
+				return parseMd(i ? str.replace(/^\n/, '') : str);
 			});
 		}
 

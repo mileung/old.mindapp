@@ -77,6 +77,6 @@ export function verifyItem(item: Item, publicKey: string, signature?: string) {
 	return isValid;
 }
 
-export function hashString(str: string) {
-	return base58.encode(bufferItem(str));
+export function hashItem(item: Item) {
+	return base58.encode(bufferItem(item));
 }

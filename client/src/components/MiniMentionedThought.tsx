@@ -6,7 +6,7 @@ export default function MiniMentionedThought({ thoughtId }: { thoughtId: string 
 		<Link
 			target="_blank"
 			to={`/${thoughtId}`}
-			className="px-1 border border-mg2 rounded text-sm font-bold transition text-fg2 hover:border-fg1 hover:text-fg1"
+			className="px-1 my-1 w-fit block border-2 border-mg1 rounded text-sm font-bold transition text-fg2 hover:text-fg1 hover:border-mg2"
 		>
 			{formatTimestamp(+thoughtId.substring(0, thoughtId.indexOf('_')))}
 		</Link>

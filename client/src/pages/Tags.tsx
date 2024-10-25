@@ -3,12 +3,21 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLastUsedTags, useTagTree } from '../utils/state';
 import { hostedLocally, makeUrl, ping, post } from '../utils/api';
-import { TagTree, getNodes, getNodesArr, getParentsMap, makeRootTag } from '../utils/tags';
+import {
+	TagTree,
+	getAllSubTags,
+	getNodes,
+	getNodesArr,
+	getParentsMap,
+	makeRootTag,
+	scrubTagTree,
+} from '../utils/tags';
 import TagEditor from '../components/TagEditor';
 import { debounce } from '../utils/performance';
 import { useKeyPress } from '../utils/keyboard';
 import { matchSorter } from 'match-sorter';
 import InputAutoWidth from '../components/InputAutoWidth';
+import { copyToClipboardAsync } from '../utils/js';
 
 // TODO: the owner of communal spaces can edit this page
 // Viewers of the space can send their current tag tree and the api returns
@@ -173,7 +182,7 @@ export default function Tags() {
 
 	const showTagInLeftPanel = useCallback(
 		(tag: string, e?: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-			console.log('tag:', tag);
+			// console.log('tag:', tag);
 			if (e?.metaKey || e?.shiftKey || !suggestedTags || !nodesArr) return;
 			let i = suggestedTags.indexOf(tag);
 			if (i === -1) {
@@ -314,6 +323,17 @@ export default function Tags() {
 									</Link>
 								</React.Fragment>
 							))}
+						<button
+							className="border-t border-mg2 pl-3 text-xl w-full font-medium transition text-fg2 hover:text-fg1"
+							onClick={() => {
+								if (tagTree) {
+									const publicTagTree = scrubTagTree(tagTree);
+									copyToClipboardAsync(JSON.stringify(publicTagTree, null, 2));
+								}
+							}}
+						>
+							Copy public tag tree
+						</button>
 					</div>
 				</div>
 			</div>
@@ -333,7 +353,7 @@ export default function Tags() {
 					</div>
 				) : (
 					<>
-						<div className="mb-1 fx gap-2 pt-0.5">
+						<div className="mb-1 fx flex-wrap gap-2 pt-0.5">
 							{!addingParent ? (
 								<button
 									ref={addParentBtn}
@@ -360,10 +380,10 @@ export default function Tags() {
 										onClick={() => suggestParentTagsSet(true)}
 										value={parentTagFilter}
 										onChange={(e) => {
+											// TODO: why is adding a parent tag ui so slow when typing
 											parentTagSuggestionsRefs.current[0]?.focus();
 											parentTagIpt.current?.focus();
-											parentTagIndexSet(0);
-											suggestParentTagsSet(true);
+											parentTagIndex && parentTagIndexSet(0);
 											parentTagFilterSet(e.target.value);
 										}}
 										onBlur={() => {
@@ -428,7 +448,7 @@ export default function Tags() {
 									<Link
 										key={tag}
 										to={`/tags/${encodeURIComponent(tag)}`}
-										className="text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 text-fg2 border-fg2"
+										className="whitespace-nowrap text-lg font-semibold rounded px-2 border-2 transition hover:text-fg1 text-fg2 border-fg2"
 										onClick={(e) => showTagInLeftPanel(tag, e)}
 									>
 										{tag}

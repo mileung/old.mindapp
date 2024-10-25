@@ -52,18 +52,18 @@ export default function ThoughtBlockHeader({
 	}, []);
 
 	return (
-		<div className="mr-1 fx gap-2 text-fg2 max-w-full">
+		<div className="mr-1 fx h-5 text-fg2 max-w-full">
 			<Link
 				target="_blank"
 				to={`/${thoughtId}`}
-				className={`${time.length > 9 ? 'truncate' : ''} text-sm font-bold transition text-fg2 hover:text-fg1`}
+				className={`${time.length > 9 ? 'truncate' : ''} text-sm font-bold transition text-fg2 hover:text-fg1 px-1 -ml-1 h-6 xy`}
 			>
 				{time}
 			</Link>
 			<Link
 				target="_blank"
 				to={`/@${thought.authorId || ''}`}
-				className={`truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
+				className={`h-6 px-1 truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${authors[thought.authorId || ''] ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={thought.authorId}
@@ -76,7 +76,7 @@ export default function ThoughtBlockHeader({
 			<a
 				target="_blank"
 				href={spaceUrl}
-				className={`truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
+				className={`h-6 px-1 mr-auto truncate fx text-sm font-bold transition text-fg2 hover:text-fg1 ${thought.spaceHost ? '' : 'italic'}`}
 			>
 				<DeterministicVisualId
 					input={fetchedSpaces[thought.spaceHost || '']}
@@ -87,34 +87,36 @@ export default function ThoughtBlockHeader({
 				</p>
 			</a>
 			{/* <button
-				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+				className="h-6 px-1 hover:text-fg1 transition"
 				// TODO: onClick={() => playTextToSpeechAudio()}
-				
+				onClick={() => {
+					// Usage example
+					textToSpeech('Hello, this is a test of text-to-speech functionality.');
+				}}
 			>
-				<PlayCircleIcon className="absolute h-4 w-4" />
+				<PlayCircleIcon className="h-4 w-4" />
 			</button> */}
 			{/* <button
-				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+				className="h-6 px-1 hover:text-fg1 transition"
 				// TODO: onClick={() => Translate()}
 				
 			>
-				<Translate className="absolute h-4 w-4" />
+				<Translate className="h-4 w-4" />
 			</button> */}
 			<button
-				className="ml-auto h-4 w-4 xy hover:text-fg1 transition"
+				className="h-6 px-1 hover:text-fg1 transition"
 				onClick={() => copyToClipboardAsync(`${thoughtId}`)}
 			>
-				<FingerPrintIcon className="absolute h-4 w-4" />
+				<FingerPrintIcon className="h-4 w-4" />
 			</button>
-			<button className="h-4 w-4 xy hover:text-fg1 transition" onClick={() => parsedSet(!parsed)}>
-				{parsed ? (
-					<CubeIcon className="absolute h-4 w-4" />
-				) : (
-					<CubeTransparentIcon className="absolute h-4 w-4" />
-				)}
+			<button
+				className="-mr-1 h-6 px-1 hover:text-fg1 transition"
+				onClick={() => parsedSet(!parsed)}
+			>
+				{parsed ? <CubeIcon className="h-4 w-4" /> : <CubeTransparentIcon className="h-4 w-4" />}
 			</button>
 			{/* <button
-				className="h-4 w-4 xy hover:text-fg1 transition"
+				className="h-6 px-1 hover:text-fg1 transition"
 				onClick={() => {
 					savedFileThoughtIdsSet({ ...savedFileThoughtIds, [thoughtId]: !filedSaved });
 					ping(
@@ -124,11 +126,27 @@ export default function ThoughtBlockHeader({
 				}}
 			>
 				{filedSaved ? (
-					<DocumentCheckIcon className="absolute h-4 w-4" />
+					<DocumentCheckIcon className="h-4 w-4" />
 				) : (
-					<ArrowDownTrayIcon className="absolute h-4 w-4 text-" />
+					<ArrowDownTrayIcon className="h-4 w-4 text-" />
 				)}
 			</button> */}
 		</div>
 	);
+}
+
+function textToSpeech(text: string) {
+	if ('speechSynthesis' in window) {
+		const utterance = new SpeechSynthesisUtterance(text);
+
+		utterance.rate = 1;
+		utterance.pitch = 1;
+		utterance.volume = 1;
+		const voices = window.speechSynthesis.getVoices();
+		utterance.voice = voices[0]; // Choose a specific voice
+		window.speechSynthesis.speak(utterance);
+		console.log('utterance:', utterance);
+	} else {
+		alert('Text-to-speech not supported in this browser.');
+	}
 }

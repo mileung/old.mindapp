@@ -1,19 +1,20 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
+import Home from './pages/Home';
 import ManagePersonas from './pages/ManagePersonas';
 import ManageSpaces from './pages/ManageSpaces';
 import Settings from './pages/Settings';
 import Tags from './pages/Tags';
 import UnlockPersona from './pages/UnlockPersona';
 import { Author } from './types/Author';
-import { Persona } from './types/PersonasPolyfill';
 import { tokenNetwork } from './types/TokenNetwork';
 import { buildUrl, hostedLocally, makeUrl, ping, post } from './utils/api';
+import { hashItem } from './utils/security';
 import { RootSettings, Space, WorkingDirectory } from './utils/settings';
 import {
-	getLocalState,
 	updateLocalState,
+	useActiveSpace,
 	useAuthors,
 	useFetchedSpaces,
 	useGetMnemonic,
@@ -26,9 +27,6 @@ import {
 } from './utils/state';
 import { TagTree } from './utils/tags';
 import { setTheme } from './utils/theme';
-import Results from './pages/Results';
-import TextInput from './components/TextInput';
-import { Button } from './components/Button';
 
 function App() {
 	const [localState, localStateSet] = useLocalState();
@@ -41,62 +39,21 @@ function App() {
 	const [rootSettings, rootSettingsSet] = useRootSettings();
 	const [, workingDirectorySet] = useWorkingDirectory();
 	const themeRef = useRef(localState.theme);
-	const pinging = useRef<Record<string, boolean>>({});
-
-	const updateFetchedSpaces = useCallback(() => {
-		personas[0].spaceHosts.forEach(async (host) => {
-			// console.log('updateFetchedSpaces');
-			if (host && !pinging.current[host]) {
-				pinging.current[host] = true;
-				try {
-					const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
-					const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
-						from: id,
-						to: buildUrl({ host, path: 'update-space-author' }),
-						joinIfNotInSpace: !!id,
-						getSpaceInfo: true,
-						signedAuthor: !id
-							? undefined
-							: {
-									id,
-									name,
-									frozen,
-									walletAddress,
-									writeDate,
-									signature,
-								},
-					});
-					// console.log('space:', space);
-					if (!id) space.fetchedSelf = new Author({});
-					fetchedSpacesSet((old) => ({ ...old, [host]: { host, ...space } }));
-					tagTreeSet(JSON.parse(JSON.stringify(space.tagTree)));
-				} catch (error) {
-					console.log('error:', error);
-					fetchedSpacesSet((old) => ({
-						...old,
-						[host]: { host, fetchedSelf: null, tagTree: null },
-					}));
-				} finally {
-					setTimeout(() => (pinging.current[host] = false), 0);
-				}
-			}
-		});
-	}, [JSON.stringify(personas[0]), sendMessage]);
 
 	useEffect(() => {
 		if (!personas[0].id) return;
-		// if (hostedLocally) {
-		// 	ping<TagTree>(
-		// 		makeUrl('receive-blocks'), //
-		// 		post({ personaId: personas[0].id }),
-		// 	).catch((err) => console.error(err));
-		// } else {
-		const mnemonic = getMnemonic(personas[0].id);
-		const { walletAddress } = personas[0];
-		if (walletAddress && mnemonic) {
-			tokenNetwork.receiveBlocks(walletAddress, mnemonic);
+		if (hostedLocally) {
+			ping<TagTree>(
+				makeUrl('receive-blocks'), //
+				post({ personaId: personas[0].id }),
+			).catch((err) => console.error(err));
+		} else {
+			const mnemonic = getMnemonic(personas[0].id);
+			const { walletAddress } = personas[0];
+			if (walletAddress && mnemonic) {
+				tokenNetwork.receiveBlocks(walletAddress, mnemonic);
+			}
 		}
-		// }
 	}, [personas[0].id]);
 
 	useEffect(() => {
@@ -126,9 +83,6 @@ function App() {
 		ping<WorkingDirectory>(makeUrl('get-working-directory'))
 			.then((data) => workingDirectorySet(data))
 			.catch((err) => console.error(err));
-		// ping<TagTree>(makeUrl('get-tag-tree'))
-		// 	.then((data) => tagTreeSet(data))
-		// 	.catch((err) => console.error(err));
 		// ping<Persona[]>(
 		// 	makeUrl('get-personas'),
 		// 	post({
@@ -143,13 +97,54 @@ function App() {
 		// 	.catch((err) => console.error(err));
 	}, [!!rootSettings?.testWorkingDirectory]);
 
-	const runs = useRef(0);
+	const activeSpace = useActiveSpace();
 	useEffect(() => {
-		if (personas) {
-			if (runs.current++ < 0) return;
-			updateFetchedSpaces();
+		const { host } = activeSpace;
+		const savedTagTree = fetchedSpaces[host].tagTree;
+		savedTagTree && tagTreeSet(savedTagTree);
+		if (!host) {
+			hostedLocally &&
+				ping<TagTree>(makeUrl('get-tag-tree'))
+					.then((data) => tagTreeSet(data))
+					.catch((err) => console.error(err));
+		} else {
+			const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];
+			const tagTreeHash = savedTagTree && hashItem(savedTagTree);
+			sendMessage<{ space: Omit<Space, 'host'> }>({
+				from: id,
+				to: buildUrl({ host, path: 'update-space-author' }),
+				tagTreeHash,
+				signedAuthor: !id
+					? undefined
+					: {
+							id,
+							name,
+							frozen,
+							walletAddress,
+							writeDate,
+							signature,
+						},
+			})
+				.then(({ space }) => {
+					if (!id) space.fetchedSelf = new Author({});
+					fetchedSpacesSet((old) => ({
+						...old,
+						[host]: {
+							...old[host],
+							...space,
+							host,
+						},
+					}));
+					space.tagTree && tagTreeSet(space.tagTree);
+				})
+				.catch((err) => {
+					fetchedSpacesSet((old) => ({
+						...old,
+						[host]: { ...old[host], fetchedSelf: null },
+					}));
+				});
 		}
-	}, [JSON.stringify(personas), updateFetchedSpaces]);
+	}, [activeSpace.host]);
 
 	useEffect(() => {
 		authorsSet((old) => {
@@ -179,7 +174,7 @@ function App() {
 			<BrowserRouter>
 				<Header />
 				<Routes>
-					<Route path="/:idOrMode?/:mode?" Component={Results} />
+					<Route path="/:idOrMode?/:mode?" Component={Home} />
 					<Route path="/unlock/:personaId" Component={UnlockPersona} />
 					{/* <Route path="/manage-persona/:personaId?" Component={ManagePersonas} /> */}
 					<Route path="/manage-personas/:personaId?" Component={ManagePersonas} />

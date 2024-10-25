@@ -110,8 +110,6 @@ export default function ManageSpaces() {
 											const { space } = await sendMessage<{ space: Omit<Space, 'host'> }>({
 												from: id,
 												to: buildUrl({ host: spaceHost, path: 'update-space-author' }),
-												joinIfNotInSpace: !!id,
-												getSpaceInfo: true,
 												signedAuthor: !id
 													? undefined
 													: {
