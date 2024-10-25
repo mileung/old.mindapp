@@ -103,10 +103,7 @@ export default function Home() {
 	);
 
 	return (
-		<div
-			className={`flex p-1.5 sm:p-3 ${tagMapOpen ? '' : ''}`}
-			// className={`flex p-1.5 sm:p-3`}
-		>
+		<div className="flex p-1.5 sm:p-3">
 			<Results />
 			<Drawer isOpen={tagMapOpen} onClose={() => tagMapOpenSet(false)}>
 				{/* <h2 className="text-xl font-bold mb-4">Drawer Content</h2>

@@ -100,7 +100,7 @@ function App() {
 	const activeSpace = useActiveSpace();
 	useEffect(() => {
 		const { host } = activeSpace;
-		const savedTagTree = fetchedSpaces[host].tagTree;
+		const savedTagTree = fetchedSpaces[host]?.tagTree;
 		savedTagTree && tagTreeSet(savedTagTree);
 		if (!host) {
 			hostedLocally &&

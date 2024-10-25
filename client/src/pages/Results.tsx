@@ -210,7 +210,7 @@ export default function Results() {
 	}, [location, personas[0].spaceHosts[0]]);
 
 	return (
-		<div className="flex-1">
+		<div className="flex-1 max-w-full">
 			{pathnameWithoutMode === '/' ||
 			urlQuery.thoughtId ||
 			urlQuery.authorIds?.length ||
