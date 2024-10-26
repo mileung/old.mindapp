@@ -274,7 +274,7 @@ export default function Results() {
 									// [ChatBubbleLeftRightIcon, 'Replies'],
 									// [TrophyIcon, 'Top'],
 									[BarsArrowDownIcon, 'New'],
-									[BarsArrowUpIcon, 'Old'],
+									// [BarsArrowUpIcon, 'Old'],
 									// [TableCellsIcon, 'Table'],
 								] as const
 							).map(([Icon, label], i) => {
@@ -390,6 +390,8 @@ export default function Results() {
 										<p className="text-2xl">Thought not found</p>
 									</div>
 								)}
+								{/* This is for when the initial 8 roots that load don't extend past the bottom of the screen making scrolling impossible */}
+								{roots.length === 8 && <div className="h-screen"></div>}
 								{!queriedThoughtId && roots[0] === null && (
 									<p className="text-2xl text-center">No thoughts found</p>
 								)}

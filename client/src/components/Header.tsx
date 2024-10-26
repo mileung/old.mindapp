@@ -67,7 +67,6 @@ export default function Header() {
 	const searchedKeywords = searchParams.get('q') || '';
 	const searchIpt = useRef<HTMLInputElement>(null);
 	const searchBtn = useRef<HTMLButtonElement>(null);
-	const gearLnk = useRef<HTMLAnchorElement>(null);
 	const spaceBtn = useRef<HTMLButtonElement>(null);
 	const personaBtn = useRef<HTMLButtonElement>(null);
 	const tagSuggestionsRefs = useRef<(null | HTMLButtonElement)[]>([]);
@@ -259,11 +258,7 @@ export default function Header() {
 						>
 							<TagIcon className="h-7 w-7" />
 						</button>
-						<Link
-							ref={gearLnk}
-							to="/settings"
-							className="xy w-10 text-fg2 transition hover:text-fg1"
-						>
+						<Link to="/settings" className="xy w-10 text-fg2 transition hover:text-fg1">
 							<CogIcon className="h-7 w-7" />
 						</Link>
 						<div className="mr-2 border-l-2 border-mg2 h-8"></div>

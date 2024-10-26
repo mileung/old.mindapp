@@ -144,7 +144,7 @@ function App() {
 					}));
 				});
 		}
-	}, [activeSpace.host]);
+	}, [activeSpace.host, personas[0].id]);
 
 	useEffect(() => {
 		authorsSet((old) => {

@@ -348,7 +348,7 @@ export const ThoughtWriter = ({
 					// Need the ternary "invisible" over `suggestTags && </>` otherwise may get:
 					// Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
 					// When inputting two tags like "Japan", "Physics", then blurring tag input idk y
-					className={`z-20 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow ${suggestTags ? '' : 'invisible'}`}
+					className={`z-50 flex flex-col overflow-scroll rounded-b mt-0.5 bg-mg1 absolute w-full max-h-56 shadow ${suggestTags ? '' : 'invisible'}`}
 				>
 					{suggestedTags.map((tag, i) => {
 						return (
