@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import ThoughtBlock from '../components/ThoughtBlock';
 import { Thought, getThoughtId, isThoughtId } from '../utils/ClientThought';
-import { buildUrl, localApiHost } from '../utils/api';
+import { buildUrl, hostedLocally, localApiHost, ping, post } from '../utils/api';
 import { isStringifiedRecord } from '../utils/js';
 import {
 	useActiveSpace,
@@ -175,6 +175,12 @@ export default function Results() {
 						columnLabelsSet(newColumnLabels);
 					}
 				});
+
+				if (hostedLocally) {
+					ping(buildUrl({ host: localApiHost, path: 'save-roots' }), post({ roots: data.roots }))
+						// .then((res) => console.log('res:', res))
+						.catch((err) => alert(err));
+				}
 			})
 			.catch((err) => console.error(err))
 			.finally(() => (pinging.current = false));

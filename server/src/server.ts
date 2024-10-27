@@ -41,6 +41,7 @@ import deleteVote from './routes/delete-vote';
 import sendTokenAmount from './routes/send-token-amount';
 import receiveBlocks from './routes/receive-blocks';
 import getVotes from './routes/get-votes';
+import saveRoots from './routes/save-roots';
 
 const app = express();
 const port = env.GLOBAL_HOST ? 8080 : 2000;
@@ -89,6 +90,7 @@ if (!env.GLOBAL_HOST) {
 	app.get('/show-working-directory', tryCatch(showWorkingDirectory));
 	app.post('/get-signature', tryCatch(getSignature));
 	app.post('/save-thought', tryCatch(saveThought));
+	app.post('/save-roots', tryCatch(saveRoots));
 	app.post('/update-personas', tryCatch(updatePersonas));
 	app.post('/send-token-amount', tryCatch(sendTokenAmount));
 	app.post('/receive-blocks', tryCatch(receiveBlocks));

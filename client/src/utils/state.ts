@@ -107,6 +107,8 @@ export const useWorkingDirectory = createAtom<undefined | null | WorkingDirector
 export const useLastUsedTags = createAtom<string[]>([]);
 export const useLocalState = createAtom<LocalState>(currentLocalState);
 export const useTagTree = createAtom<null | TagTree>(null);
+// TODO: For users hosting mindapp locally, indicate wherever tags are displayed which ones overlap with the local and space tag tree, tags that are specific  to the space, and tags that specific to what's local
+// export const useLocalTagTree = createAtom<null | TagTree>(null);
 
 type Item = string | Record<string, any> | any[];
 export function useGetSignature() {

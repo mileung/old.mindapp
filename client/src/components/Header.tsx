@@ -304,153 +304,161 @@ export default function Header() {
 						</button>
 					</div>
 					{(switchingSpaces || switchingPersonas) && (
-						<div
-							className={`absolute shadow rounded h-fit overflow-hidden top-12 bg-mg1 ${switchingSpaces ? 'right-12' : 'right-2'} mr-0 sm:mr-1`}
-						>
-							<div className="max-h-48 overflow-scroll">
-								{(
-									((switchingSpaces
-										? personas[0].spaceHosts.map((host) => fetchedSpaces[host])
-										: personas) || []) as (Space & Persona)[]
-								).map((thing, i) => {
-									const thingKey = switchingSpaces ? thing?.host : thing.id;
-									const showCheck = !i;
-									return (
-										<div className="flex transition hover:bg-mg2" key={thingKey || i}>
-											<button
-												onMouseDown={(e) => e.preventDefault()}
-												className="w-44 pl-2 h-11 fx"
-												onClick={() => {
-													switchingSpacesSet(false);
-													switchingPersonasSet(false);
-													if (switchingPersonas && thing.id && thing.locked) {
-														return navigate(`/unlock/${thingKey}`);
-													}
-													personasSet((old) => {
-														if (switchingSpaces) {
-															old[0].spaceHosts.splice(
-																0,
-																0,
-																old[0].spaceHosts.splice(
-																	old[0].spaceHosts.findIndex((h) => h === (thing?.host || '')),
-																	1,
-																)[0],
-															);
-														} else {
-															old.splice(
-																0,
-																0,
-																old.splice(
-																	old.findIndex((p) => p.id === thing.id),
-																	1,
-																)[0],
-															);
-														}
-														return [...old];
-													});
-												}}
-											>
-												<DeterministicVisualId
-													input={switchingSpaces ? thing : thingKey}
-													className={`h-6 w-6 overflow-hidden ${switchingSpaces ? 'rounded' : 'rounded-full'}`}
-												/>
-												<div className="flex-1 ml-1.5 truncate">
-													<p
-														className={`max-w-full text-left text-lg font-semibold leading-5  ${!thing?.name && 'text-fg2'} truncate`}
-													>
-														{thing?.name ||
-															(thingKey ? 'No name' : switchingSpaces ? 'Local space' : 'Anon')}
-													</p>
-													<p className="text-left font-mono text-fg2 leading-5 truncate">
-														{switchingSpaces ? thingKey || localApiHost : shortenString(thingKey!)}
-													</p>
-												</div>
-											</button>
-											{!thingKey ? (
-												<div className="w-8 xy">
-													{showCheck && <CheckIcon className="h-5 w-5" />}
-												</div>
-											) : (
-												<Link
-													className="xy w-8 group relative"
-													aria-disabled={!thingKey}
-													to={`/manage-${switchingSpaces ? 'spaces' : 'personas'}/${thingKey}`}
+						<>
+							{/*
+								fragment is needed to avoid crashing 
+								idk y. Without it, refresh the home page, press n, press tab, press f, press enter, switch from anon to a persona and it crashes, unless there's this fragment...
+								*/}
+							<div
+								className={`absolute shadow rounded h-fit overflow-hidden top-12 bg-mg1 ${switchingSpaces ? 'right-12' : 'right-2'} mr-0 sm:mr-1`}
+							>
+								<div className="max-h-48 overflow-scroll">
+									{(
+										((switchingSpaces
+											? personas[0].spaceHosts.map((host) => fetchedSpaces[host])
+											: personas) || []) as (Space & Persona)[]
+									).map((thing, i) => {
+										const thingKey = switchingSpaces ? thing?.host : thing.id;
+										const showCheck = !i;
+										return (
+											<div className="flex transition hover:bg-mg2" key={i}>
+												<button
 													onMouseDown={(e) => e.preventDefault()}
+													className="w-44 pl-2 h-11 fx"
 													onClick={() => {
 														switchingSpacesSet(false);
 														switchingPersonasSet(false);
+														if (switchingPersonas && thing.id && thing.locked) {
+															return navigate(`/unlock/${thingKey}`);
+														}
+														personasSet((old) => {
+															if (switchingSpaces) {
+																old[0].spaceHosts.splice(
+																	0,
+																	0,
+																	old[0].spaceHosts.splice(
+																		old[0].spaceHosts.findIndex((h) => h === (thing?.host || '')),
+																		1,
+																	)[0],
+																);
+															} else {
+																old.splice(
+																	0,
+																	0,
+																	old.splice(
+																		old.findIndex((p) => p.id === thing.id),
+																		1,
+																	)[0],
+																);
+															}
+															return [...old];
+														});
 													}}
 												>
-													{showCheck ? (
-														<CheckIcon className="h-5 w-5" />
-													) : (
-														thing.locked &&
-														switchingPersonas && <LockClosedIcon className="h-4 w-4 text-fg2" />
-													)}
-													<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
-														<EllipsisHorizontalIcon className="h-5 w-5" />
+													<DeterministicVisualId
+														input={switchingSpaces ? thing : thingKey}
+														className={`h-6 w-6 overflow-hidden ${switchingSpaces ? 'rounded' : 'rounded-full'}`}
+													/>
+													<div className="flex-1 ml-1.5 truncate">
+														<p
+															className={`max-w-full text-left text-lg font-semibold leading-5  ${!thing?.name && 'text-fg2'} truncate`}
+														>
+															{thing?.name ||
+																(thingKey ? 'No name' : switchingSpaces ? 'Local space' : 'Anon')}
+														</p>
+														<p className="text-left font-mono text-fg2 leading-5 truncate">
+															{switchingSpaces
+																? thingKey || localApiHost
+																: shortenString(thingKey!)}
+														</p>
 													</div>
-												</Link>
-											)}
-										</div>
-									);
-								})}
-							</div>
-							<Link
-								to={switchingSpaces ? '/manage-spaces' : '/manage-personas'}
-								className="border-t border-mg2 h-10 fx transition hover:bg-mg2 px-2 py-1"
-								onMouseDown={(e) => e.preventDefault()}
-								onClick={() => {
-									switchingSpacesSet(false);
-									switchingPersonasSet(false);
-								}}
-							>
-								<div className="h-6 w-6 xy">
-									{switchingSpaces ? (
-										<Square2StackIcon className="h-6 w-6" />
-									) : (
-										<UserGroupIcon className="h-6 w-6" />
-									)}
+												</button>
+												{!thingKey ? (
+													<div className="w-8 xy">
+														{showCheck && <CheckIcon className="h-5 w-5" />}
+													</div>
+												) : (
+													<Link
+														className="xy w-8 group relative"
+														aria-disabled={!thingKey}
+														to={`/manage-${switchingSpaces ? 'spaces' : 'personas'}/${thingKey}`}
+														onMouseDown={(e) => e.preventDefault()}
+														onClick={() => {
+															switchingSpacesSet(false);
+															switchingPersonasSet(false);
+														}}
+													>
+														{showCheck ? (
+															<CheckIcon className="h-5 w-5" />
+														) : (
+															thing.locked &&
+															switchingPersonas && <LockClosedIcon className="h-4 w-4 text-fg2" />
+														)}
+														<div className="bg-mg2 opacity-0 transition hover:opacity-100 absolute xy inset-0">
+															<EllipsisHorizontalIcon className="h-5 w-5" />
+														</div>
+													</Link>
+												)}
+											</div>
+										);
+									})}
 								</div>
-								<p className="ml-1.5 text-lg font-medium">
-									{/* TODO: Button should say add space or create persona? */}
-									Manage {switchingSpaces ? 'spaces' : 'personas'}
-								</p>
-							</Link>
-							{!switchingSpaces && (
-								<button
-									className="w-full border-t border-mg2 h-10 fx transition hover:bg-mg2 px-2 py-1"
+								<Link
+									to={switchingSpaces ? '/manage-spaces' : '/manage-personas'}
+									className="border-t border-mg2 h-10 fx transition hover:bg-mg2 px-2 py-1"
 									onMouseDown={(e) => e.preventDefault()}
 									onClick={() => {
 										switchingSpacesSet(false);
 										switchingPersonasSet(false);
-										if (hostedLocally) {
-											ping(makeUrl('lock-all-personas')).catch((err) => alert(err));
-										}
-										personasSet((old) => {
-											old.forEach((p) => {
-												if (!!p.id) p.locked = true;
-											});
-											old.splice(
-												0,
-												0,
-												old.splice(
-													old.findIndex((p) => !p.id),
-													1,
-												)[0],
-											);
-											return [...old];
-										});
-										navigate('/');
 									}}
 								>
 									<div className="h-6 w-6 xy">
-										<LockClosedIcon className="h-6 w-6" />
+										{switchingSpaces ? (
+											<Square2StackIcon className="h-6 w-6" />
+										) : (
+											<UserGroupIcon className="h-6 w-6" />
+										)}
 									</div>
-									<p className="ml-1.5 text-lg font-medium">Lock all personas</p>
-								</button>
-							)}
-						</div>
+									<p className="ml-1.5 text-lg font-medium">
+										{/* TODO: Button should say add space or create persona? */}
+										Manage {switchingSpaces ? 'spaces' : 'personas'}
+									</p>
+								</Link>
+								{!switchingSpaces && (
+									<button
+										className="w-full border-t border-mg2 h-10 fx transition hover:bg-mg2 px-2 py-1"
+										onMouseDown={(e) => e.preventDefault()}
+										onClick={() => {
+											switchingSpacesSet(false);
+											switchingPersonasSet(false);
+											if (hostedLocally) {
+												ping(makeUrl('lock-all-personas')).catch((err) => alert(err));
+											}
+											personasSet((old) => {
+												old.forEach((p) => {
+													if (!!p.id) p.locked = true;
+												});
+												old.splice(
+													0,
+													0,
+													old.splice(
+														old.findIndex((p) => !p.id),
+														1,
+													)[0],
+												);
+												return [...old];
+											});
+											navigate('/');
+										}}
+									>
+										<div className="h-6 w-6 xy">
+											<LockClosedIcon className="h-6 w-6" />
+										</div>
+										<p className="ml-1.5 text-lg font-medium">Lock all personas</p>
+									</button>
+								)}
+							</div>
+						</>
 					)}
 				</header>
 			)}

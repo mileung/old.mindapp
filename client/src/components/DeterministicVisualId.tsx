@@ -65,7 +65,7 @@ const stringToColor = (string: string) => {
 const stringToAngle = (string: string) => {
 	let hash = 0;
 	for (let i = 0; i < string.length; i++) {
-		hash = string.charCodeAt(i) + ((hash << 3) - hash);
+		hash = string.charCodeAt(i) + ((hash << 7) - hash);
 		hash = hash & hash;
 	}
 	return `${hash % 360}deg`;

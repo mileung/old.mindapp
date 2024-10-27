@@ -105,7 +105,9 @@ function App() {
 		if (!host) {
 			hostedLocally &&
 				ping<TagTree>(makeUrl('get-tag-tree'))
-					.then((data) => tagTreeSet(data))
+					.then((data) => {
+						tagTreeSet(data);
+					})
 					.catch((err) => console.error(err));
 		} else {
 			const { id, name, frozen, walletAddress, writeDate, signature } = personas[0];

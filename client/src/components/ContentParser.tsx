@@ -95,7 +95,7 @@ function parseMd(text: string) {
 		// console.log('tag:', tag);
 		if (typeof tag === 'string') {
 			return !tag ? null : (
-				<p key={i} className="whitespace-pre-wrap inline font-medium">
+				<p key={i} className="whitespace-pre-wrap break-words inline font-medium">
 					{tag}
 				</p>
 			);

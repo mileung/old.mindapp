@@ -53,14 +53,18 @@ export default function Tags() {
 	const nodes = useMemo(() => tagTree && getNodes(tagTree), [tagTree]);
 	const nodesArr = useMemo(() => nodes && getNodesArr(nodes), [nodes]);
 	const nodesSet = useMemo(() => new Set(nodesArr), [nodesArr]);
+	const trimmedTagFilter = useMemo(() => tagFilter.trim(), [tagFilter]);
 	const tagToAdd = useMemo(
-		() => (nodesSet.has(tagFilter.trim()) ? '' : tagFilter.trim()),
-		[nodesSet, tagFilter],
+		() => (nodesSet.has(trimmedTagFilter) ? '' : trimmedTagFilter),
+		[nodesSet, trimmedTagFilter],
 	);
 	const suggestedTags = useMemo(
 		() =>
-			nodesArr && (tagFilter ? matchSorter(nodesArr, tagFilter).concat(tagToAdd || []) : nodesArr),
-		[nodesArr, tagFilter, tagToAdd],
+			nodesArr &&
+			(trimmedTagFilter
+				? matchSorter(nodesArr, trimmedTagFilter).concat(tagToAdd || [])
+				: nodesArr),
+		[nodesArr, trimmedTagFilter, tagToAdd],
 	);
 	const rootTag = useMemo(() => {
 		return tagTree && suggestedTags && tagIndex !== null
@@ -75,18 +79,11 @@ export default function Tags() {
 	const trimmedParentFilter = useMemo(() => parentTagFilter.trim(), [parentTagFilter]);
 	const suggestedParentTags = useMemo(() => {
 		if (!nodesArr || !suggestParentTags) return [];
-		let arr = matchSorter(nodesArr, parentTagFilter);
+		let arr = matchSorter(nodesArr, trimmedParentFilter);
 		trimmedParentFilter ? arr.push(trimmedParentFilter) : arr.unshift(...lastUsedTags);
 		arr = [...new Set(arr)].filter((tag) => !(rootParents || []).includes(tag));
 		return arr;
-	}, [
-		nodesArr,
-		suggestParentTags,
-		parentTagFilter,
-		trimmedParentFilter,
-		lastUsedTags,
-		rootParents,
-	]);
+	}, [nodesArr, suggestParentTags, trimmedParentFilter, lastUsedTags, rootParents]);
 
 	const replaceTag = useCallback((tag?: string) => {
 		navigate(!tag ? '/tags' : `/tags/${encodeURIComponent(tag)}`, { replace: true });
@@ -115,7 +112,6 @@ export default function Tags() {
 
 	const addRootTag = useCallback(
 		(newTag: string, ctrlKey: boolean, altKey: boolean) => {
-			console.log('hostedLocally:', hostedLocally);
 			if (!hostedLocally) return alert('Run Mindapp locally to edit tags');
 			altKey && tagFilterSet('');
 			subTaggingLineageSet(ctrlKey ? [newTag] : []);

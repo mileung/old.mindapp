@@ -6,7 +6,7 @@ import {
 	UserPlusIcon,
 	XCircleIcon,
 } from '@heroicons/react/16/solid';
-import { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
+import React, { MutableRefObject, useCallback, useMemo, useRef, useState } from 'react';
 import {
 	useTagTree,
 	usePersonas,
@@ -216,6 +216,15 @@ export const ThoughtWriter = ({
 		[suggestedTags, writeThought],
 	);
 
+	useKeyPress(
+		{ key: 'ArrowDown' },
+		(e) => {
+			// TODO: move focus to first thought
+			// Make the ux similar to using VS Code and Markdown
+		},
+		[suggestedTags, writeThought],
+	);
+
 	return (
 		<div className="w-full flex flex-col">
 			<TextareaAutoHeight
@@ -257,42 +266,44 @@ export const ThoughtWriter = ({
 						onClick={() => tagIpt.current!.focus()}
 					>
 						{tags.map((name, i) => (
-							<div key={i} className="text-fg1 flex group">
-								<div
-									className=""
-									// onMouseEnter={} TODO: show set hierarchy
-								>
+							// The React.Fragment is needed to avoid some bug
+							// without it, the app crashes under certain conditions I cannot fully explain
+							// For example, remove the Fragment and put the key back in with the div. Then go to any uil. Then use alt + m to open the mindapp extension. Then with just your keyboard, add the tags "Tech Industry", then "Web Development". Then click the X on "Tech Industry". The client crashes with:
+							//  NotFoundError: Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
+							// idk y but the fragment fixes it
+							<React.Fragment key={name}>
+								<div className="text-fg1 flex group">
 									{name}
+									<button
+										className="xy -ml-0.5 group h-7 w-7 rounded-full -outline-offset-4"
+										ref={(r) => (tagXs.current[i] = r)}
+										onClick={(e) => {
+											e.stopPropagation(); // this is needed to focus the next tag
+											const newTags = [...tags];
+											newTags.splice(i, 1);
+											tagsSet(newTags);
+											!newTags.length || (i === newTags.length && !e.shiftKey)
+												? tagIpt.current?.focus()
+												: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
+										}}
+										onKeyDown={(e) => {
+											if (e.key === 'Backspace') {
+												tagXs.current[i]?.click();
+											} else if (
+												!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
+											) {
+												tagIpt.current?.focus();
+											}
+										}}
+										onMouseUp={() => {
+											tagIndexSet(-1);
+											setTimeout(() => tagIpt.current?.focus(), 0);
+										}}
+									>
+										<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
+									</button>
 								</div>
-								<button
-									className="xy -ml-0.5 group h-7 w-7 rounded-full -outline-offset-4"
-									ref={(r) => (tagXs.current[i] = r)}
-									onClick={(e) => {
-										e.stopPropagation(); // this is needed to focus the next tag
-										const newTags = [...tags];
-										newTags.splice(i, 1);
-										tagsSet(newTags);
-										!newTags.length || (i === newTags.length && !e.shiftKey)
-											? tagIpt.current?.focus()
-											: tagXs.current[i - (e.shiftKey ? 1 : 0)]?.focus();
-									}}
-									onKeyDown={(e) => {
-										if (e.key === 'Backspace') {
-											tagXs.current[i]?.click();
-										} else if (
-											!['Control', 'Alt', 'Tab', 'Shift', 'Meta', 'Enter'].includes(e.key)
-										) {
-											tagIpt.current?.focus();
-										}
-									}}
-									onMouseUp={() => {
-										tagIndexSet(-1);
-										setTimeout(() => tagIpt.current?.focus(), 0);
-									}}
-								>
-									<XCircleIcon className="w-4 h-4 text-fg2 group-hover:text-fg1 transition" />
-								</button>
-							</div>
+							</React.Fragment>
 						))}
 					</div>
 				)}
