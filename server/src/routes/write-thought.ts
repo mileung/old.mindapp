@@ -52,6 +52,7 @@ const writeThought: RequestHandler = async (req, res) => {
 	if (oldThought) {
 		if (env.GLOBAL_HOST && (await oldThought.hasUserInteraction())) {
 			// TODO: make this atomic with the overwrite
+			// TODO: allow edits if all the interactions were by the same author
 			throw new Error('Global thoughts with user interaction cannot be edited');
 		}
 		newThought = new Thought({
